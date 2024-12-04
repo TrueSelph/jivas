@@ -1,7 +1,7 @@
 ---
 name: Feature request
 about: Suggest an idea for Jivas
-title: ''
+title: "[Feature Request]: "
 labels: ''
 assignees: ''
 

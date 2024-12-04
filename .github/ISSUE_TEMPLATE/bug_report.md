@@ -1,7 +1,7 @@
 ---
 name: Bug report
 about: Create a report to report any bugs in the Jivas Stack
-title: ''
+title: "[BUG]: "
 labels: ''
 assignees: ''
 
