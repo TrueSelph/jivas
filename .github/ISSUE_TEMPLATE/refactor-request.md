@@ -7,8 +7,6 @@ assignees: ''
 
 ---
 
-# Refactor Request: [Concise Title]
-
 ## Summary
 Provide a brief description of the refactor you are proposing. Focus on the high-level goal of the change.
 
