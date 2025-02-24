@@ -366,14 +366,14 @@ class TestUtils:
     def test_type_error_on_invalid_input(self) -> None:
         """Test that TypeError is raised when input is neither a string nor a list."""
         # Arrange
-        invalid_input = "123"  # An integer, which is not a valid input type
+        invalid_input = 123  # An integer, which is not a valid input type
         placeholders = {"key": "value"}
 
         # Act & Assert
         with pytest.raises(
             TypeError, match="Input must be a string or a list of strings."
         ):
-            Utils.replace_placeholders(invalid_input, placeholders)
+            Utils.replace_placeholders(invalid_input, placeholders)  # type: ignore
 
     def test_short_message_returns_single_chunk(self) -> None:
         """Test that a short message is returned as a single chunk."""
@@ -431,7 +431,7 @@ class TestUtils:
         input_list: list[str] = ["test", "list"]
 
         # Act
-        result = Utils.escape_string(str(input_list))
+        result = Utils.escape_string(input_list)  # type: ignore
 
         # Assert
         assert result == ""
@@ -1030,8 +1030,8 @@ class TestUtils:
         result_list = Utils.convert_str_to_json(input_list)
 
         # Assert
-        assert result_dict == input_dict
-        assert result_list == input_list
+        assert result_dict == {"key": "value"}
+        assert result_list == ["item1", "item2"]
 
     def test_json_decode_error_handling(self) -> None:
         """Test that JSONDecodeError is handled correctly."""
