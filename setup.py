@@ -50,6 +50,7 @@ setup(
         "langchain-core>=0.3.10",
         "langchain-experimental>=0.3.2",
         "langchain-openai>=0.2.2",
+        "setuptools>=75.8.1",
     ],
     extras_require={
         "dev": [
