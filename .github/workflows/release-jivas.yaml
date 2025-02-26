@@ -71,7 +71,10 @@ jobs:
         run: pip install .[dev]
 
       - name: Transpile jac code to python
-        run: jac run main.jac
+        run: |
+          export JACPATH=$(pwd)
+          jac run main.jac
+        continue-on-error: false
 
       - name: Build package
         run: python setup.py sdist bdist_wheel
