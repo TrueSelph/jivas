@@ -17,7 +17,7 @@ import:jac from jivas.agent.action.action { Action }
 import:jac from jivas.agent.action.actions { Actions }
 
 walker import_agent :graph_walker: {
-    # creates or refreshes an agent via json data or yaml source
+    # creates or refreshes an agent via json data or yaml source  
 
     # set up logger
     static has logger:Logger = logging.getLogger(__name__);
@@ -25,11 +25,12 @@ walker import_agent :graph_walker: {
     has descriptor: str = "";
     has daf_name: str = "";
     has daf_version: str = "";
+    has jpr_api_key: str = "";
     has reporting: bool = True;
 
     obj __specs__ {
         # make this walker visible in API
-        static has private: bool = False;
+        static has private: bool = False; 
     }
 
     can import_from_descriptor(agents_node:Agents, descriptor:str) -> Agent {
@@ -39,7 +40,7 @@ walker import_agent :graph_walker: {
 
         if(not descriptor) {
             return None;
-        }
+        } 
 
         # TODO: build an agent data validator and execute at this point
 
@@ -52,7 +53,7 @@ walker import_agent :graph_walker: {
         try {
             agent_data = yaml.safe_load(descriptor);
         } except yaml.YAMLError {}
-
+        
         if(not agent_data) {
             self.logger.error('no agent data available for import');
             return None;
@@ -60,7 +61,7 @@ walker import_agent :graph_walker: {
 
         # Update agent node if exists or create new
         if (agent_data.get('id', None)) {
-
+            
             try {
                 agent_node = &agent_data["id"];
             } except Exception as e {
@@ -68,7 +69,7 @@ walker import_agent :graph_walker: {
                 return None;
             }
 
-        }
+        } 
         else {
             agent_name = agent_data.get('name');
             # if agent has same name as existing agent, update
@@ -100,10 +101,10 @@ walker import_agent :graph_walker: {
             # Attach memory and actions node if not exists
             agent_node.get_memory();
             agent_node.get_actions();
-
+            
             # import requires that agent re-install all actions
             if(agent_node := agent_node.update(
-                data=agent_data,
+                data=agent_data, 
                 with_actions=True
             )) {
                 # write out descriptor
@@ -116,7 +117,7 @@ walker import_agent :graph_walker: {
         return None;
     }
 
-    can import_from_daf(agents_node:Agents, daf_name:str, version:Optional[str]="") -> Agent {
+    can import_from_daf(agents_node:Agents, daf_name:str, version:Optional[str]="", jpr_api_key:Optional[str]="") -> Agent {
         # imports the agent as a digital agent freight package
         agent_node = None;
         safe_to_import = False;
@@ -124,12 +125,12 @@ walker import_agent :graph_walker: {
         package_root = Utils.get_daf_root();
         # extract the namespace, package name
         (namespace, package_name) = daf_name.split('/');
-
+        
         # attempt to find the package locally, first...
         if (package_path := Utils.find_package_folder(package_root, daf_name) ) {
-
+            
             info_yaml_path = os.path.join(package_path, 'info.yaml');
-
+            
             if(os.path.exists(info_yaml_path)) {
                 with open(info_yaml_path, 'r') as file {
                     try  {
@@ -137,7 +138,7 @@ walker import_agent :graph_walker: {
                         _info = yaml.safe_load(file);
                         # grab info package version
                         package_version = _info.get('package', {}).get('version', None);
-
+                        
                         # validate the version, if present
                         if(version) {
                             if(is_version_compatible(version, package_version)) {
@@ -158,10 +159,10 @@ walker import_agent :graph_walker: {
 
         if (not safe_to_import) {
             # this means we'll need to try the package registry
-
+            
             # download package from package registry
-            if(package_data := RegistryAPI.download_package(daf_name, version)) {
-
+            if(package_data := RegistryAPI.download_package(daf_name, version, api_key=jpr_api_key)) {
+                
                 try {
                     package_file = requests.get(package_data["file"]);
 
@@ -171,7 +172,7 @@ walker import_agent :graph_walker: {
 
                     # Assuming the package_data is a ZIP file
                     with tarfile.open(
-                        fileobj=io.BytesIO(package_file.content),
+                        fileobj=io.BytesIO(package_file.content), 
                         mode="r:gz"
                     ) as tar_file {
                         tar_file.extractall(target_dir);
@@ -204,7 +205,7 @@ walker import_agent :graph_walker: {
                             f"an exception occurred, {traceback.format_exc()}"
                         );
                         return None;
-                    }
+                    } 
                 }
             }
             if(agent_node and os.path.exists(memory_yaml_path)) {
@@ -218,7 +219,7 @@ walker import_agent :graph_walker: {
                         self.logger.error(
                             f"an exception occurred, {traceback.format_exc()}"
                         );
-                    }
+                    } 
                 }
             }
             if(agent_node and os.path.exists(knowledge_yaml_path)) {
@@ -245,9 +246,9 @@ walker import_agent :graph_walker: {
                     }
                 }
             }
-        }
-
-
+        } 
+        
+    
         return agent_node;
     }
 
@@ -261,13 +262,13 @@ walker import_agent :graph_walker: {
                 }
             }
         } elif (self.daf_name) {
-            if(agent_node := self.import_from_daf(here, self.daf_name, self.daf_version)) {
+            if(agent_node := self.import_from_daf(here, self.daf_name, self.daf_version, self.jpr_api_key)) {
                 if(self.reporting) {
                     report agent_node.export();
                 }
             }
         }
-
+        
     }
-
+ 
 }

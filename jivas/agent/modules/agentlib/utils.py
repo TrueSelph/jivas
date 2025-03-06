@@ -395,115 +395,82 @@ class Utils:
         actions_data: List[Dict[str, Any]]
     ) -> Optional[List[Dict[str, Any]]]:
         """Order interact actions based on the 'before' and 'after' config values."""
+        
         if not actions_data:
-            return None
+            return []
+        # Separate ExitInteractAction from the rest
+        other_actions = [action for action in actions_data if action.get('context', {}).get('_package', {}).get('meta', {}).get('type', None) != 'interact_action' ]
+        interact_actions = [action for action in actions_data if action.get('context', {}).get('_package', {}).get('meta', {}).get('type', None) == 'interact_action']
 
-        other_actions = [
-            action
-            for action in actions_data
-            if action.get("context", {}).get("_package", {}).get("meta", {}).get("type")
-            != "interact_action"
-        ]
-        interact_actions = [
-            action
-            for action in actions_data
-            if action.get("context", {}).get("_package", {}).get("meta", {}).get("type")
-            == "interact_action"
-        ]
+        # Prepare for sorting based on 'before' and 'after' constraints
+        from collections import defaultdict
 
-        graph = defaultdict(list)
-        in_degree: dict = defaultdict(int)
+        # Adjacency list for before and after constraints
+        before_all_actions = []
+        after_all_actions = []
+        before_constraints = defaultdict(list)
+        after_constraints = defaultdict(list)
 
         for action in interact_actions:
-            action_name = action["context"]["_package"]["name"]
-            config_order = (
-                action.get("context", {})
-                .get("_package", {})
-                .get("config", {})
-                .get("order", {})
-            )
-
-            print(f"\nProcessing action: {action_name}")
-            print(f"Config Order: {config_order}")
-
-            if "before" in config_order:
-                before = config_order["before"]
-                if before == "all":
-                    for other_action in interact_actions:
-                        if other_action != action:
-                            graph[action_name].append(
-                                other_action["context"]["_package"]["name"]
-                            )
-                            in_degree[other_action["context"]["_package"]["name"]] += 1
-                            print(
-                                f"Adding edge: {action_name} -> {other_action['context']['_package']['name']}"
-                            )
+            config_order = action.get('_package', {}).get('config', {}).get('order', {})
+            
+            # Handle 'before' and 'after'
+            if 'before' in config_order:
+                if config_order['before'] == 'all':
+                    before_all_actions.append(action)
                 else:
-                    graph[action_name].append(before)
-                    in_degree[before] += 1
-                    print(f"Adding edge: {action_name} -> {before}")
+                    before_constraints[config_order['before']].append(action)
 
-            if "after" in config_order:
-                after = config_order["after"]
-                if after == "all":
-                    for other_action in interact_actions:
-                        if other_action != action:
-                            graph[other_action["context"]["_package"]["name"]].append(
-                                action_name
-                            )
-                            in_degree[action_name] += 1
-                            print(
-                                f"Adding edge: {other_action['context']['_package']['name']} -> {action_name}"
-                            )
+            if 'after' in config_order:
+                if config_order['after'] == 'all':
+                    after_all_actions.append(action)
                 else:
-                    graph[after].append(action_name)
-                    in_degree[action_name] += 1
-                    print(f"Adding edge: {after} -> {action_name}")
+                    after_constraints[config_order['after']].append(action)
 
-        print("\nFinal Graph:", dict(graph))
-        print("Final In-degree:", dict(in_degree))
+        def compare_action(action):
+            order_config = action['context']['_package']['config']['order']
+            name = action['context']['_package']['name']
+            weight = order_config.get('weight', float('inf'))  # Use `inf` for undefined weights
 
-        queue = [
-            action["context"]["_package"]["name"]
-            for action in interact_actions
-            if in_degree[action["context"]["_package"]["name"]] == 0
-        ]
-        sorted_actions_names = []
+            return (weight, name)
 
-        while queue:
-            action_name = queue.pop(0)
-            sorted_actions_names.append(action_name)
-            print(f"Processing {action_name}, remaining queue: {queue}")
+        # Sort 'before':'all' and 'after':'all' specifically
+        before_all_actions.sort(key=compare_action)
+        after_all_actions.sort(key=compare_action)
 
-            for neighbor in graph[action_name]:
-                in_degree[neighbor] -= 1
-                print(f"Decrementing in-degree of {neighbor}: {in_degree[neighbor]}")
-                if in_degree[neighbor] == 0:
-                    queue.append(neighbor)
+        # Sort interact_actions considering complex order constraints
+        sorted_actions = [] + before_all_actions
 
-        if len(sorted_actions_names) != len(interact_actions):
-            raise ValueError("Circular dependency detected!")
+        def add_with_constraints(action):
+            if action in sorted_actions:
+                return
 
-        action_lookup = {
-            action["context"]["_package"]["name"]: action for action in interact_actions
-        }
-        sorted_actions = [
-            action_lookup[action_name] for action_name in sorted_actions_names
-        ]
+            # Ensure 'before' constraints are handled
+            for constraint in before_constraints[action['context']['_package']['name']]:
+                add_with_constraints(constraint)
 
+            if action not in sorted_actions:
+                sorted_actions.append(action)
+
+            # Ensure 'after' constraints are handled
+            for constraint in after_constraints[action['context']['_package']['name']]:
+                add_with_constraints(constraint)
+
+        # Ordering interact_actions except those in 'before' and 'after': 'all'
+        for action in interact_actions:
+            if action not in before_all_actions and action not in after_all_actions:
+                add_with_constraints(action)
+
+        # Tack `after_all_actions` onto the sorted list
+        sorted_actions.extend(after_all_actions)
         sorted_actions.extend(other_actions)
-
+        
+        # finally, iterate through the sorted actions and update the weight prop for interact_actions
         for i, action in enumerate(sorted_actions):
-            if (
-                action.get("context", {})
-                .get("_package", {})
-                .get("meta", {})
-                .get("type")
-                == "interact_action"
-            ):
-                action["context"]["weight"] = i
+            if(action.get('context', {}).get('_package', {}).get('meta', {}).get('type', 'action') == 'interact_action'):
+                action['context']['weight'] = i
+            
 
-        print("\nFinal Sorted Actions:", sorted_actions)
         return sorted_actions
 
     @staticmethod

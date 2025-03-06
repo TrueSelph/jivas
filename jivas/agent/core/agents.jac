@@ -25,7 +25,7 @@ node Agents :GraphNode: {
         # returns an agent node by name or None
         return Utils.node_obj([-->](?id == id));
     }
-
+    
     can delete(id:str) {
         # removes an agent node by id
         if(agent_node := self.get_by_id(id)) {
@@ -49,5 +49,5 @@ node Agents :GraphNode: {
 
         return agent_nodes;
     }
-
+    
 }

@@ -83,9 +83,9 @@ node Frame :GraphNode: {
         last_interaction_node = self.get_last_interaction();
 
         interaction_node = Interaction(
-            agent_id=self.agent_id,
-            channel=channel,
-            utterance=utterance,
+            agent_id=self.agent_id, 
+            channel=channel, 
+            utterance=utterance, 
             response = InteractionResponse(session_id=self.session_id).export()
         );
 
@@ -99,12 +99,12 @@ node Frame :GraphNode: {
         # mainly for inserting items into the message history
 
         last_interaction_node = self.get_last_interaction();
-
+        
         interaction_node = Interaction(
-            agent_id=self.agent_id,
-            channel=channel,
+            agent_id=self.agent_id, 
+            channel=channel, 
             response=InteractionResponse(
-                session_id=self.session_id,
+                session_id=self.session_id, 
                 message=TextInteractionMessage(content=message).export()
             ).export()
         );
@@ -152,7 +152,7 @@ node Frame :GraphNode: {
 
         transcript = "";
         statements = self.get_transcript_statements(interactions, max_statement_length, with_events=with_events);
-
+        
         for item in statements {
 
             key = next(iter(item));
@@ -172,13 +172,13 @@ node Frame :GraphNode: {
     }
 
     can prune_interactions(frame_size:int) {
-        # prunes the given frame of interaction nodes by the specified amount.
+        # prunes the given frame of interaction nodes by the specified amount. 
         # operation will leave 'frame_size' nodes or less in the frame and remove all older nodes
         self spawn _prune_interactions(frame_size=frame_size);
     }
 
     can refresh_interactions() {
-        # prunes the given frame of interaction nodes down to 1.
+        # prunes the given frame of interaction nodes down to 1. 
         self.prune_interactions(frame_size=1);
     }
 
@@ -215,7 +215,7 @@ walker _get_transcript_statements {
 
     obj __specs__ {
         # make this a private walker
-        static has private: bool = True;
+        static has private: bool = True; 
     }
 
     can on_frame with Frame entry {
@@ -230,7 +230,7 @@ walker _get_transcript_statements {
                 disengage;
             }
         } elif (self.retrace_count < self.interactions) {
-
+            
             ai_statement = "";
             human_statement = "";
 
@@ -240,7 +240,7 @@ walker _get_transcript_statements {
                     self.statements.append({"ai": f"event: {event}"});
                 }
             }
-
+            
             if (here.has_response()) {
                 content = here.get_message().get_content();
                 if(type(content) == list){
@@ -266,7 +266,7 @@ walker _get_transcript_statements {
             self.retrace_count += 1;
             visit [-:Retrace:->](`?Interaction);
         }
-
+        
     }
 
     can chunk_message(message:str) -> str {
@@ -279,25 +279,25 @@ walker _get_transcript_statements {
 
         return message;
     }
-
+    
     can on_exit with exit {
         (self.statements).reverse();
     }
 }
-
+ 
 walker _get_interactions {
     # returns the list of interactions of a frame.
     has interactions:list = [];
 
     obj __specs__ {
         # make this a private walker
-        static has private: bool = True;
+        static has private: bool = True; 
     }
-
+ 
     can on_frame with Frame entry {
         visit [-:Advance:->](`?Interaction);
-    }
-
+    }    
+ 
     can on_interaction with Interaction entry {
         self.interactions.append(here);
         visit [-:Advance:->](`?Interaction);
@@ -305,7 +305,7 @@ walker _get_interactions {
 }
 
 walker _prune_interactions {
-    # prunes the given frame of interaction nodes by the specified amount.
+    # prunes the given frame of interaction nodes by the specified amount. 
     # operation will leave 'frame_size' nodes or less in the frame and remove all older nodes
     has frame_size:int = 1;
     has frame_node:Frame = None;
@@ -314,13 +314,13 @@ walker _prune_interactions {
 
     obj __specs__ {
         # make this a private walker
-        static has private: bool = True;
+        static has private: bool = True; 
     }
 
     can on_frame with Frame entry {
         # if we're here, we'need to connect the advance edge to the new top of the interaction chain
         self.frame_node = here;
-
+        
         if (self.interaction_head) {
             here +:Advance:+> self.interaction_head;
         } else {
@@ -347,7 +347,7 @@ walker _prune_interactions {
             if (not [-:Retrace:->](`?Frame)) {
                 here +:Retrace:+> self.frame_node;
             }
-
+            
         } elif (self.retraces > self.frame_size) {
             # if we're here, it means we are in pruning mode
             visit [-:Retrace:->](`?Interaction) else {
@@ -357,5 +357,5 @@ walker _prune_interactions {
             visit [-:Retrace:->](`?Interaction);
         }
     }
-
+    
 }

@@ -5,6 +5,9 @@ venv
 .pytest_cache
 __jac_gen__
 
+# jivas app
+.jvdata
+
 # Distribution / packaging
 .Python
 play/

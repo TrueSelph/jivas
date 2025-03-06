@@ -35,7 +35,7 @@ node Interaction :GraphNode: {
     can set_message(message:InteractionMessage) {
         # set the interaction response message object
         # loads an existing interaction response object or returns a fresh one
-
+        
         interaction_response = self.get_response() or InteractionResponse();
         interaction_response.set_message(message);
         self.response = interaction_response.export();
@@ -99,7 +99,7 @@ node Interaction :GraphNode: {
             data_obj.load(data_item);
             return data_obj;
         }
-
+        
         return None;
     }
 
@@ -123,7 +123,7 @@ node Interaction :GraphNode: {
     }
 
     can add_event(event:str) {
-        # adds a stated event to interaction
+        # adds a stated event to interaction 
         self.events.append(event);
     }
 
@@ -152,7 +152,7 @@ node Interaction :GraphNode: {
         } else {
             self.functions[action_label] = [function];
             self.add_intent(action_label);
-        }
+        } 
 
     }
 

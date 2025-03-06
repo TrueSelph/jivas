@@ -11,11 +11,11 @@ node Action :GraphNode: {
     has label: str = "";
     has description: str = "basic agent action";
     has enabled: bool = True;
-    has _package: dict = {};
+    has _package: dict = {}; 
     has agent_id:str = "";
     # set up logger
     static has logger:Logger = logging.getLogger(__name__);
-    # [Bug] Do not do `can init` this without setting the has vars
+    # [Bug] Do not do `can init` this without setting the has vars 
     # can init {
     #     # override to initialize the action
     # }
@@ -57,8 +57,8 @@ node Action :GraphNode: {
         if (data) {
 
             for attr in data.keys() {
-
-                if (attr not in self.protected_attrs) {
+                
+                if (attr not in self.protected_attrs) {   
                     # check if attribute is a node attribute
                     if (hasattr(self, attr)) {
 
@@ -117,5 +117,5 @@ node Action :GraphNode: {
 
     can get_namespace_package_name() {
         return self._package.get('name', None);
-    }
+    } 
 }

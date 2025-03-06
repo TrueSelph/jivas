@@ -54,7 +54,7 @@ node GraphNode {
         if (data) {
             for attr in data.keys() {
                 if (attr not in self.protected_attrs) {
-
+                                    
                     # check if attribute is a node attribute
                     if (hasattr(self, attr)) {
                         setattr(self, attr, data[attr]);
