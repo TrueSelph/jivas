@@ -13,7 +13,7 @@ import:py from jaclang { jac_import }
 import:py from jivas.agent.modules.agentlib.utils { Utils }
 import:py from jvcli.utils { is_version_compatible }
 import:py from jvcli.api { RegistryAPI }
-import:py from jaclang.runtimelib.machine { JacMachine }
+import:py from jvserve.lib.agent_interface { AgentInterface }
 import:jac from action { Action }
 import:jac from interact_action { InteractAction }
 import:jac from interact_graph_walker { interact_graph_walker }
@@ -464,7 +464,8 @@ node Actions :GraphNode: {
             # register action
             # TODO: add a check here before node register in cases where this is an init
             # and the node architype props changed compared to saved descriptor
-            action_node = JacMachine.get().spawn_node(
+            print(f"Registering action {label} with architype {architype} from module {module}");
+            action_node = AgentInterface.spawn_node(
                 node_name=architype,
                 attributes=action_data.get('context', {}),
                 module_name=module
