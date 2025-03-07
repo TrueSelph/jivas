@@ -40,7 +40,7 @@ setup(
     python_requires=">=3.12.0",
     install_requires=[
         "jvcli>=2.0.3",
-        "jvserve>=2.0.0",
+        "jvserve>=2.0.2",
         "pytz>=2024.2",
         "types-pytz>=2024.2.0.20241003",
         "schedule>=1.2.2",
