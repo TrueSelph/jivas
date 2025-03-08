@@ -51,6 +51,7 @@ setup(
         "langchain-experimental>=0.3.2",
         "langchain-openai>=0.2.2",
         "setuptools>=75.8.1",
+        "transformers>=4.49.0",
     ],
     extras_require={
         "dev": [
