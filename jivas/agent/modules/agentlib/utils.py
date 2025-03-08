@@ -460,9 +460,6 @@ class Utils:
                     in_degree[action_name] += 1
                     print(f"Adding edge: {after} -> {action_name}")
 
-        print("\nFinal Graph:", dict(graph))
-        print("Final In-degree:", dict(in_degree))
-
         queue = [
             action["context"]["_package"]["name"]
             for action in interact_actions
@@ -503,7 +500,6 @@ class Utils:
             ):
                 action["context"]["weight"] = i
 
-        print("\nFinal Sorted Actions:", sorted_actions)
         return sorted_actions
 
     @staticmethod
