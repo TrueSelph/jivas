@@ -464,7 +464,7 @@ node Actions :GraphNode: {
             # register action
             # TODO: add a check here before node register in cases where this is an init
             # and the node architype props changed compared to saved descriptor
-            print(f"Registering action {label} with architype {architype} from module {module}");
+            self.logger.info(f"Registering action {label} with architype {architype} from module {module}");
             action_node = AgentInterface.spawn_node(
                 node_name=architype,
                 attributes=action_data.get('context', {}),
