@@ -51,6 +51,10 @@ node Action :GraphNode: {
         # override to implement pulse operation
     }
 
+    can healthcheck() -> bool {
+        return True;
+    }
+
     can update(data: dict = {}) -> GraphNode {
         # updates an action node; expects a dict of attribute names mapped to values for updating
         # overridden to respond to enable / disable updates

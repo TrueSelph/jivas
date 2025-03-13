@@ -1061,6 +1061,17 @@ class TestUtils:
         assert result is None
         mock_logger_error.assert_called_once()
 
+    def test_convert_str_to_json_with_dict_input(self) -> None:
+        """Test that convert_str_to_json returns the input when it is already a dict."""
+        # Arrange
+        input_data = {"key": "value"}
+
+        # Act
+        result = Utils.convert_str_to_json(input_data)  # type: ignore
+
+        # Assert
+        assert result == input_data
+
     def test_delete_old_files(self, tmp_path: Any, mocker: MockerFixture) -> None:
         """Test deleting files older than specified days."""
         # Arrange

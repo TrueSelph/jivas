@@ -19,12 +19,12 @@ node Memory :GraphNode: {
     # set up logger
     static has logger:Logger = logging.getLogger(__name__);
 
-    can get_frame(agent_id:str, session_id:str, force_session:bool=False) -> Frame {
+    can get_frame(agent_id:str, session_id:str, force_session:bool=False, lookup:bool=False) -> Frame {
         # attempt to retrieve an existing session or spawn then traverse to a new one if force is on
 
         frame_node = Utils.node_obj( [-->](`?Frame)(?session_id == session_id) );
 
-        if not frame_node {
+        if not frame_node and not lookup {
             if(force_session) {
                 frame_node = Frame(agent_id=agent_id, session_id = session_id);
             } else {

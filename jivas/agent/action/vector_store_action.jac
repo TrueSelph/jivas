@@ -14,6 +14,7 @@ import:py from langchain_core.vectorstores.base { VectorStore }
 import:py from langchain_core.documents.base { Document }
 import:py from langchain_openai { OpenAIEmbeddings }
 import:py from langchain_openai { AzureOpenAIEmbeddings }
+import:py from jivas.agent.modules.embeddings.jivas_embeddings { JivasEmbeddings }
 
 node VectorStoreAction :Action: {
     # base node for all store action implementations
@@ -26,7 +27,7 @@ node VectorStoreAction :Action: {
     has embedding_model_api_key:str = "";
     has embedding_model_api_version:str = "";
     has embedding_model_name:str = ""; # e.g. text-embedding-3-large
-    has embedding_model_provider:str = "openai"; # e.g. openai / azure / google
+    has embedding_model_provider:str = "openai"; # e.g. openai / azure / google / jivas
 
 
     can get_client() {
@@ -85,17 +86,21 @@ node VectorStoreAction :Action: {
 
         # Try to parse the content as JSON
         importing_error_message= "";
-        try {
-            knodes = json.loads(data);
-        } except json.JSONDecodeError as e {
-            importing_error_message = f"Failed to import knode JSON, {e}";
-        }
+        if(isinstance(data, str)) {
+            try {
+                knodes = json.loads(data);
+            } except json.JSONDecodeError as e {
+                importing_error_message = f"Failed to import knode JSON, {e}";
+            }
 
-        # Try to parse the content as YAML
-        try {
-            knodes = yaml.safe_load(data);
-        } except yaml.YAMLError as e {
-            importing_error_message = f"Failed to import knode YAML, {e}";
+            # Try to parse the content as YAML
+            try {
+                knodes = yaml.safe_load(data);
+            } except yaml.YAMLError as e {
+                importing_error_message = f"Failed to import knode YAML, {e}";
+            }
+        }else {
+            knodes = data;
         }
 
         try{
@@ -134,7 +139,7 @@ node VectorStoreAction :Action: {
         try {
 
             if(collection := self.get_collection(self.collection_name)) {
-
+                excluded_fields = '';
                 if include_id {
                     if(not embeddings) {
                         excluded_fields = 'vec';
@@ -265,6 +270,19 @@ node VectorStoreAction :Action: {
                     api_key=self.embedding_model_api_key,
                     open_api_version=self.embedding_model_api_version
                 );
+        } elif(self.embedding_model_provider == "jivas") {
+
+            if(self.embedding_model_name) {
+                return JivasEmbeddings(
+                    base_url = self.embedding_model_endpoint,
+                    api_key=self.embedding_model_api_key,
+                    model=self.embedding_model_name
+                );
+            }
+            return JivasEmbeddings(
+                base_url = self.embedding_model_endpoint,
+                api_key=self.embedding_model_api_key
+            );
         } else {
             self.logger.error(f"Provider {self.embedding_model_provider} not supported for embedding model {self.embedding_model_name}");
             return None;
@@ -435,5 +453,16 @@ node VectorStoreAction :Action: {
         # """
     }
 
+    can healthcheck() -> bool {
+        try {
+            if(self.embedding_model_provider and self.embedding_model_api_key){
+                return True;
+            }
+            return False;
+        } except Exception as e {
+            self.logger.error(f"An exception occurred in {self.label}:\n{traceback.format_exc()}\n");
+            return False;
+        }
+    }
 
 }

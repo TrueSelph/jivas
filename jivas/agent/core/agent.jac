@@ -19,7 +19,7 @@ node Agent :GraphNode: {
     has name: str = "";
     has description: str = "";
     has descriptor: str = "";
-
+    has jpr_api_key: str = "";
     has agent_logging: bool = True; # when set, agent will log interactions
     has message_limit: int = 1024;
     has flood_block_time: int = 300; # in seconds
