@@ -7,9 +7,9 @@ import mimetypes
 import os
 import re
 import time
-from collections import defaultdict
+from collections import defaultdict, deque
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, DefaultDict, Dict, List, Optional
 from uuid import UUID
 
 import pytz  # To handle timezones
@@ -394,7 +394,7 @@ class Utils:
     def order_interact_actions(
         actions_data: List[Dict[str, Any]]
     ) -> Optional[List[Dict[str, Any]]]:
-        """Order interact actions based on the 'before' and 'after' config values."""
+        """Order interact actions based on their dependencies and weights."""
         if not actions_data:
             return None
 
@@ -411,94 +411,92 @@ class Utils:
             == "interact_action"
         ]
 
-        graph = defaultdict(list)
-        in_degree: dict = defaultdict(int)
+        action_lookup = {
+            action["context"]["_package"]["name"]: action for action in interact_actions
+        }
 
+        graph: DefaultDict[str, List[str]] = defaultdict(list)
+        in_degree: DefaultDict[str, int] = defaultdict(int)
+
+        action_weights = {
+            name: action["context"]["_package"]["config"]
+            .get("order", {})
+            .get("weight", 0)
+            for name, action in action_lookup.items()
+        }
+
+        # First handle explicit before/after constraints (excluding "all")
         for action in interact_actions:
             action_name = action["context"]["_package"]["name"]
-            config_order = (
-                action.get("context", {})
-                .get("_package", {})
-                .get("config", {})
-                .get("order", {})
-            )
+            config_order = action["context"]["_package"]["config"].get("order", {})
 
-            print(f"\nProcessing action: {action_name}")
-            print(f"Config Order: {config_order}")
+            before = config_order.get("before")
+            after = config_order.get("after")
 
-            if "before" in config_order:
-                before = config_order["before"]
-                if before == "all":
-                    for other_action in interact_actions:
-                        if other_action != action:
-                            graph[action_name].append(
-                                other_action["context"]["_package"]["name"]
-                            )
-                            in_degree[other_action["context"]["_package"]["name"]] += 1
-                            print(
-                                f"Adding edge: {action_name} -> {other_action['context']['_package']['name']}"
-                            )
-                else:
-                    graph[action_name].append(before)
-                    in_degree[before] += 1
-                    print(f"Adding edge: {action_name} -> {before}")
+            if before and before != "all" and before in action_lookup:
+                graph[action_name].append(before)
+                in_degree[before] += 1
 
-            if "after" in config_order:
-                after = config_order["after"]
-                if after == "all":
-                    for other_action in interact_actions:
-                        if other_action != action:
-                            graph[other_action["context"]["_package"]["name"]].append(
-                                action_name
-                            )
-                            in_degree[action_name] += 1
-                            print(
-                                f"Adding edge: {other_action['context']['_package']['name']} -> {action_name}"
-                            )
-                else:
-                    graph[after].append(action_name)
-                    in_degree[action_name] += 1
-                    print(f"Adding edge: {after} -> {action_name}")
+            if after and after != "all" and after in action_lookup:
+                graph[after].append(action_name)
+                in_degree[action_name] += 1
 
-        queue = [
+        # Handle "before": "all" and "after": "all" constraints separately without creating cycles
+        before_all_actions = [
             action["context"]["_package"]["name"]
             for action in interact_actions
-            if in_degree[action["context"]["_package"]["name"]] == 0
+            if action["context"]["_package"]["config"].get("order", {}).get("before")
+            == "all"
         ]
+        after_all_actions = [
+            action["context"]["_package"]["name"]
+            for action in interact_actions
+            if action["context"]["_package"]["config"].get("order", {}).get("after")
+            == "all"
+        ]
+
+        for action_name in before_all_actions:
+            for other_name in action_lookup:
+                if other_name not in before_all_actions and other_name != action_name:
+                    graph[action_name].append(other_name)
+                    in_degree[other_name] += 1
+
+        for action_name in after_all_actions:
+            for other_name in action_lookup:
+                if other_name not in after_all_actions and other_name != action_name:
+                    graph[other_name].append(action_name)
+                    in_degree[action_name] += 1
+
+        # Kahn's algorithm with weights as tie-breaker
+        queue = deque(
+            sorted(
+                [name for name in action_lookup if in_degree[name] == 0],
+                key=lambda x: action_weights[x],
+            )
+        )
+
         sorted_actions_names = []
-
         while queue:
-            action_name = queue.pop(0)
-            sorted_actions_names.append(action_name)
-            print(f"Processing {action_name}, remaining queue: {queue}")
-
-            for neighbor in graph[action_name]:
+            current = queue.popleft()
+            sorted_actions_names.append(current)
+            for neighbor in graph[current]:
                 in_degree[neighbor] -= 1
-                print(f"Decrementing in-degree of {neighbor}: {in_degree[neighbor]}")
                 if in_degree[neighbor] == 0:
                     queue.append(neighbor)
+            queue = deque(sorted(queue, key=lambda x: action_weights[x]))
 
         if len(sorted_actions_names) != len(interact_actions):
             raise ValueError("Circular dependency detected!")
 
-        action_lookup = {
-            action["context"]["_package"]["name"]: action for action in interact_actions
-        }
+        # Map sorted names back to actions and add others
         sorted_actions = [
-            action_lookup[action_name] for action_name in sorted_actions_names
-        ]
+            action_lookup[name] for name in sorted_actions_names
+        ] + other_actions
 
-        sorted_actions.extend(other_actions)
-
-        for i, action in enumerate(sorted_actions):
-            if (
-                action.get("context", {})
-                .get("_package", {})
-                .get("meta", {})
-                .get("type")
-                == "interact_action"
-            ):
-                action["context"]["weight"] = i
+        # Assign final weights according to sorted order
+        for idx, action in enumerate(sorted_actions):
+            if action["context"]["_package"]["meta"]["type"] == "interact_action":
+                action["context"]["weight"] = idx
 
         return sorted_actions
 
