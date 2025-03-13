@@ -6,7 +6,6 @@ import:py traceback;
 import:py from logging { Logger }
 import:jac from action { Action }
 
-
 node TTSAction :Action: {
     # The Text-to-speech base action for all TTS actions.
 
@@ -56,7 +55,7 @@ node TTSAction :Action: {
             }
 
             if(as_url) {
-                return f"{os.environ.get('JIVAS_FILES_URL','http://localhost:8000/files')}/{output_file_name}";
+                return f"{os.environ.get('JIVAS_FILES_URL','http://localhost:9000/files')}/{output_file_name}";
             }
 
             return os.path.abspath(output_file_path);

@@ -25,7 +25,9 @@ walker import_agent :graph_walker: {
     has descriptor: str = "";
     has daf_name: str = "";
     has daf_version: str = "";
+    has jpr_api_key: str = "";
     has reporting: bool = True;
+    has daf_archive:dict = {};
 
     obj __specs__ {
         # make this walker visible in API
@@ -44,14 +46,19 @@ walker import_agent :graph_walker: {
         # TODO: build an agent data validator and execute at this point
 
         # Try to parse the content as JSON
-        try {
-            agent_data = json.loads(descriptor);
-        } except json.JSONDecodeError {}
+        if(isinstance(descriptor, str)) {
+            try {
+                agent_data = json.loads(descriptor);
+            } except json.JSONDecodeError {}
 
-        # Try to parse the content as YAML
-        try {
-            agent_data = yaml.safe_load(descriptor);
-        } except yaml.YAMLError {}
+            # Try to parse the content as YAML
+            try {
+                agent_data = yaml.safe_load(descriptor);
+            } except yaml.YAMLError {}
+
+        }else{
+            agent_data = descriptor;
+        }
 
         if(not agent_data) {
             self.logger.error('no agent data available for import');
@@ -116,7 +123,7 @@ walker import_agent :graph_walker: {
         return None;
     }
 
-    can import_from_daf(agents_node:Agents, daf_name:str, version:Optional[str]="") -> Agent {
+    can import_from_daf(agents_node:Agents, daf_name:str, version:Optional[str]="", jpr_api_key:Optional[str]="") -> Agent {
         # imports the agent as a digital agent freight package
         agent_node = None;
         safe_to_import = False;
@@ -160,7 +167,7 @@ walker import_agent :graph_walker: {
             # this means we'll need to try the package registry
 
             # download package from package registry
-            if(package_data := RegistryAPI.download_package(daf_name, version)) {
+            if(package_data := RegistryAPI.download_package(daf_name, version, api_key=jpr_api_key)) {
 
                 try {
                     package_file = requests.get(package_data["file"]);
@@ -193,12 +200,33 @@ walker import_agent :graph_walker: {
             descriptor_yaml_path = os.path.join(package_path, 'descriptor.yaml');
             memory_yaml_path = os.path.join(package_path, 'memory.yaml');
             knowledge_yaml_path = os.path.join(package_path, 'knowledge.yaml');
+            meta = {};
+
+            if(os.path.exists(info_yaml_path)) {
+                with open(info_yaml_path, 'r') as file {
+                    try  {
+                        info_yaml = yaml.safe_load(file);
+                        meta = {
+                            "namespace": info_yaml['package']['name'],
+                            "version": info_yaml['package']['version'],
+                            "author": info_yaml['package']['author'],
+                            "dependencies": info_yaml['package']['dependencies']
+                        };
+                    } except Exception as e {
+                        self.logger.error(
+                            f"an exception occurred, {traceback.format_exc()}"
+                        );
+                        return None;
+                    }
+                }
+            }
 
             if(os.path.exists(descriptor_yaml_path)) {
                 with open(descriptor_yaml_path, 'r') as file {
                     try  {
-                        descriptor_yaml = file.read();
-                        agent_node = self.import_from_descriptor(agents_node, descriptor_yaml);
+                        descriptor_yaml = yaml.safe_load(file);
+                        descriptor_yaml["meta"] = meta;
+                        agent_node = self.import_from_descriptor(agents_node, yaml.dump(descriptor_yaml));
                     } except Exception as e {
                         self.logger.error(
                             f"an exception occurred, {traceback.format_exc()}"
@@ -261,7 +289,7 @@ walker import_agent :graph_walker: {
                 }
             }
         } elif (self.daf_name) {
-            if(agent_node := self.import_from_daf(here, self.daf_name, self.daf_version)) {
+            if(agent_node := self.import_from_daf(here, self.daf_name, self.daf_version, self.jpr_api_key)) {
                 if(self.reporting) {
                     report agent_node.export();
                 }

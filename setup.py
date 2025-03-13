@@ -52,6 +52,7 @@ setup(
         "langchain-openai>=0.2.2",
         "setuptools>=75.8.1",
         "transformers>=4.49.0",
+        "spacy>=3.8.4",
     ],
     extras_require={
         "dev": [
