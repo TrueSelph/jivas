@@ -28,7 +28,7 @@ node InteractAction :Action: {
     }
 
     can get_root_action() {
-        # returns the interact action which is the top-level ancestor of this interact action
+        # returns the interact action which is the top-level ancestor of this interact action 
         return (self spawn _get_root_action()).root_action;
     }
 }
@@ -39,7 +39,7 @@ walker _get_root_action {
 
     obj __specs__ {
         # make this a private walker
-        static has private: bool = True;
+        static has private: bool = True; 
     }
 
     can on_action with InteractAction entry {

@@ -75,7 +75,7 @@ node Actions :GraphNode: {
         return ((self spawn _get_actions(filter_enabled=filter_enabled_actions)).action_nodes);
     }
 
-    can get_action_info(namespace_package_name:str, version:str=None) {
+    can get_action_info(namespace_package_name:str, version:str=None, jpr_api_key:str=None) {
         # retrieves the info.yaml data for a named action by version either locally first or on package manager
 
         action_info = None;
@@ -93,7 +93,7 @@ node Actions :GraphNode: {
                     _info = yaml.safe_load(file);
                     # grab info package version
                     package_version = _info.get('package', {}).get('version', None);
-
+                    
                     # validate the version
                     if is_version_compatible(version, package_version) {
                         # craft the module root
@@ -101,36 +101,41 @@ node Actions :GraphNode: {
                         # determine whether we have an app in this package
                         has_app = os.path.isfile( os.path.join(package_path, 'app', 'app.py') );
                         # set the package info
-                        action_info = _info['package'];
+                        action_info = _info['package'];                        
                         # set info package path
                         action_info['config']['path'] = package_path;
                         # dynamically set action app flag
                         action_info['config']['app'] = has_app;
                         # add the module root
-                        action_info['config']['module_root'] = module_root;
+                        action_info['config']['module_root'] = module_root; 
                         # add the action module for loading
-                        action_info['config']['module'] = f"{module_root}.{package_name}";
+                        action_info['config']['module'] = f"{module_root}.{package_name}"; 
                     }
                 } except yaml.YAMLError as e {
                     self.logger.error(
                         f"an exception occurred, {traceback.format_exc()}"
                     );
                 }
-            }
+            }   
         }
-
+           
         if(not action_info) {
+            
             # if no action_info found locally, we fetch from package repo
-            if( _info := RegistryAPI.get_action_info(namespace_package_name, version) ) {
+            self.logger.info(f'attempting to fetch action info remotely for {namespace_package_name}={version}');
+            
+            if( _info := RegistryAPI.get_action_info(namespace_package_name, version, api_key=jpr_api_key) ) {
+                
+                self.logger.info(f'found action info remotely for {namespace_package_name}={version}');
                 # set the package info
                 action_info = _info.get('package', None);
             }
         }
-
+        
         # perform final preprocessing on action info
         if(action_info) {
             action_info['config']['namespace'] = namespace;
-            action_info['config']['package_name'] = package_name;
+            action_info['config']['package_name'] = package_name;          
         }
 
         return action_info;
@@ -172,7 +177,7 @@ node Actions :GraphNode: {
     }
 
     can load_pip_packages(action_data:dict) {
-
+        
         loaded = True;
         pip_packages = action_data.get('context', {}).get('_package', {}).get('dependencies', {}).get('pip', {});
 
@@ -213,7 +218,7 @@ node Actions :GraphNode: {
         # """
         try {
             package_distribution = pkg_resources.get_distribution(package_name);
-
+            
             if version is None {
                 # If no version is specified, simply confirm the package is installed
                 return True;
@@ -226,8 +231,8 @@ node Actions :GraphNode: {
         }
     }
 
-    can load_action_packages(agent_id:str, data: dict) {
-        # accepts an agent descriptor listing of actions, prepares a loading manifest of ordered deps, loads them and returns loaded action data
+    can load_action_packages(agent_id:str, data: dict, jpr_api_key:str=None) {
+        # accepts an agent descriptor listing of actions, prepares a loading manifest of ordered deps, loads them and returns loaded action data     
 
         # grab flattened list of action data indexed by namespace package name
         action_data_index = self.index_action_data(data);
@@ -238,11 +243,11 @@ node Actions :GraphNode: {
             action_data_index_copy = action_data_index.copy();
             # go through index and load up package info and dependencies
             for (namespace_package_name, action_data) in action_data_index_copy.items() {
-
+                
                 (namespace, package_name) = namespace_package_name.split('/');
                 package_version = action_data.get('context', {}).get('version', None);
 
-                if( action_info := self.get_action_info(namespace_package_name, package_version) ) {
+                if( action_info := self.get_action_info(namespace_package_name, package_version, jpr_api_key) ) {
 
                     action_data['context']['_package'] = action_info;
                     action_data['context']['agent_id'] = agent_id;
@@ -255,14 +260,14 @@ node Actions :GraphNode: {
 
                     # if action dependencies exist, check and load as needed
                     action_deps = action_info.get('dependencies', {}).get('actions', {});
-
+                    
                     loaded_action_deps = {};
-
+                    
                     for action_dep in action_deps.keys() {
                         if action_dep not in action_data_index.keys() {
                             action_dep_version = action_deps[action_dep];
-
-                            if( dep_action_info := self.get_action_info( action_dep, action_dep_version )) {
+                            
+                            if( dep_action_info := self.get_action_info( action_dep, action_dep_version, jpr_api_key )) {
                                 # add action descriptor entry based on dep action info
                                 loaded_action_deps[action_dep] = {
                                     "action": action_dep,
@@ -277,7 +282,7 @@ node Actions :GraphNode: {
                                 };
                             } else {
                                 self.logger.error(f"unable to find action {action_dep}={action_dep_version}");
-                                continue;
+                                continue; 
                             }
                         }
                     }
@@ -304,7 +309,7 @@ node Actions :GraphNode: {
             );
         }
 
-        # now that action data index is loaded, we proceed to
+        # now that action data index is loaded, we proceed to 
         # download and load what's needed, which includes action and pip packages
 
         # make sure we upgrade pip before we proceed
@@ -313,23 +318,27 @@ node Actions :GraphNode: {
         # make a working copy to iterate thru
         action_data_index_copy = action_data_index.copy();
         for (namespace_package_name, action_data) in action_data_index_copy.items() {
-
+            
             package_path = action_data.get('context', {}).get('_package', {}).get('config', {}).get('path', None);
             # if an action package is already downloaded, there will be a 'path' variable in the '_package' key
-            # if not, we need to download it and refresh the _package values
-            if package_path is None {
+            # if not, we need to download it and refresh the _package values            
+            if package_path is None {         
 
                 package_version = action_data.get('context', {}).get('version', None);
+                
+                self.logger.info(f'attempting to download action for {namespace_package_name}={package_version}');
 
                 try {
+
                     # download package from package repo
-                    package_data = RegistryAPI.download_package(namespace_package_name, package_version);
+                    package_data = RegistryAPI.download_package(namespace_package_name, package_version, api_key=jpr_api_key);
+
                     if not package_data {
                         # remove the entry from the index
                         if(namespace_package_name in action_data_index) {
                             del action_data_index[namespace_package_name];
                         }
-                        self.logger.error(f'unable to download package {namespace_package_name}...skipping');
+                        self.logger.error(f'unable to download package {namespace_package_name}={package_version} ...skipping');
                         continue;
                     }
 
@@ -341,18 +350,18 @@ node Actions :GraphNode: {
 
                     # Assuming the package_data is a ZIP file
                     with tarfile.open(
-                        fileobj=io.BytesIO(package_file.content),
+                        fileobj=io.BytesIO(package_file.content), 
                         mode="r:gz"
                     ) as tar_file {
                         tar_file.extractall(target_dir);
                     }
 
                     # attempt to refresh and replace action _package data
-                    if( action_info := self.get_action_info(namespace_package_name, package_version) ) {
+                    if( action_info := self.get_action_info(namespace_package_name, package_version, jpr_api_key) ) {
 
                         action_data['context']['_package'] = action_info;
                         if( not action_info.get('config', {}).get('path', None) ) {
-                            # if download and reload unsuccessful,
+                            # if download and reload unsuccessful, 
                             # remove the entry from the index
                             if(namespace_package_name in action_data_index) {
                                 del action_data_index[namespace_package_name];
@@ -361,7 +370,7 @@ node Actions :GraphNode: {
                             self.logger.error(f'unable to download package {namespace_package_name}...skipping');
                             continue;
                         }
-
+                
                     }
                 } except Exception as e {
                     # remove the entry from the index
@@ -371,13 +380,13 @@ node Actions :GraphNode: {
                     self.logger.error(f'unable to download and load package {namespace_package_name}...skipping, {e}');
                     continue;
                 }
-
+                
             }
 
             # now we load the pip packages that aren't loaded
             if(self.load_pip_packages(action_data)) {
                 # once successful, we import the action modules into runtime
-                self.import_action(action_data);
+                self.import_action(action_data);                
             } else {
                 # if we were unable to successfully load a package on index, remove it from the index and report
                 if(namespace_package_name in action_data_index) {
@@ -421,8 +430,8 @@ node Actions :GraphNode: {
                 update_child_actions(action_data["children"]);
             }
         }
-
-        # assign ordering weights to all interact actions then return
+        
+        # assign ordering weights to all interact actions then return       
         return Utils.order_interact_actions(action_data_index.values());
     }
 
@@ -448,7 +457,7 @@ node Actions :GraphNode: {
         }
 
         try  {
-
+            
             if (singleton) {
                 # check if action is a singleton action with duplicate type
                 if (existing_action := self.get(action_type=label)) {
@@ -462,10 +471,9 @@ node Actions :GraphNode: {
             }
 
             # register action
-            # TODO: add a check here before node register in cases where this is an init
+            # TODO: add a check here before node register in cases where this is an init 
             # and the node architype props changed compared to saved descriptor
-            print(f"Registering action {label} with architype {architype} from module {module}");
-            action_node = AgentInterface.spawn_node(
+            action_node = JacMachine.get().spawn_node(
                 node_name=architype,
                 attributes=action_data.get('context', {}),
                 module_name=module
@@ -484,10 +492,10 @@ node Actions :GraphNode: {
 
                 # execute the action's on_register ability for on registration inits
                 action_node.on_register();
-
+                                
                 # log success if all went well
                 self.logger.info(f"registered action: {action_node.label}");
-            }
+            }   
 
             # Handle child actions; only interact_actions can have child actions
             # we also cannot nest regular actions under interact_actions
@@ -510,8 +518,8 @@ node Actions :GraphNode: {
 
     can install_actions(agent_id:str, data: dict) {
         # accepts the list of action data and related configurations and coordinates the importation and registration of action packages
-
-        loaded_actions_data = self.load_action_packages(agent_id, data);
+        agent_node = &agent_id;
+        loaded_actions_data = self.load_action_packages(agent_id, data, jpr_api_key=agent_node.jpr_api_key);
         # if actions data is empty, quit right here with error
         if(not loaded_actions_data) {
             self.logger.error('no actions loaded; unable to proceed with actions install');
@@ -528,7 +536,7 @@ node Actions :GraphNode: {
 
         # Add systems exit action, last
         self ++> ExitInteractAction();
-
+        
         # Now call post_register() on each action to execute any setup code which relies on all actions being in place
         for action_node in self.get_all() {
             action_node.post_register();
@@ -564,11 +572,11 @@ node Actions :GraphNode: {
     }
 
     can queue_interact_actions(actions:list) -> list {
-        # accepts a list of interact actions and organizes them in an execution queue
-        # based on weights and precedence specified in _package.config.order
+        # accepts a list of interact actions and organizes them in an execution queue 
+        # based on weights and precedence specified in _package.config.order 
 
-        # this is the Jaclang equivalent of a lamda function
-        # return sorted(objects, key=lambda InteractAction:obj.weight)
+        # this is the Jaclang equivalent of a lamda function 
+        # return sorted(objects, key=lambda InteractAction:obj.weight)       
         return sorted(actions, key = with action:InteractAction can action.weight );
     }
 
@@ -583,7 +591,7 @@ walker _get_actions {
 
     obj __specs__ {
         # all graph_walkers are private by default, unless overridden
-        static has private: bool = True;
+        static has private: bool = True; 
     }
 
     can on_actions with Actions entry {
@@ -611,7 +619,7 @@ walker _get_interact_actions {
 
     obj __specs__ {
         # make this a private walker
-        static has private: bool = True;
+        static has private: bool = True; 
     }
 
     can on_actions with Actions entry {

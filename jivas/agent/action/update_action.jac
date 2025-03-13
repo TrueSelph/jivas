@@ -19,7 +19,7 @@ walker update_action :interact_graph_walker: {
 
     obj __specs__ {
         # make this walker visible in API
-        static has private: bool = False;
+        static has private: bool = False; 
     }
 
     can on_agent with Agent entry {
@@ -31,7 +31,7 @@ walker update_action :interact_graph_walker: {
     }
 
     can on_action with Action entry {
-
+        
         if(action_node:=here.update(data = self.action_data)) {
             report action_node.export();
         }

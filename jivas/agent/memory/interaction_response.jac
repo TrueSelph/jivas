@@ -19,17 +19,17 @@ obj InteractionMessage {
     can load(data:dict) {
         # loads a compatible interaction message data struct
         if (data) {
-            for attr in data.keys() {
+            for attr in data.keys() {                      
                 # set if attribute is a valid attribute
                 if (hasattr(self, attr)) {
                     setattr(self, attr, data[attr]);
-                }
+                } 
             }
         }
     }
-
+    
     can get_type() -> str {
-        return self.message_type;
+        return self.message_type; 
     }
 
     can set_meta(key:str, value: any) {
@@ -74,7 +74,7 @@ obj MediaInteractionMessage :InteractionMessage: {
 
     has message_type:str = MessageType.MEDIA.value;
     has mime:str = "";
-    has data:Any = None;
+    has data:Any = None;    
     has content:str = "";
 
     can has_content() -> bool {
@@ -94,11 +94,11 @@ obj MultiInteractionMessage :InteractionMessage: {
     can load(data:dict) {
         # loads a compatible interaction message data struct
         if (data) {
-            for attr in data.keys() {
+            for attr in data.keys() {                      
                 # set if attribute is a valid attribute
                 if (hasattr(self, attr)) {
                     setattr(self, attr, data[attr]);
-                }
+                } 
             }
         }
     }
@@ -137,8 +137,8 @@ obj MultiInteractionMessage :InteractionMessage: {
 
         if(self.content) {
             # for each item, instantiate the message object based on the set type
-            for content_item in self.content {
-
+            for content_item in self.content { 
+                
                 message = SilentInteractionMessage();
 
                 if(content_item.get('message_type') == MessageType.MULTI.value) {
@@ -147,7 +147,7 @@ obj MultiInteractionMessage :InteractionMessage: {
                     message = MediaInteractionMessage();
                 } elif (content_item.get('message_type') == MessageType.TEXT.value) {
                     message = TextInteractionMessage();
-                }
+                } 
 
                 message.load(content_item);
                 content_items.append(message);
@@ -168,11 +168,11 @@ obj InteractionResponse {
     can load(data:dict) {
         # loads a compatible interaction response data struct
         if (data) {
-            for attr in data.keys() {
+            for attr in data.keys() {                      
                 # set if attribute is a valid attribute
                 if (hasattr(self, attr)) {
                     setattr(self, attr, data[attr]);
-                }
+                } 
             }
         }
     }
@@ -217,7 +217,7 @@ obj InteractionResponse {
 
         return message;
     }
-
+ 
     can export(ignore_keys: list = ['__jac__']) {
         # convert the object to dictionary
         node_export = Utils.export_to_dict(self, ignore_keys);

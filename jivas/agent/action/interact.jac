@@ -78,24 +78,32 @@ walker interact :interact_graph_walker: {
         # if we have a resume action... head there instead
         # ensure we include a resume flag in the context_data of the
         # current interaction node for the benefit of action handlers
-
+    
         # the interact walk, sorts the interact actions by weight to preserve execution order before walk
-        visit here.queue_interact_actions(
-            [-->](`?InteractAction)(?enabled == True)
-        );
 
         if (resume_action_node := self.frame_node.get_resume_action(self.last_interaction_node)) {
             # add any resumption directives from the last interaction node of the frame...
             root_action_node = resume_action_node.get_root_action();
+            self.interaction_node.add_intent(root_action_node.label);
+            visit here.queue_interact_actions(
+                [-->](`?InteractAction)(?enabled == True)
+            );
+            
             if( self.subqueue_interact_action(resume_action_node, root_action_node) ) {
                 self.interaction_node.context_data["resumed"] = True;
             }
+        }
+        else{
+            queued_actions = here.queue_interact_actions(
+                [-->](`?InteractAction)(?enabled == True)
+            );
+            visit queued_actions;
         }
         self.logger.debug(f"Utterance: {self.utterance}");
     }
 
     can on_action with InteractAction entry {
-
+       
         # performs execute routine for action nodes
         result = {};
 
@@ -110,7 +118,7 @@ walker interact :interact_graph_walker: {
                 self.logger.debug(f"Touching: {here.label}");
                 self.execute = here.touch(visitor=self);
                 if (self.execute) {
-
+                    
                     # execute the action
                     self.logger.debug(f"Executing: {here.label}");
                     if (result := here.execute(visitor=self)) {
@@ -141,6 +149,9 @@ walker interact :interact_graph_walker: {
         # performs validation checks on the interaction
         try  {
             self.agent_node = &self.agent_id;
+            if(not self.agent_node) {
+                return False;
+            }
         } except Exception as e {
             Jac.get_context().status = 400;
             self.logger.error("invalid agent id");
@@ -334,10 +345,10 @@ walker interact :interact_graph_walker: {
 
     can dequeue_action(action_label:str, action_node:Optional[InteractAction]=None) {
         # dequeue the supplied action as the next action in the walk path
-
+        
         if(action_label) {
             action_node = self.agent_node.get_actions().get(action_label=action_label);
-        }
+        } 
 
         if(action_node) {
             self.dequeue_interact_action(action_node);
@@ -346,7 +357,7 @@ walker interact :interact_graph_walker: {
 
     can append_interact_action(interact_action: InteractAction) {
         # adds the interact action to the end of the active walk path (before exit)
-
+        
         # first grab exit action
         if (exit_action := self.agent_node.get_actions().get(action_label="ExitInteractAction") ) {
             exit_action_node_ref = None;
@@ -366,10 +377,10 @@ walker interact :interact_graph_walker: {
             visit interact_action;
             # then re-add the exit action after it
             self.__jac__.next.append(exit_action_node_ref);
-
-            return self.__jac__.next;
-
-
+    
+            return self.__jac__.next;                      
+               
+            
         } else {
             visit interact_action;
         }
@@ -387,7 +398,7 @@ walker interact :interact_graph_walker: {
                 }
             }
 
-            return self.__jac__.next;
+            return self.__jac__.next;                  
         }
 
         return None;
@@ -396,7 +407,7 @@ walker interact :interact_graph_walker: {
     can prepend_interact_action(interact_action: InteractAction) {
         # adds the interact action to the head of the active walk path
         if( self.dequeue_interact_action(interact_action) ) {
-
+    
             # backup the clean path
             path = self.__jac__.next;
             # reset the walk path
@@ -404,9 +415,9 @@ walker interact :interact_graph_walker: {
             # reinsert the interact action at the head of walk path
             visit interact_action;
             # restore the remaining walk path after the interact action
-            self.__jac__.next.extend(path);
+            self.__jac__.next.extend(path);  
 
-            return self.__jac__.next;
+            return self.__jac__.next;                         
         }
 
         return None;
@@ -414,19 +425,20 @@ walker interact :interact_graph_walker: {
 
     can subqueue_interact_action(interact_action: InteractAction, index_interact_action: InteractAction) {
         # adds the interact action to the head of a subset of the walk path following index interact action
-
+        
         if( interact_action and index_interact_action ) {
 
             if( (exit_action := self.agent_node.get_actions().get(action_label="ExitInteractAction"))
                 and self.in_next_queue(index_interact_action) ) {
-
+                jac_next_copy = self.__jac__.next.copy();
+                jac_trail = enumerate(jac_next_copy, start=0);
+                
                 # remove all actions from head up to and including index
-                for (i, node_ref) in enumerate(self.__jac__.next) {
+                for (i, node_ref) in jac_trail {
                     if (f'{node_ref.id}' == f'{index_interact_action.__jac__.id}') {
-                        self.__jac__.next.pop(i);
                         break;
                     } elif(f'{node_ref.id}' != f'{exit_action.__jac__.id}') {
-                        self.__jac__.next.pop(i);
+                        self.__jac__.next.pop(0);
                     }
                 }
             }
@@ -445,7 +457,7 @@ walker interact :interact_graph_walker: {
     can in_next_queue(action_node: InteractAction) -> bool {
         # checks if the action node is in the next queue
         if (action_node) {
-            for node_ref in self.__jac__.next {
+            for node_ref in self.__jac__.next{
                 if (f'{node_ref.id}' == f'{action_node.__jac__.id}') {
                     return True;
                 }
@@ -527,15 +539,15 @@ walker interact :interact_graph_walker: {
             # lets return the generated response, if we have one...
             has_response = self.interaction_node.has_response();
             if (has_response) {
-
+                
                 try  {
 
                     # set the message obj
                     self.message = self.interaction_node.get_message();
 
                     # prepare the response payload
-                    interaction_data = self.interaction_node.export();
-
+                    interaction_data = self.interaction_node.export(); 
+                    
                     # handle verbose mode
                     if (self.verbose) {
                         interaction_data['frame'] = self.frame_node.export();

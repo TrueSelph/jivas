@@ -4,10 +4,9 @@ import:py from logging { Logger }
 import:jac from jivas.agent.action.action { Action }
 import:py from jivas.agent.modules.agentlib.utils { Utils }
 
-
 node ModelAction :Action: {
     # Generic model action node architype for abstracted, standardized LLM interfacing
-
+    
     # set up logger
     static has logger:Logger = logging.getLogger(__name__);
 
@@ -15,17 +14,17 @@ node ModelAction :Action: {
     has model_name:str = "gpt-4o";
     has model_temperature:float = 0.7;
     has model_max_tokens:int = 2048;
-
+    
     # abstract invoke ability for the model meant to be overidden with specifics of model call
     can invoke(
-        prompt_messages:list,
-        prompt_variables:dict,
+        prompt_messages:list, 
+        prompt_variables:dict, 
         kwargs:dict = {}
     ) -> ModelActionResult abs;
 
     can call_model(
-        prompt_messages:list,
-        prompt_variables:dict,
+        prompt_messages:list, 
+        prompt_variables:dict, 
         kwargs:dict = {},
         interaction_node:Optional[Interaction]=None,
         logging:bool = False
@@ -45,7 +44,7 @@ node ModelAction :Action: {
                 interaction_node.context_data['ModelActionResult'].append(model_action_result.export());
                 # update token tally
                 interaction_node.add_tokens(model_action_result.get_tokens());
-
+                
             }
 
             if(logging) {
@@ -61,7 +60,7 @@ node ModelAction :Action: {
 }
 
 obj ModelActionResult {
-
+    
     # encapsulates a language model prompt, result and related tokens
     # this is meant to be instantiated with attr values and serve as the standard when interfacing with llms asyncronously
 

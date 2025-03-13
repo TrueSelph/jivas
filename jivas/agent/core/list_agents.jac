@@ -6,7 +6,7 @@ walker list_agents :graph_walker: {
 
     obj __specs__ {
         # make this walker visible in API
-        static has private: bool = False;
+        static has private: bool = False; 
     }
 
     can on_agents with Agents entry {

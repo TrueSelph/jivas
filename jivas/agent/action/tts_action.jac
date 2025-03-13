@@ -6,7 +6,6 @@ import:py traceback;
 import:py from logging { Logger }
 import:jac from action { Action }
 
-
 node TTSAction :Action: {
     # The Text-to-speech base action for all TTS actions.
 
@@ -30,7 +29,7 @@ node TTSAction :Action: {
         audio = None;
 
         # self.get_audio_file must be called in return statement
-        return self.get_audio_as(audio, as_base64, as_url);
+        return self.get_audio_as(audio, as_base64, as_url);  
     }
 
     can get_audio_as(audio:bytes, as_base64:bool=False, as_url:bool=False) {
@@ -45,22 +44,22 @@ node TTSAction :Action: {
             if(as_base64) {
                 # return a base 64 encoded representation of the audio file
                 return base64.b64encode(audio).decode('utf-8');
-            }
-
+            } 
+ 
             # Save the audio content to a file
             output_file_name = f"{str(uuid.uuid4())}.mp3";
-            output_file_path = f"{os.environ.get('JIVAS_FILES_ROOT_PATH','.files')}/{output_file_name}";
+            output_file_path = f"{os.environ.get('JIVAS_FILES_ROOT_PATH','.files')}/{output_file_name}";  
             # output the file
             with open(output_file_path, "wb") as audio_file {
                 audio_file.write(audio);
             }
 
             if(as_url) {
-                return f"{os.environ.get('JIVAS_FILES_URL','http://localhost:8000/files')}/{output_file_name}";
+                return f"{os.environ.get('JIVAS_FILES_URL','http://localhost:9000/files')}/{output_file_name}";
             }
 
             return os.path.abspath(output_file_path);
-
+                  
         } except Exception as e {
             self.logger.error(f"an exception occurred, {traceback.format_exc()}");
         }

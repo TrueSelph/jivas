@@ -20,7 +20,7 @@ node STTAction :Action: {
         # :return: text transcript of audio
         # """
 
-        # override with specifics of STT model then save in audio
+        # override with specifics of STT model then save in audio 
     }
 
     can invoke_base64(audio_base64:str, audio_type:str="audio/mp3") {
@@ -32,7 +32,7 @@ node STTAction :Action: {
         # :return: Transcription text
         # """
 
-        # override with specifics of STT model then save in audio
+        # override with specifics of STT model then save in audio 
     }
 
 }

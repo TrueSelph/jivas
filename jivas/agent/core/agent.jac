@@ -19,7 +19,7 @@ node Agent :GraphNode: {
     has name: str = "";
     has description: str = "";
     has descriptor: str = "";
-
+    has jpr_api_key: str = "";
     has agent_logging: bool = True; # when set, agent will log interactions
     has message_limit: int = 1024;
     has flood_block_time: int = 300; # in seconds
@@ -67,37 +67,37 @@ node Agent :GraphNode: {
 
     can get_tts_action() {
         # fetch text to speech action node if enabled and configured
-
+        
         if(tts_action_node := self.get_actions().get(action_label=self.tts_action)) {
             if(tts_action_node.enabled) {
                 return tts_action_node;
             }
         }
-
+        
         return None;
     }
 
     can get_stt_action() {
         # fetch speech to text action node if enabled and configured
-
+        
         if(stt_action_node := self.get_actions().get(action_label=self.stt_action)) {
             if(stt_action_node.enabled) {
                 return stt_action_node;
             }
         }
-
+        
         return None;
     }
 
     can get_vector_store_action() {
         # fetch vector store action node if enabled and configured
-
+        
         if(vector_store_action_node := self.get_actions().get(action_label=self.vector_store_action)) {
             if(vector_store_action_node.enabled) {
                 return vector_store_action_node;
             }
         }
-
+        
         return None;
     }
 
@@ -174,14 +174,14 @@ node Agent :GraphNode: {
 
 walker _export_actions {
     # retrieves a list of all actions and sub actions
-    # must be spawned on agent or actions node
+    # must be spawned on agent or actions node 
     has transient_export_attrs:list = ['_package'];
     has action_nodes: list = [];
     has node_index: dict = {};
 
     obj __specs__ {
         # make this a private walker
-        static has private: bool = True;
+        static has private: bool = True; 
     }
 
     can on_agent with Agent entry {
@@ -193,10 +193,10 @@ walker _export_actions {
     }
 
     can on_action with Action entry {
-
+        
         # skip over the exit action
         if(here.label != "ExitInteractAction") {
-
+            
             # handle any children (only for InteractActions)
             children = [];
 
@@ -209,7 +209,7 @@ walker _export_actions {
 
             self.node_index.update({
                 here.id: {
-                    "action": here._package['name'],
+                    "action": here._package['name'], 
                     "context": here.export(self.transient_export_attrs),
                     "children": children
                 }
@@ -218,7 +218,7 @@ walker _export_actions {
             # we're done here, don't revisit
             ignore here;
         }
-
+        
         # attempt to visit any child actions
         visit [-->](`?Action);
     }

@@ -18,13 +18,13 @@ node Memory :GraphNode: {
 
     # set up logger
     static has logger:Logger = logging.getLogger(__name__);
-
-    can get_frame(agent_id:str, session_id:str, force_session:bool=False) -> Frame {
+    
+    can get_frame(agent_id:str, session_id:str, force_session:bool=False, lookup:bool=False) -> Frame {
         # attempt to retrieve an existing session or spawn then traverse to a new one if force is on
 
-        frame_node = Utils.node_obj( [-->](`?Frame)(?session_id == session_id) );
+        frame_node = Utils.node_obj( [-->](`?Frame)(?session_id == session_id) ); 
 
-        if not frame_node {
+        if not frame_node and not lookup {
             if(force_session) {
                 frame_node = Frame(agent_id=agent_id, session_id = session_id);
             } else {
@@ -122,7 +122,7 @@ node Memory :GraphNode: {
     }
 
     can purge(session_id:str=None) {
-        # removes all frames and interactions (or by session_id)
+        # removes all frames and interactions (or by session_id) 
         return (self spawn _purge(session_id)).removed;
     }
 
@@ -149,7 +149,7 @@ walker _purge {
 
     obj __specs__ {
         # make this a private walker
-        static has private: bool = True;
+        static has private: bool = True; 
     }
 
     can on_memory with Memory entry {
@@ -170,7 +170,7 @@ walker _purge {
     can on_interaction with Interaction entry {
         visit [-:Retrace:->];
         self.removed.append(here);
-        Jac.destroy(here);
+        Jac.destroy(here);  
     }
 }
 
@@ -192,7 +192,7 @@ walker _export_memory {
 
     obj __specs__ {
         # make this a private walker
-        static has private: bool = True;
+        static has private: bool = True; 
     }
 
     can on_memory with Memory entry {
@@ -212,14 +212,14 @@ walker _export_memory {
     }
 
     can on_frame with Frame entry {
-
+        
         # grab interactions object
         interactions = here.get_interactions();
 
         # init interactions
         interaction_nodes = [];
 
-        # fix interaction object by exporting what we
+        # fix interaction object by exporting what we 
         for interaction_node in interactions {
             # add to interactions
             interaction_nodes.append({"interaction": {"context": interaction_node.export()}});
@@ -234,7 +234,7 @@ walker _export_memory {
                 }
             }
         );
-
+        
     }
 
     can export_memory with exit {
@@ -261,7 +261,7 @@ walker _export_memory {
                     json.dump(self.frame_data, outfile, indent=4);
                 }
             }
-
-        }
+            
+        } 
     }
 }

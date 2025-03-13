@@ -6,7 +6,7 @@ import:jac from app { App }
 import:jac from agents { Agents }
 
 walker graph_walker {
-    # base walker designed to traverse along app graph;
+    # base walker designed to traverse along app graph; 
     has agent_id: str = "";
     has reporting: bool = True;
 
@@ -15,7 +15,7 @@ walker graph_walker {
 
     obj __specs__ {
         # all graph_walkers are private by default, unless overridden
-        static has private: bool = True;
+        static has private: bool = True; 
     }
 
     can export(ignore_keys: list = ['__jac__']) {
@@ -27,11 +27,11 @@ walker graph_walker {
     can update(data: dict = {}) -> graph_walker {
         # updates a graph node; expects a dict of attribute names mapped to values for updating
         if(data) {
-            for attr in data.keys() {
+            for attr in data.keys() {                    
                 # check if attribute is a node attribute
                 if (hasattr(self, attr)) {
                     self.attr = data[attr];
-                }
+                } 
             }
         }
         self.postupdate();
@@ -42,13 +42,13 @@ walker graph_walker {
     can postupdate {
         # can be overriden to execute following a walker update
     }
-
+    
     can on_root with `root entry {
         # spawn app node if not there
         visit [-->](`?App) else {
             self.logger.debug('app node created');
             app_node = here ++> App();
-            visit app_node;
+            visit app_node;  
         }
     }
 
@@ -66,13 +66,13 @@ walker graph_walker {
         if(self.agent_id) {
 
             try {
-
+                
                 if(agent_node := &self.agent_id) {
-
+            
                     if agent_node.published {
                         visit agent_node;
                     }
-
+                
                 }
 
             } except Exception as e {
@@ -81,5 +81,5 @@ walker graph_walker {
                 disengage;
             }
         }
-    }
+    }    
 }

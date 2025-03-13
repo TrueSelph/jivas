@@ -10,7 +10,7 @@ import:jac from import_agent {import_agent}
 
 walker init_agents :graph_walker: {
     # initializes agents on the graph using the existing file-based descriptor
-
+    
     has reporting:bool = False;
 
     # set up logger
@@ -18,7 +18,7 @@ walker init_agents :graph_walker: {
 
     obj __specs__ {
         # make this walker visible in API
-        static has private: bool = False;
+        static has private: bool = False; 
     }
 
     can on_agents with Agents entry {
@@ -33,7 +33,7 @@ walker init_agents :graph_walker: {
                         self.logger.error(f"agent descriptor not found: {agent_node.descriptor}");
                         continue;
                     }
-
+                    
                     descriptor = "";
 
                     with open(agent_node.descriptor) as file {
@@ -50,5 +50,5 @@ walker init_agents :graph_walker: {
             }
         }
     }
-
+    
 }
