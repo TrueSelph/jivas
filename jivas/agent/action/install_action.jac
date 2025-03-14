@@ -44,7 +44,7 @@ walker install_action :graph_walker: {
 
         # Handle the actions entry point
         jpr_api_key = descriptor_data.get('jpr_api_key');
-        dep_action_info = agent_node.get_actions().get_action_info(namespace_package_name=self.package_name, version=self.version, jpr_api_key=jpr_api_key);
+        dep_action_info = here.get_actions().get_action_info(namespace_package_name=self.package_name, version=self.version, jpr_api_key=jpr_api_key);
 
         if(dep_action_info) {
             action_info = {
@@ -57,7 +57,7 @@ walker install_action :graph_walker: {
 
             action_exists = False;
             for action in descriptor_data['actions'] {
-                if(action['action'] == package_name) {
+                if(action['action'] == self.package_name) {
                     if(self.override_action) {
                         action['context'] = action_info['context'];
                     } else{
