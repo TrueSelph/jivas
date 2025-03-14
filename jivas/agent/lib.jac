@@ -15,7 +15,9 @@ import:jac from jivas.agent.action {
     pulse,
     list_actions,
     get_action,
-    update_action
+    update_action,
+    healthcheck,
+    install_action
 }
 
 import:jac from jivas.agent.analytics {
