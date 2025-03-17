@@ -79,11 +79,6 @@ jobs:
       - name: Build package
         run: python setup.py sdist bdist_wheel
 
-      - name: Changelog CI
-        uses: saadmk11/changelog-ci@v1.1.2
-        with:
-          release_version : ${{ needs.check-version.outputs.new_version }}
-
       - name: Publish to PyPI
         env:
           TWINE_USERNAME: __token__
