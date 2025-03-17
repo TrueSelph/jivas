@@ -41,7 +41,7 @@ setup(
     install_requires=[
         "jvcli>=2.0.10",
         "jvserve>=2.0.3",
-        "jaclang @ git+https://github.com/TrueSelph/jaseci.git@fast_import_v2#subdirectory=jac",
+        # "jaclang @ git+https://github.com/TrueSelph/jaseci.git@fast_import_v2#subdirectory=jac",
         "pytz>=2024.2",
         "types-pytz>=2024.2.0.20241003",
         "schedule>=1.2.2",
