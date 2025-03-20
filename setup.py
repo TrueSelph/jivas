@@ -40,7 +40,7 @@ setup(
     python_requires=">=3.12.0",
     install_requires=[
         "jvcli>=2.0.10",
-        "jvserve>=2.0.3",
+        "jvserve>=2.0.4",
         # "jaclang @ git+https://github.com/TrueSelph/jaseci.git@fast_import_v2#subdirectory=jac",
         "pytz>=2024.2",
         "types-pytz>=2024.2.0.20241003",
