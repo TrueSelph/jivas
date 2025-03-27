@@ -124,7 +124,7 @@ node Actions :GraphNode: {
             # if no action_info found locally, we fetch from package repo
             self.logger.info(f'attempting to fetch action info remotely for {namespace_package_name}={version}');
 
-            if( _info := RegistryAPI.get_action_info(namespace_package_name, version, api_key=jpr_api_key) ) {
+            if( _info := RegistryAPI.get_package_info(namespace_package_name, version, api_key=jpr_api_key) ) {
 
                 self.logger.info(f'found action info remotely for {namespace_package_name}={version}');
                 # set the package info
@@ -179,7 +179,13 @@ node Actions :GraphNode: {
     can load_pip_packages(action_data:dict) {
 
         loaded = True;
+
         pip_packages = action_data.get('context', {}).get('_package', {}).get('dependencies', {}).get('pip', {});
+        if(not pip_packages) {
+            return loaded;
+        }
+
+        self.logger.info(f"attempting to install pip package(s) {pip_packages}");
 
         for (package, version) in pip_packages.items() {
 
