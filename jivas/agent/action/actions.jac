@@ -519,8 +519,12 @@ node Actions :GraphNode: {
 
     can install_actions(agent_id:str, data: dict) {
         # accepts the list of action data and related configurations and coordinates the importation and registration of action packages
-        agent_node = &agent_id;
-        loaded_actions_data = self.load_action_packages(agent_id, data, jpr_api_key=agent_node.jpr_api_key);
+        loaded_actions_data = None;
+
+        if(agent_node := &agent_id) {
+            loaded_actions_data = self.load_action_packages(agent_id, data, jpr_api_key=agent_node.jpr_api_key);
+        }
+
         # if actions data is empty, quit right here with error
         if(not loaded_actions_data) {
             self.logger.error('no actions loaded; unable to proceed with actions install');
