@@ -1,6 +1,9 @@
+import:py inspect;
 import:py logging;
 import:py from logging { Logger }
 import:py from jivas.agent.modules.agentlib.utils { Utils }
+import:py from typing { Optional, Type, Union }
+import:py from dataclasses { fields, MISSING }
 
 node GraphNode {
     # base graph node for all nodes in agent graph, under app node.
@@ -34,19 +37,38 @@ node GraphNode {
         return type(super()).__name__;
     }
 
-    can export(ignore_keys: list = []) {
+    can export(ignore_keys: list = [], modified_context: bool = False) -> dict {
 
-        # set the keys to ignore
-        ignore_keys = ignore_keys + self.transient_attrs;
-        # convert the object to dictionary
-        node_export = Utils.export_to_dict(self, ignore_keys);
-        # we have to merge contents of _context into top-level dict; _context contains injected attributes
-        if (isinstance(node_export['_context'], dict)) {
-            node_export.update(node_export['_context']);
-            # now remove the original _context
-            del node_export['_context'];
+        if(modified_context) {
+            ignore_keys = ignore_keys + self.transient_attrs;
+
+            cls = type(self);
+            default_values = {};
+            for f in fields(self){
+                if f.default is not MISSING{
+                    default_values[f.name] = f.default;
+                }
+                elif f.default_factory is not MISSING{
+                    default_values[f.name] = f.default_factory();
+                }
+            }
+
+            node_export = Utils.export_to_dict(self, ignore_keys);
+            return Utils.sanitize_dict_context(descriptor_data = node_export, action_data = default_values, keys_to_remove= ignore_keys);
+
+        } else {
+            # set the keys to ignore
+            ignore_keys = ignore_keys + self.transient_attrs;
+            # convert the object to dictionary
+            node_export = Utils.export_to_dict(self, ignore_keys);
+            # we have to merge contents of _context into top-level dict; _context contains injected attributes
+            if (isinstance(node_export['_context'], dict)) {
+                node_export.update(node_export['_context']);
+                # now remove the original _context
+                del node_export['_context'];
+            }
+            return node_export;
         }
-        return node_export;
     }
 
     can update(data: dict = {}) -> GraphNode {

@@ -1,5 +1,6 @@
 import:py io;
 import:py os;
+import:py re;
 import:py subprocess;
 import:py pkg_resources;
 import:py sys;
@@ -75,6 +76,15 @@ node Actions :GraphNode: {
         return ((self spawn _get_actions(filter_enabled=filter_enabled_actions)).action_nodes);
     }
 
+    can queue_interact_actions(actions:list) -> list {
+        # accepts a list of interact actions and organizes them in an execution queue
+        # based on weights and precedence specified in _package.config.order
+
+        # this is the Jaclang equivalent of a lamda function
+        # return sorted(objects, key=lambda InteractAction:obj.weight)
+        return sorted(actions, key = with action:InteractAction can action.weight );
+    }
+
     can get_action_info(namespace_package_name:str, version:str=None, jpr_api_key:str=None) {
         # retrieves the info.yaml data for a named action by version either locally first or on package manager
 
@@ -124,7 +134,7 @@ node Actions :GraphNode: {
             # if no action_info found locally, we fetch from package repo
             self.logger.info(f'attempting to fetch action info remotely for {namespace_package_name}={version}');
 
-            if( _info := RegistryAPI.get_action_info(namespace_package_name, version, api_key=jpr_api_key) ) {
+            if( _info := RegistryAPI.get_package_info(namespace_package_name, version, api_key=jpr_api_key) ) {
 
                 self.logger.info(f'found action info remotely for {namespace_package_name}={version}');
                 # set the package info
@@ -140,6 +150,161 @@ node Actions :GraphNode: {
 
         return action_info;
     }
+
+    can import_action(action_data:dict) {
+        # prepares the module path to lib.jac and imports the module
+        module_root = action_data.get('context', {}).get('_package', {}).get('config', {}).get('module_root', None);
+
+        if(module_root) {
+            jac_import(f"{module_root}.lib", base_path="./");
+            return True;
+        }
+
+        return False;
+    }
+
+    can register_action(action_data: dict, parent: str="") -> Action {
+        # registers an agent action
+        # expects an action descriptor object with optional architype source embeddings;
+        action_node = None;
+
+        if(not action_data) {
+            self.logger.error(f"unable to register action {label}, missing or invalid action data");
+            return None;
+        }
+
+        label = action_data.get('context', {}).get('label', action_data.get('action', None));
+        architype = action_data.get('context', {}).get('_package', {}).get('architype', None);
+        module = action_data.get('context', {}).get('_package', {}).get('config', {}).get('module', None);
+        singleton = action_data.get('context', {}).get('_package', {}).get('config', {}).get('singleton', False);
+        action_type = action_data.get('context', {}).get('_package', {}).get('meta', {}).get('type','action');
+
+        if (not architype or not module or not label) {
+            self.logger.error(f"unable to register action {label}, missing label, architype or module name");
+            return None;
+        }
+
+        try  {
+
+            if (singleton) {
+                # check if action is a singleton action with duplicate type
+                if (existing_action := self.get(action_type=label)) {
+                    self.logger.error(f"action already exists: {label}");
+                    return None;
+                }
+            } elif (existing_action := (self.get(action_label=label))) {
+                # check if non singleton action has unique label
+                self.logger.error(f"action already exists: {existing_action.label}");
+                return None;
+            }
+
+            # register action
+            # TODO: add a check here before node register in cases where this is an init
+            # and the node architype props changed compared to saved descriptor
+            self.logger.info(f"Registering action {label} with architype {architype} from module {module}");
+            action_node = AgentInterface.spawn_node(
+                node_name=architype,
+                attributes=action_data.get('context', {}),
+                module_name=module
+            );
+
+            # at this point all architypes related to this action are registered, let's map
+            if (action_node) {
+                # get action parent node
+                if (not parent) {
+                    action_parent_node = self;
+                } else {
+                    action_parent_node = self.get_by_type(action_type=parent);
+                }
+                # map the action
+                action_parent_node ++> action_node;
+
+                # execute the action's on_register ability for on registration inits
+                action_node.on_register();
+
+                # log success if all went well
+                self.logger.info(f"registered action: {action_node.label}");
+            }
+
+            # Handle child actions; only interact_actions can have child actions
+            # we also cannot nest regular actions under interact_actions
+            if ("children" in action_data and action_type == 'interact_action') {
+                for child_data in action_data["children"] {
+                    self.register_action(
+                        action_data=child_data,
+                        parent=architype
+                    );
+                }
+            }
+
+        } except Exception as e {
+            self.logger.error(
+                f"an exception occurred wile registering action {label}, {traceback.format_exc()}"
+            );
+        }
+
+    }
+
+    can install_actions(agent_id:str, data: dict, jpr_api_key:str=None) {
+        # accepts the list of action data and related configurations and coordinates the importation and registration of action packages
+        loaded_actions_data = None;
+
+        if(agent_id) {
+            loaded_actions_data = self.load_action_packages(agent_id, data, jpr_api_key=jpr_api_key);
+        }
+
+        # if actions data is empty, quit right here with error
+        if(not loaded_actions_data) {
+            self.logger.error('no actions loaded; unable to proceed with actions install');
+            return None;
+        }
+
+        # purge all actions and related imported modules
+        self.deregister_actions();
+
+        # now register all the action nodes on loaded action data...
+        for action_data in loaded_actions_data {
+            self.register_action(action_data=action_data);
+        }
+
+        # Add systems exit action, last
+        self ++> ExitInteractAction();
+
+        # Now call post_register() on each action to execute any setup code which relies on all actions being in place
+        for action_node in self.get_all() {
+            action_node.post_register();
+        }
+    }
+
+    can deregister_action(action_type: str="", action_label: str="") {
+        # gracefully disposes of each action, calling the on_deregister on each action node before destruction
+        # can perform deregistration by type or by label
+
+        target = [];
+
+        if action_type and not action_label {
+            target = self.get_by_type(action_type);
+        } elif action_label and not action_type {
+            target.append(self.get_by_label(action_label));
+        }
+        for action_node in target {
+            action_node.on_deregister();
+            # TODO: remove the action module folder and related modules
+            Jac.destroy(action_node);
+        }
+
+    }
+
+    can deregister_actions() {
+        # gracefully disposes of each action, calling the on_deregister on each action node before destruction
+        for action_node in self.get_all() {
+            action_node.on_deregister();
+            # TODO: remove the action module folder and related modules
+            Jac.destroy(action_node);
+        }
+    }
+
+    # UTILS
 
     can index_action_data(data:dict) {
         # returns a flat dictionary of action data where the key is the action package name and value is the action data
@@ -164,57 +329,94 @@ node Actions :GraphNode: {
         return action_data_index;
     }
 
-    can import_action(action_data:dict) {
-        # prepares the module path to lib.jac and imports the module
-        module_root = action_data.get('context', {}).get('_package', {}).get('config', {}).get('module_root', None);
+    can index_pip_packages(indexed_action_data:dict) {
+        # returns a flat dictionary of pip packages where the key is the package name and value is the package version
+        pip_packages_index = {};
 
-        if(module_root) {
-            jac_import(f"{module_root}.lib", base_path="./");
-            return True;
-        }
-
-        return False;
-    }
-
-    can load_pip_packages(action_data:dict) {
-
-        loaded = True;
-        pip_packages = action_data.get('context', {}).get('_package', {}).get('dependencies', {}).get('pip', {});
-
-        for (package, version) in pip_packages.items() {
-
-            package_with_version = f"{package}=={version}";
-            try {
-                if(not self.has_pip_package(package, version)) {
-                    subprocess.check_call([sys.executable, "-m", "pip", "install", package_with_version, "--root-user-action=ignore"]);
-                }
-                if(self.has_pip_package(package, version)) {
-                    self.logger.info(f"pip package installed {package_with_version}");
-                    loaded = True;
-                } else {
-                    loaded = False;
-                    break;
-                }
-            } except subprocess.CalledProcessError as e {
-                self.logger.error(f"failed to install {package_with_version}. Error: {e}");
-                loaded = False;
-                break;
+        for (namespace_package_name, action_data) in indexed_action_data.items() {
+            if(pip_packages := action_data.get('context', {}).get('_package', {}).get('dependencies', {}).get('pip', {})) {
+                pip_packages_index.update(pip_packages);
             }
         }
 
-        return loaded;
+        return pip_packages_index;
+    }
+
+    can batch_pip_package_install(packages:dict) {
+        # """
+        # Installs multiple pip packages quietly, non-interactively,
+        # and auto-resolving conflicts. If no operator is provided in
+        # version spec, '==' is assumed.
+
+        # Args:
+        #     packages (dict): Dictionary in {"package": "[operator]version"} format.
+        #                     e.g. {"numpy": "1.23.0", "pandas": ">=1.5.0"}
+        #     quiet (bool): Runs pip install quietly if True.
+        #     resolve_conflicts (bool): Aggressively resolve package version conflicts.
+
+        # Returns:
+        #     None
+        # """
+
+        package_specs = [];
+
+        for (pkg, ver) in packages.items() {
+            if (not ver) {
+                package_specs.append(pkg);
+            }
+            elif ( bool(re.match(r'^(==|>=|<=|>|<|~=|!=)', ver)) ) {
+                package_specs.append(f"{pkg}{ver}");
+            }
+            else {
+                package_specs.append(f"{pkg}=={ver}");
+            }
+        }
+
+        command = [sys.executable, "-m", "pip", "install", "--upgrade", "--no-input"];
+        command.extend(package_specs);
+
+        self.logger.info(f"Attempting to install package dependencies: {package_specs}");
+
+        try {
+            subprocess.run(command, check=True, stderr=None, stdout=None);
+            self.logger.info("Packages dependencies installed successfully.");
+
+        } except subprocess.CalledProcessError as e {
+            self.logger.error(f"An error occurred while installing one or more package dependencies. There may be a conflict or a missing package.");
+        }
+    }
+
+    can has_pip_packages(packages:dict) {
+        # """
+        # Checks if multiple pip packages are installed.
+
+        # Args:
+        #     packages (dict): Dictionary in {"package": "version"} format.
+        #                     e.g. {"numpy": ">=1.23.0", "pandas": "1.5.0"}
+
+        # Returns:
+        #     bool: True if all packages are installed and versions match, otherwise False.
+        # """
+
+        for (pkg, ver) in packages.items() {
+            if (not self.has_pip_package(pkg, ver)) {
+                return False;
+            }
+        }
+
+        return True;
     }
 
     can has_pip_package(package_name:str, version:str=None) {
         # """
-        # Checks if a pip package is installed and optionally verifies the version.
+        # Checks if a pip package is installed and optionally verifies the version with optional comparator operators.
 
         # Parameters:
         # package_name (str): The name of the package to check.
-        # version (str, optional): The specific version to check for. Defaults to None.
+        # version (str, optional): The specific version to check for, with optional comparator operators (e.g., >=, <=, etc.). Defaults to None.
 
         # Returns:
-        # bool: True if the package is installed and the version matches (if specified), otherwise False.
+        # bool: True if the package is installed and the version matches the condition (if specified), otherwise False.
         # """
         try {
             package_distribution = pkg_resources.get_distribution(package_name);
@@ -223,8 +425,12 @@ node Actions :GraphNode: {
                 # If no version is specified, simply confirm the package is installed
                 return True;
             } else {
+                # If no operator is detected, assume '=='
+                if (not re.match(r'^(==|>=|<=|>|<|~=|!=)', version)) {
+                    version = f"=={version}";
+                }
                 # Compare the installed package's version with the specified version
-                return package_distribution.version == version;
+                return pkg_resources.parse_version(package_distribution.version) in pkg_resources.Requirement.parse(f"{package_name}{version}");
             }
         } except pkg_resources.DistributionNotFound {
             return False;
@@ -315,6 +521,10 @@ node Actions :GraphNode: {
         # make sure we upgrade pip before we proceed
         subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "pip", "--root-user-action=ignore"]);
 
+        # preprocess all pip depenedencies and install them in batch
+        indexed_pip_packages = self.index_pip_packages(action_data_index);
+        self.batch_pip_package_install(indexed_pip_packages);
+
         # make a working copy to iterate thru
         action_data_index_copy = action_data_index.copy();
         for (namespace_package_name, action_data) in action_data_index_copy.items() {
@@ -384,7 +594,7 @@ node Actions :GraphNode: {
             }
 
             # now we load the pip packages that aren't loaded
-            if(self.load_pip_packages(action_data)) {
+            if(self.has_pip_packages( action_data.get('context', {}).get('_package', {}).get('dependencies', {}).get('pip', {}) )) {
                 # once successful, we import the action modules into runtime
                 self.import_action(action_data);
             } else {
@@ -433,152 +643,6 @@ node Actions :GraphNode: {
 
         # assign ordering weights to all interact actions then return
         return Utils.order_interact_actions(action_data_index.values());
-    }
-
-    can register_action(action_data: dict, parent: str="") -> Action {
-        # registers an agent action
-        # expects an action descriptor object with optional architype source embeddings;
-        action_node = None;
-
-        if(not action_data) {
-            self.logger.error(f"unable to register action {label}, missing or invalid action data");
-            return None;
-        }
-
-        label = action_data.get('context', {}).get('label', action_data.get('action', None));
-        architype = action_data.get('context', {}).get('_package', {}).get('architype', None);
-        module = action_data.get('context', {}).get('_package', {}).get('config', {}).get('module', None);
-        singleton = action_data.get('context', {}).get('_package', {}).get('config', {}).get('singleton', False);
-        action_type = action_data.get('context', {}).get('_package', {}).get('meta', {}).get('type','action');
-
-        if (not architype or not module or not label) {
-            self.logger.error(f"unable to register action {label}, missing label, architype or module name");
-            return None;
-        }
-
-        try  {
-
-            if (singleton) {
-                # check if action is a singleton action with duplicate type
-                if (existing_action := self.get(action_type=label)) {
-                    self.logger.error(f"action already exists: {label}");
-                    return None;
-                }
-            } elif (existing_action := (self.get(action_label=label))) {
-                # check if non singleton action has unique label
-                self.logger.error(f"action already exists: {existing_action.label}");
-                return None;
-            }
-
-            # register action
-            # TODO: add a check here before node register in cases where this is an init
-            # and the node architype props changed compared to saved descriptor
-            self.logger.info(f"Registering action {label} with architype {architype} from module {module}");
-            action_node = AgentInterface.spawn_node(
-                node_name=architype,
-                attributes=action_data.get('context', {}),
-                module_name=module
-            );
-
-            # at this point all architypes related to this action are registered, let's map
-            if (action_node) {
-                # get action parent node
-                if (not parent) {
-                    action_parent_node = self;
-                } else {
-                    action_parent_node = self.get_by_type(action_type=parent);
-                }
-                # map the action
-                action_parent_node ++> action_node;
-
-                # execute the action's on_register ability for on registration inits
-                action_node.on_register();
-
-                # log success if all went well
-                self.logger.info(f"registered action: {action_node.label}");
-            }
-
-            # Handle child actions; only interact_actions can have child actions
-            # we also cannot nest regular actions under interact_actions
-            if ("children" in action_data and action_type == 'interact_action') {
-                for child_data in action_data["children"] {
-                    self.register_action(
-                        action_data=child_data,
-                        parent=architype
-                    );
-                }
-            }
-
-        } except Exception as e {
-            self.logger.error(
-                f"an exception occurred wile registering action {label}, {traceback.format_exc()}"
-            );
-        }
-
-    }
-
-    can install_actions(agent_id:str, data: dict) {
-        # accepts the list of action data and related configurations and coordinates the importation and registration of action packages
-        agent_node = &agent_id;
-        loaded_actions_data = self.load_action_packages(agent_id, data, jpr_api_key=agent_node.jpr_api_key);
-        # if actions data is empty, quit right here with error
-        if(not loaded_actions_data) {
-            self.logger.error('no actions loaded; unable to proceed with actions install');
-            return None;
-        }
-
-        # purge all actions and related imported modules
-        self.deregister_actions();
-
-        # now register all the action nodes on loaded action data...
-        for action_data in loaded_actions_data {
-            self.register_action(action_data=action_data);
-        }
-
-        # Add systems exit action, last
-        self ++> ExitInteractAction();
-
-        # Now call post_register() on each action to execute any setup code which relies on all actions being in place
-        for action_node in self.get_all() {
-            action_node.post_register();
-        }
-    }
-
-    can deregister_action(action_type: str="", action_label: str="") {
-        # gracefully disposes of each action, calling the on_deregister on each action node before destruction
-        # can perform deregistration by type or by label
-
-        target = [];
-
-        if action_type and not action_label {
-            target = self.get_by_type(action_type);
-        } elif action_label and not action_type {
-            target.append(self.get_by_label(action_label));
-        }
-        for action_node in target {
-            action_node.on_deregister();
-            # TODO: remove the action module folder and related modules
-            Jac.destroy(action_node);
-        }
-
-    }
-
-    can deregister_actions() {
-        # gracefully disposes of each action, calling the on_deregister on each action node before destruction
-        for action_node in self.get_all() {
-            action_node.on_deregister();
-            # TODO: remove the action module folder and related modules
-            Jac.destroy(action_node);
-        }
-    }
-
-    can queue_interact_actions(actions:list) -> list {
-        # accepts a list of interact actions and organizes them in an execution queue
-        # based on weights and precedence specified in _package.config.order
-
-        # this is the Jaclang equivalent of a lamda function
-        # return sorted(objects, key=lambda InteractAction:obj.weight)
-        return sorted(actions, key = with action:InteractAction can action.weight );
     }
 
 }

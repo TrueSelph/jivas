@@ -158,7 +158,7 @@ walker interact :interact_graph_walker: {
             return False;
         }
 
-        # load config from agent_node or defaults
+        # load config from jivas.agent_node or defaults
         message_limit = self.agent_node.message_limit;
         flood_block_time = self.agent_node.flood_block_time;
         window_time = self.agent_node.window_time;

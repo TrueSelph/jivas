@@ -12,6 +12,7 @@ from datetime import datetime
 from typing import Any, DefaultDict, Dict, List, Optional
 from uuid import UUID
 
+import ftfy
 import pytz  # To handle timezones
 import requests
 import yaml
@@ -687,3 +688,67 @@ class Utils:
             return name_parts[0]
         else:
             return ""
+
+    @staticmethod
+    def normalize_text(text: str) -> str:
+        """
+        Normalizes a string by:
+        - Stripping whitespace.
+        - Fixing text encoding.
+        - Removing non-word characters.
+
+        :param text: Input string.
+        :return: Normalized string.
+        """
+        text = text.strip().replace("\\n", "\n")
+        text = ftfy.fix_text(text)
+        return re.sub(r"\W+", "", text)
+
+    @staticmethod
+    def sanitize_dict_context(
+        descriptor_data: dict, action_data: dict, keys_to_remove: list
+    ) -> dict:
+        """
+        Cleans and sanitizes descriptor_data by:
+        - Removing keys that match in descriptor_data and action_data.
+        - Logging warnings for mismatched values.
+        - Removing empty values except boolean `False`.
+        - Removing keys listed in keys_to_remove.
+
+        :param descriptor_data: Dictionary containing descriptor data.
+        :param action_data: Dictionary containing action data.
+        :param keys_to_remove: List of keys to remove.
+        :return: Sanitized dictionary.
+        """
+        logger = logging.getLogger(__name__)
+
+        # Check for matching keys and remove them if they match
+        for key in list(action_data.keys()):
+            if key in descriptor_data:
+                if isinstance(descriptor_data[key], str):
+                    str1 = Utils.normalize_text(descriptor_data[key])
+                    str2 = Utils.normalize_text(action_data[key])
+
+                    if str1 == str2:
+                        del descriptor_data[key]
+                    else:
+                        logger.warning(f"No str match for key: {key}")
+                else:
+                    if descriptor_data[key] == action_data[key]:
+                        del descriptor_data[key]
+                    else:
+                        logger.warning(f"No match for key: {key}")
+
+        # Prepare keys to remove
+        to_remove_key = list(keys_to_remove)
+
+        # Remove empty values (except boolean False)
+        for key in list(descriptor_data.keys()):
+            if not descriptor_data[key] and not isinstance(descriptor_data[key], bool):
+                to_remove_key.append(key)
+
+        # Remove specified keys
+        for key in to_remove_key:
+            descriptor_data.pop(key, None)
+
+        return descriptor_data
