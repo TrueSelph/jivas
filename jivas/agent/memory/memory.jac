@@ -244,22 +244,20 @@ walker _export_memory {
         # output the yaml
         if(None) {
             # create file path
-            self.file_path = f"{os.getenv("JIVAS_FILES_ROOT_PATH")}/{str(uuid.uuid4())}";
+            file_name = f"memory/{str(uuid.uuid4())}";
 
             if(not self.json){
                 # set file path
-                self.file_path = f"{self.file_path}.yaml";
+                self.file_path = f"{file_name}.yaml";
 
                 # write to file
                 Utils.dump_yaml_file(self.file_path, self.frame_data);
             }else{
                 # set file path
-                self.file_path = f"{self.file_path}.json";
+                self.file_path = f"{file_name}.json";
 
                 # write to file
-                with open(self.file_path, "w") as outfile{
-                    json.dump(self.frame_data, outfile, indent=4);
-                }
+                Utils.dump_json_file(self.file_path, self.frame_data);
             }
 
         }

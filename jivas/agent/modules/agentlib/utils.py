@@ -16,9 +16,21 @@ import ftfy
 import pytz  # To handle timezones
 import requests
 import yaml
-from jvserve.lib.file_interface import file_interface
+from jvserve.lib.file_interface import (
+    file_interface,
+    FILE_INTERFACE,
+    get_file_interface,
+)
+
+from copy import deepcopy
 
 logger = logging.getLogger(__name__)
+
+# ensure .jvdata is the root as it contains sensitive data which we don't
+# want served by jvcli jvfileserve
+jvdata_file_interface = (
+    get_file_interface("") if FILE_INTERFACE == "local" else file_interface
+)
 
 
 class LongStringDumper(yaml.SafeDumper):
@@ -86,10 +98,16 @@ class Utils:
                 default_flow_style=False,
                 sort_keys=False,
             )
-            file_interface.save_file(file_path, yaml_output.encode("utf-8"))
+            jvdata_file_interface.save_file(file_path, yaml_output.encode("utf-8"))
             logger.debug(f"Descriptor successfully written to {file_path}")
         except IOError:
             logger.error(f"Error writing to descriptor file {file_path}")
+
+    @staticmethod
+    def dump_json_file(file_path: str, data: dict) -> None:
+        jvdata_file_interface.save_file(
+            file_path, json.dumps(data, indent=4).encode("utf-8")
+        )
 
     @staticmethod
     def path_to_module(path: str) -> str:
