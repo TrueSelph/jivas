@@ -17,12 +17,10 @@ import pytz  # To handle timezones
 import requests
 import yaml
 from jvserve.lib.file_interface import (
-    file_interface,
     FILE_INTERFACE,
+    file_interface,
     get_file_interface,
 )
-
-from copy import deepcopy
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +103,7 @@ class Utils:
 
     @staticmethod
     def dump_json_file(file_path: str, data: dict) -> None:
+        """Dump data to a JSON file."""
         jvdata_file_interface.save_file(
             file_path, json.dumps(data, indent=4).encode("utf-8")
         )
