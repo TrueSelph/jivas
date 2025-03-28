@@ -1,4 +1,5 @@
 import:py os;
+import:py io;
 import:py yaml;
 import:py logging;
 import:py traceback;
@@ -8,6 +9,7 @@ import:jac from jivas.agent.core.agent {Agent}
 import:jac from jivas.agent.action.actions { Actions }
 import:jac from jivas.agent.core.graph_walker {graph_walker}
 import:jac from jivas.agent.core.import_agent {import_agent}
+import:py from jvserve.lib.file_interface { file_interface }
 
 walker install_action :graph_walker: {
     # installs a single action on an agent
@@ -29,9 +31,9 @@ walker install_action :graph_walker: {
         descriptor_data = None;
 
         try {
-            with open(here.descriptor, 'r') as file {
-                descriptor_data = yaml.safe_load(file);
-            }
+        	file_bytes = file_interface.get_file(here.descriptor);
+			file = io.BytesIO(file_bytes);
+            descriptor_data = yaml.safe_load(file);
 
             if(not descriptor_data) {
                 self.logger.error(f"unable to load descriptor: {here.descriptor}");

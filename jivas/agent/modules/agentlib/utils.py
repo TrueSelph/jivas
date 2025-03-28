@@ -15,6 +15,7 @@ from uuid import UUID
 import pytz  # To handle timezones
 import requests
 import yaml
+from jvserve.lib.file_interface import file_interface
 
 logger = logging.getLogger(__name__)
 
@@ -49,9 +50,6 @@ class Utils:
 
         descriptor_path = os.environ.get("JIVAS_DESCRIPTOR_ROOT_PATH", ".jvdata")
 
-        if not os.path.exists(descriptor_path):
-            os.makedirs(descriptor_path)
-
         return descriptor_path
 
     @staticmethod
@@ -80,15 +78,14 @@ class Utils:
     def dump_yaml_file(file_path: str, data: dict) -> None:
         """Dump data to a YAML file."""
         try:
-            with open(file_path, "w") as file:
-                yaml_output = yaml.dump(
-                    data,
-                    Dumper=LongStringDumper,
-                    allow_unicode=True,
-                    default_flow_style=False,
-                    sort_keys=False,
-                )
-                file.write(yaml_output)
+            yaml_output = yaml.dump(
+                data,
+                Dumper=LongStringDumper,
+                allow_unicode=True,
+                default_flow_style=False,
+                sort_keys=False,
+            )
+            file_interface.save_file(file_path, yaml_output.encode("utf-8"))
             logger.debug(f"Descriptor successfully written to {file_path}")
         except IOError:
             logger.error(f"Error writing to descriptor file {file_path}")
@@ -392,7 +389,7 @@ class Utils:
 
     @staticmethod
     def order_interact_actions(
-        actions_data: List[Dict[str, Any]]
+        actions_data: List[Dict[str, Any]],
     ) -> Optional[List[Dict[str, Any]]]:
         """Order interact actions based on their dependencies and weights."""
         if not actions_data:
