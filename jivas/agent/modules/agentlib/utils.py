@@ -16,8 +16,19 @@ import ftfy
 import pytz  # To handle timezones
 import requests
 import yaml
+from jvserve.lib.file_interface import (
+    FILE_INTERFACE,
+    file_interface,
+    get_file_interface,
+)
 
 logger = logging.getLogger(__name__)
+
+# ensure .jvdata is the root as it contains sensitive data which we don't
+# want served by jvcli jvfileserve
+jvdata_file_interface = (
+    get_file_interface("") if FILE_INTERFACE == "local" else file_interface
+)
 
 
 class LongStringDumper(yaml.SafeDumper):
@@ -50,9 +61,6 @@ class Utils:
 
         descriptor_path = os.environ.get("JIVAS_DESCRIPTOR_ROOT_PATH", ".jvdata")
 
-        if not os.path.exists(descriptor_path):
-            os.makedirs(descriptor_path)
-
         return descriptor_path
 
     @staticmethod
@@ -81,18 +89,24 @@ class Utils:
     def dump_yaml_file(file_path: str, data: dict) -> None:
         """Dump data to a YAML file."""
         try:
-            with open(file_path, "w") as file:
-                yaml_output = yaml.dump(
-                    data,
-                    Dumper=LongStringDumper,
-                    allow_unicode=True,
-                    default_flow_style=False,
-                    sort_keys=False,
-                )
-                file.write(yaml_output)
+            yaml_output = yaml.dump(
+                data,
+                Dumper=LongStringDumper,
+                allow_unicode=True,
+                default_flow_style=False,
+                sort_keys=False,
+            )
+            jvdata_file_interface.save_file(file_path, yaml_output.encode("utf-8"))
             logger.debug(f"Descriptor successfully written to {file_path}")
         except IOError:
             logger.error(f"Error writing to descriptor file {file_path}")
+
+    @staticmethod
+    def dump_json_file(file_path: str, data: dict) -> None:
+        """Dump data to a JSON file."""
+        jvdata_file_interface.save_file(
+            file_path, json.dumps(data, indent=4).encode("utf-8")
+        )
 
     @staticmethod
     def path_to_module(path: str) -> str:
@@ -393,7 +407,7 @@ class Utils:
 
     @staticmethod
     def order_interact_actions(
-        actions_data: List[Dict[str, Any]]
+        actions_data: List[Dict[str, Any]],
     ) -> Optional[List[Dict[str, Any]]]:
         """Order interact actions based on their dependencies and weights."""
         if not actions_data:
