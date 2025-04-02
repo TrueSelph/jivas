@@ -1131,3 +1131,58 @@ class TestUtils:
 
         # Assert
         assert result == ""
+
+    def test_is_version_compatible_with_exact_match(self) -> None:
+        """is_version_compatible correctly handles exact version matches and version ranges."""
+        assert Utils.is_version_compatible("1.0.0", "1.0.0") is True
+        assert Utils.is_version_compatible("2.1.0", ">=2.0.0,<3.0.0") is True
+        assert Utils.is_version_compatible("1.0.0", "^1.0.0") is True
+
+    def test_is_version_compatible_with_incompatible_versions(self) -> None:
+        """is_version_compatible returns False for incompatible versions."""
+        assert Utils.is_version_compatible("1.0.0", "2.0.0") is False
+        assert Utils.is_version_compatible("1.0.0", ">=2.0.0,<3.0.0") is False
+        assert Utils.is_version_compatible("1.0.0", "^2.0.0") is False
+
+    def test_is_version_compatible_with_invalid_version(self) -> None:
+        """is_version_compatible handles invalid version inputs gracefully."""
+        assert Utils.is_version_compatible("invalid_version", "1.0.0") is False
+        assert Utils.is_version_compatible("1.0.0", "invalid_specifier") is False
+        assert (
+            Utils.is_version_compatible("invalid_version", "invalid_specifier") is False
+        )
+
+    def test_is_version_compatible_with_shorthand_tilde(self) -> None:
+        """is_version_compatible correctly handles shorthand '~' specifier."""
+        assert Utils.is_version_compatible("1.2.3", "~1.2.0") is True
+        assert Utils.is_version_compatible("1.3.0", "~1.2.0") is False
+        assert Utils.is_version_compatible("1.2.0", "~1.2.0") is True
+
+    def test_is_version_compatible_with_shorthand_caret(self) -> None:
+        """is_version_compatible correctly handles shorthand '^' specifier."""
+        assert Utils.is_version_compatible("1.2.3", "^1.2.0") is True
+        assert Utils.is_version_compatible("2.0.0", "^1.2.0") is False
+        assert Utils.is_version_compatible("0.2.3", "^0.2.0") is True
+        assert Utils.is_version_compatible("0.3.0", "^0.2.0") is False
+
+    def test_is_version_compatible_with_edge_cases(self) -> None:
+        """is_version_compatible handles edge cases like empty strings and None."""
+        assert Utils.is_version_compatible("", "1.0.0") is False
+        assert Utils.is_version_compatible("1.0.0", "") is False
+        assert Utils.is_version_compatible("", "") is False
+        assert Utils.is_version_compatible(None, "1.0.0") is False  # type: ignore
+        assert Utils.is_version_compatible("1.0.0", None) is False  # type: ignore
+        assert Utils.is_version_compatible(None, None) is False  # type: ignore
+
+    def test_is_version_compatible_with_pre_release_versions(self) -> None:
+        """is_version_compatible correctly handles pre-release versions."""
+        assert (
+            Utils.is_version_compatible("1.0.0-alpha", ">=1.0.0-alpha,<2.0.0") is True
+        )
+        assert Utils.is_version_compatible("1.0.0-alpha", ">=1.0.0,<2.0.0") is False
+        assert Utils.is_version_compatible("1.0.0-beta", "^1.0.0-alpha") is True
+
+    def test_is_version_compatible_with_exact_pre_release(self) -> None:
+        """is_version_compatible correctly matches exact pre-release versions."""
+        assert Utils.is_version_compatible("1.0.0-alpha", "1.0.0-alpha") is True
+        assert Utils.is_version_compatible("1.0.0-alpha", "1.0.0-beta") is False
