@@ -13,6 +13,7 @@ import:py from logging { Logger }
 import:py from jaclang { jac_import }
 import:py from jivas.agent.modules.agentlib.utils { Utils }
 import:py from jvcli.api { RegistryAPI }
+import:py from jvcli.utils { is_version_compatible }
 import:py from jvserve.lib.agent_interface { AgentInterface }
 import:jac from action { Action }
 import:jac from interact_action { InteractAction }
@@ -104,7 +105,7 @@ node Actions :GraphNode: {
                     package_version = _info.get('package', {}).get('version', None);
 
                     # validate the version
-                    if Utils.is_version_compatible(package_version, version) {
+                    if is_version_compatible(package_version, version) {
                         # craft the module root
                         module_root = Utils.path_to_module(package_path);
                         # determine whether we have an app in this package

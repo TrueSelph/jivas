@@ -21,8 +21,6 @@ from jvserve.lib.file_interface import (
     file_interface,
     get_file_interface,
 )
-from packaging.specifiers import InvalidSpecifier, SpecifierSet
-from packaging.version import InvalidVersion, Version
 
 logger = logging.getLogger(__name__)
 
@@ -771,36 +769,3 @@ class Utils:
             descriptor_data.pop(key, None)
 
         return descriptor_data
-
-    @staticmethod
-    def is_version_compatible(version: str, specifiers: str) -> bool:
-        """
-        Determines if the provided version satisfies the given specifiers or exact version match.
-
-        Args:
-        - version (str): The version to be checked. E.g., "2.1.0" or ">=0.0.1".
-        - specifiers (str): The version specifier set or exact version. E.g., "2.1.0", ">=0.2,<0.3", or "^2.0.0".
-
-        Returns:
-        - bool: True if the version satisfies the specifier set or exact match, False otherwise.
-        """
-        try:
-            # Check if specifiers represent exactly a single version equal
-            if all(c not in specifiers for c in "<>!=~^*,"):
-                # Just a direct equality check
-                return Version(version) == Version(specifiers)
-
-            # Handle caret (^) notation commonly used in package managers like npm
-            if specifiers.startswith("^"):
-                base_version = Version(specifiers[1:])
-                next_major = base_version.major + 1
-                specifiers = f">={base_version},<{next_major}.0.0"
-
-            specifier_set = SpecifierSet(specifiers)
-            version_to_check = Version(version)
-
-            return version_to_check in specifier_set
-
-        except (InvalidVersion, InvalidSpecifier) as e:
-            print(f"Version parsing error: {e}")
-            return False
