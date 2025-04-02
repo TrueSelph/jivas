@@ -12,8 +12,8 @@ import:py requests;
 import:py from logging { Logger }
 import:py from jaclang { jac_import }
 import:py from jivas.agent.modules.agentlib.utils { Utils }
-import:py from jvcli.utils { is_version_compatible }
 import:py from jvcli.api { RegistryAPI }
+import:py from jvcli.utils { is_version_compatible }
 import:py from jvserve.lib.agent_interface { AgentInterface }
 import:jac from action { Action }
 import:jac from interact_action { InteractAction }
@@ -105,7 +105,7 @@ node Actions :GraphNode: {
                     package_version = _info.get('package', {}).get('version', None);
 
                     # validate the version
-                    if is_version_compatible(version, package_version) {
+                    if is_version_compatible(package_version, version) {
                         # craft the module root
                         module_root = Utils.path_to_module(package_path);
                         # determine whether we have an app in this package
@@ -132,11 +132,11 @@ node Actions :GraphNode: {
         if(not action_info) {
 
             # if no action_info found locally, we fetch from package repo
-            self.logger.info(f'attempting to fetch action info remotely for {namespace_package_name}={version}');
+            self.logger.info(f'attempting to fetch action info remotely for {namespace_package_name} {version}');
 
             if( _info := RegistryAPI.get_package_info(namespace_package_name, version, api_key=jpr_api_key) ) {
 
-                self.logger.info(f'found action info remotely for {namespace_package_name}={version}');
+                self.logger.info(f'found action info remotely for {namespace_package_name} {version}');
                 # set the package info
                 action_info = _info.get('package', None);
             }
@@ -379,7 +379,7 @@ node Actions :GraphNode: {
 
         try {
             subprocess.run(command, check=True, stderr=None, stdout=None);
-            self.logger.info("Packages dependencies installed successfully.");
+            self.logger.info("Package dependencies installed successfully.");
 
         } except subprocess.CalledProcessError as e {
             self.logger.error(f"An error occurred while installing one or more package dependencies. There may be a conflict or a missing package.");
@@ -487,7 +487,7 @@ node Actions :GraphNode: {
                                     }
                                 };
                             } else {
-                                self.logger.error(f"unable to find action {action_dep}={action_dep_version}");
+                                self.logger.error(f"unable to find action {action_dep} {action_dep_version}");
                                 continue;
                             }
                         }
@@ -503,7 +503,7 @@ node Actions :GraphNode: {
                         # remove the issue index so it is not loaded
                         del action_data_index[namespace_package_name];
                         # raise the error
-                        self.logger.error(f"unable to find action {namespace_package_name}={package_version}");
+                        self.logger.error(f"unable to find action {namespace_package_name} {package_version}");
                         continue;
                     }
                 }
@@ -536,7 +536,7 @@ node Actions :GraphNode: {
 
                 package_version = action_data.get('context', {}).get('version', None);
 
-                self.logger.info(f'attempting to download action for {namespace_package_name}={package_version}');
+                self.logger.info(f'attempting to download action for {namespace_package_name} {package_version}');
 
                 try {
 
@@ -548,7 +548,7 @@ node Actions :GraphNode: {
                         if(namespace_package_name in action_data_index) {
                             del action_data_index[namespace_package_name];
                         }
-                        self.logger.error(f'unable to download package {namespace_package_name}={package_version} ...skipping');
+                        self.logger.error(f'unable to download package {namespace_package_name} {package_version} ...skipping');
                         continue;
                     }
 
