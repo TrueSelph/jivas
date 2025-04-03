@@ -24,6 +24,21 @@ CONTEXT:
 
 """;
 
+    # the directive which is used to generate the response containing references from the matched context
+    has ref_directive:str = """
+Use CONTEXT as your knowledge base, intelligently assess the user question and perform the following tasks:
+a. Review 'content' in CONTEXT for the appropriate context to produce an accurate answer. Do not include any information outside of the CONTEXT.
+b. For each applicable item in CONTEXT, include after your response, a formatted list of unique references taken from REF_FIELDS under 'metadata' in CONTEXT.
+c. If relevant content is not available in CONTEXT, advise the user that you do not have the relevant information at this time.
+
+REF_FIELDS:
+{ref_fields}
+
+CONTEXT:
+{context}
+
+""";
+
     # the null directive template for RAG
     has null_directive:str = "No context information was retrieved based on user utterance. If the user utterance is a question which relates to your knowledge, advise them that you do not have the relevant information at this time to answer their question.\n";
 
@@ -57,6 +72,10 @@ Ensure that the final output is either the refined query or the original message
     has mmr:bool = False;
     # whether to return metadata with context or not
     has metadata:bool = False;
+    # whether we wish to process context references or not
+    has references:bool = False;
+    # the field or fields (comma separated) in the metadata to use for crafting the references
+    has metadata_ref_fields:str = "";
     # the vector store action name bound to this retrieval action
     has vector_store_action:str = "";
 
@@ -77,6 +96,19 @@ Ensure that the final output is either the refined query or the original message
     can execute(visitor: interact_graph_walker) -> dict {
         # implementation of execute for retrieval interact
 
+        # we safe check the references configuration; if references is true, then metadata is also true
+        if(self.references) {
+
+            if (not self.metadata_ref_fields) {
+                self.logger.warning("References are enabled, but metadata_ref_fields is not set. Turning 'references' off.");
+                self.references = False;
+            } elif (not self.metadata) {
+                self.logger.warning("References are enabled, but metadata is not. Setting metadata to True.");
+                self.metadata = True;
+            }
+
+        }
+
         # first prepare the query with context completion
         if(not (query := self.prepare_query(visitor)) ) {
             query = visitor.utterance;
@@ -88,7 +120,19 @@ Ensure that the final output is either the refined query or the original message
 
         # handle context, if any and queue directive
         if(context := self.retrieve_context(query)) {
-            context_directive = self.directive.format(context=context);
+
+            context_directive = None;
+
+            # determine if references are in effect
+            if(self.references and self.metadata_ref_fields and self.metadata) {
+                # if references are in effect, we need to format the context
+                # and add the field and context in the reference directive
+                context_directive = self.ref_directive.format(context=context, ref_fields=self.metadata_ref_fields);
+            } else {
+                # otherwise, we just add the context as is
+                context_directive = self.directive.format(context=context);
+            }
+
             visitor.interaction_node.add_directive(directive = context_directive);
         } else {
             directives = visitor.interaction_node.get_directives();
