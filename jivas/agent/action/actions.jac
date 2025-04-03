@@ -536,10 +536,8 @@ node Actions :GraphNode: {
 
                 package_version = action_data.get('context', {}).get('version', None);
 
-                self.logger.info(f'attempting to download action for {namespace_package_name} {package_version}');
-
                 try {
-
+                    self.logger.info(f'attempting to download action for {namespace_package_name} {package_version}');
                     # download package from package repo
                     package_data = RegistryAPI.download_package(namespace_package_name, package_version, api_key=jpr_api_key);
 
@@ -645,6 +643,14 @@ node Actions :GraphNode: {
         return Utils.order_interact_actions(action_data_index.values());
     }
 
+    can healthcheck() {
+        # performs agent healthcheck; triggers the healthcheck ability of all actions on an agent
+        # this is a wrapper for the _healthcheck_actions walker
+
+        self.logger.info("performing agent healthcheck");
+        return ((self spawn _healthcheck_actions()).trace);
+    }
+
 }
 
 walker _get_actions {
@@ -702,5 +708,27 @@ walker _get_interact_actions {
         # attempt to visit any child actions
         visit [-->](`?InteractAction);
     }
+}
+
+walker _healthcheck_actions {
+    # performs agent healthcheck; triggers the healthcheck ability of all actions on an agent
+
+    has trace:dict = {};
+
+    obj __specs__ {
+        # make this a private walker
+        static has private: bool = True;
+    }
+
+    can on_actions with Actions entry {
+        # head to action
+        visit [-->](`?Action)(?enabled==True);
+    }
+
+    can on_action with Action entry {
+        # trigger healthcheck ability
+        self.trace[here.label] = here.healthcheck();;
+    }
+
 }
 
