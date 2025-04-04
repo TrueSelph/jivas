@@ -112,6 +112,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to Private Registry
+        uses: docker/login-action@v3
+        with:
+          registry: registry.v75inc.dev
+          username: ${{ secrets.V75_REGISTRY_USER }}
+          password: ${{ secrets.V75_REGISTRY_PASSWORD }}
+
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
@@ -121,5 +134,9 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner == github.repository_owner && github.repository_owner || github.repository_owner | lowercase }}/jivas:latest
             ghcr.io/${{ github.repository_owner == github.repository_owner && github.repository_owner || github.repository_owner | lowercase }}/jivas:${{ needs.check-version.outputs.new_version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/jivas:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/jivas:${{ needs.check-version.outputs.new_version }}
+            registry.v75inc.dev/jivas-jaclang/jivas:latest
+            registry.v75inc.dev/jivas-jaclang/jivas:${{ needs.check-version.outputs.new_version }}
           build-args: |
             JIVAS_VERSION=${{ needs.check-version.outputs.new_version }}
