@@ -119,7 +119,7 @@ jobs:
           file: ./docker/jivas.Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/jivas:latest
-            ghcr.io/${{ github.repository_owner }}/jivas:${{ needs.check-version.outputs.new_version }}
+            ghcr.io/${{ github.repository_owner == github.repository_owner && github.repository_owner || github.repository_owner | lowercase }}/jivas:latest
+            ghcr.io/${{ github.repository_owner == github.repository_owner && github.repository_owner || github.repository_owner | lowercase }}/jivas:${{ needs.check-version.outputs.new_version }}
           build-args: |
             JIVAS_VERSION=${{ needs.check-version.outputs.new_version }}
