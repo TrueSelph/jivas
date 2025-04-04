@@ -1,5 +1,43 @@
 #!/bin/bash
 
+# Function to export variables from .env file
+export_env_vars() {
+    if [ -f ".env" ]; then
+        echo "Loading environment variables from .env file..."
+        while IFS= read -r line || [ -n "$line" ]; do
+            # Skip comments and empty lines
+            if [[ ! "$line" =~ ^(#.*)?$ ]] && [ -n "$line" ]; then
+                # Extract variable name and value
+                varname=$(echo "$line" | cut -d= -f1)
+                varvalue=$(echo "$line" | cut -d= -f2-)
+
+                # Remove quotes if present
+                varvalue=$(echo "$varvalue" | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//")
+
+                # Export the variable
+                export "$varname"="$varvalue"
+                echo "Exported: $varname=$varvalue"
+            fi
+        done < .env
+    else
+        echo "Warning: No .env file found. Using environment variables from Docker or system defaults."
+    fi
+}
+
+# Export variables
+export_env_vars
+
+# Log the configuration
+echo "Starting Jivas with configuration:"
+echo "--------------------------------"
+echo "JIVAS_USER: $JIVAS_USER"
+echo "JIVAS_PORT: $JIVAS_PORT"
+echo "JIVAS_BASE_URL: $JIVAS_BASE_URL"
+echo "JIVAS_STUDIO_URL: $JIVAS_STUDIO_URL"
+echo "JIVAS_FILES_URL: $JIVAS_FILES_URL"
+echo "JIVAS_ENVIRONMENT: $JIVAS_ENVIRONMENT"
+echo "--------------------------------"
+
 # turn on bash's job control
 set -m
 
@@ -17,7 +55,7 @@ if [ "$JIVAS_ENVIRONMENT" == "development" ]; then
     jac jvfileserve $JIVAS_FILES_ROOT_PATH &
 fi
 
-# Run init script
+# Rest of script remains unchanged
 function initialize() {
     if lsof -i :8000 >/dev/null; then
         # Try to login first
@@ -34,8 +72,22 @@ function initialize() {
         if [ -z "$JIVAS_TOKEN" ] || [ "$JIVAS_TOKEN" == "null" ]; then
             echo "Login failed. Creating system admin..."
 
-            # Create system admin
-            jac create_system_admin main.jac --email $JIVAS_USER --password $JIVAS_PASSWORD
+            # if DATABASE_HOST is set create system admin, if not use signup
+            if [ -z "$DATABASE_HOST" ]; then
+                echo "Database host is not set. Using signup endpoint"
+                curl --silent --show-error --no-progress-meter \
+                    --request POST \
+                    --header 'Content-Type: application/json' \
+                    --header 'Accept: application/json' \
+                    --data '{
+                    "password": "'"$JIVAS_PASSWORD"'",
+                    "email": "'"$JIVAS_USER"'"
+                    }' \
+                    "http://localhost:$JIVAS_PORT/user/register"
+            else
+                echo "Creating system admin..."
+                jac create_system_admin main.jac --email $JIVAS_USER --password $JIVAS_PASSWORD
+            fi
 
             # Attempt to login again after creating the superadmin
             JIVAS_TOKEN=$(curl --silent --show-error --no-progress-meter \

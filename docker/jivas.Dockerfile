@@ -1,5 +1,4 @@
 # Use a slim Python image as the base
-# and we specify platform because build fails when installing spacy (jivas dep) on m chips
 FROM python:3.12-slim
 ARG JIVAS_VERSION
 
@@ -16,8 +15,8 @@ RUN mkdir -p /tmp/jac_cloud_logs && chmod 777 /tmp/jac_cloud_logs
 
 # Install the plugins
 RUN pip install --upgrade pip
-RUN pip install jivas==$JIVAS_VERSION
 RUN pip install git+https://github.com/TrueSelph/jaseci.git@fast_import_v2#subdirectory=jac
+RUN pip install jivas==$JIVAS_VERSION
 
 # init project files
 RUN jvcli startproject .
@@ -26,7 +25,7 @@ RUN jvcli startproject .
 RUN jac tool gen_parser
 
 # Add JACPATH to the environment
-ENV JACPATH /app
+ENV JACPATH=/app
 
 # Copy the supervisord configuration (less likely to change frequently)
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
