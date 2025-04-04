@@ -1,3 +1,4 @@
+import:py json;
 import:py logging;
 import:py traceback;
 import:py from typing { Optional }
@@ -13,17 +14,68 @@ node RetrievalInteractAction :InteractAction: {
     static has logger:Logger = logging.getLogger(__name__);
 
     # the directive template for RAG
-    has directive:str = "Ignore your own knowledge and assumptions. Use only CONTEXT to craft your response to the question. Do not include any information not found in the CONTEXT. If relevant content is not available in CONTEXT, advise the user that you do not have the relevant information at this time.\n\nCONTEXT: \n{context}\n";
+    has directive:str = """
+Use CONTEXT as your knowledge base, intelligently assess the user question, review CONTEXT for context and finally produce an informative and accurate response.
+Do not include any information outside of the CONTEXT. If relevant content is not available in CONTEXT, advise the user that you do not have the relevant information at this time.
+
+CONTEXT:
+{context}
+
+
+""";
+
+    # the directive which is used to generate the response containing references from the matched context
+    has ref_directive:str = """
+Use CONTEXT as your knowledge base, intelligently assess the user question and perform the following tasks:
+a. Review 'content' in CONTEXT for the appropriate context to produce an accurate answer. Do not include any information outside of the CONTEXT.
+b. For each applicable item in CONTEXT, include after your response, a formatted list of unique references taken from REF_FIELDS under 'metadata' in CONTEXT.
+c. If relevant content is not available in CONTEXT, advise the user that you do not have the relevant information at this time.
+
+REF_FIELDS:
+{ref_fields}
+
+CONTEXT:
+{context}
+
+""";
+
     # the null directive template for RAG
-    has null_directive:str = "Ignore the user's query. Let them know that you can't answer it right now, but you'll get back to them as soon as possible. Alternatively, use your roles as an excuse to avoid answering the query altogether.\n";
+    has null_directive:str = "No context information was retrieved based on user utterance. If the user utterance is a question which relates to your knowledge, advise them that you do not have the relevant information at this time to answer their question.\n";
+
     # context_rewriting_prompt
-    has query_completion_prompt:str = "Based on the conversation history, perform the following tasks:\n\n      1. **Understand the User's Intent**:\n         - Analyze the user's message to determine their intent.\n         - If the message is a **query** (a question or request for information), proceed to step 2.\n         - If the message is **small talk**, a **greeting**, or a **statement** that does not seek additional information, proceed to step 3.\n\n      2. **Refine the User's Query**:\n         - Rephrase and enhance the user's query by incorporating relevant details from the conversation history.\n         - Make the query more explicit and detailed to clearly convey the user's request.\n         - Focus solely on refining the query, without providing an answer or additional information.\n\n      3. **Provide the Final Message**:\n         - Output **only** the refined query from step 2 or the original user message if no refinement was necessary.\n         - Do not include any answers, explanations, or additional commentary.\n\n      **Note:** Your task is to **craft a refined query** when applicable, not to answer the query. Ensure that the final output is either the refined query or the original message, with no extra content.";
+    has query_completion_prompt:str = """
+Based on the conversation history, perform the following tasks:
+
+1. **Understand the User's Intent**:
+    - Analyze the user's message to determine their intent.
+    - If the message is a **query** (a question or request for information), proceed to step 2.
+    - If the message is **small talk**, a **greeting**, or a **statement** that does not seek additional information, proceed to step 3.
+2. **Refine the User's Query**:
+    - Rephrase and enhance the user's query by incorporating relevant details from the conversation history.
+    - Make the query more explicit and detailed to clearly convey the user's request.
+    - Focus solely on refining the query, without providing an answer or additional information.
+3. **Provide the Final Message**:
+    - Output **only** the refined query from step 2 or the original user message if no refinement was necessary.
+    - Do not include any answers, explanations, or additional commentary.
+
+**Note:**
+Your task is to **craft a refined query** when applicable, not to answer the query.
+Ensure that the final output is either the refined query or the original message, with no extra content.
+
+""";
+
     # the number of results
     has k:int = 3;
     # the score threshold (smaller numbers are usually more accurate)
     has score_threshold:float = 0.3;
     # max marginal relevance search
     has mmr:bool = False;
+    # whether to return metadata with context or not
+    has metadata:bool = False;
+    # whether we wish to process context references or not
+    has references:bool = False;
+    # the field or fields (comma separated) in the metadata to use for crafting the references
+    has metadata_ref_fields:str = "";
     # the vector store action name bound to this retrieval action
     has vector_store_action:str = "";
 
@@ -34,30 +86,6 @@ node RetrievalInteractAction :InteractAction: {
     has model_temperature:float = 0.2;
     has model_max_tokens:int = 10000;
 
-    can healthcheck() -> bool {
-        try {
-            if (
-                self.directive and
-                self.null_directive and
-                self.query_completion_prompt and
-                self.k > 0 and
-                self.vector_store_action and
-                self.history_size and
-                self.model_action and
-                self.model_name and
-                self.model_temperature and
-                self.model_max_tokens > 0 and
-                self.max_statement_length > 0
-            ) {
-                return True;
-            }
-            return False;
-        } except Exception as e {
-            self.logger.error(f"An exception occurred in {self.label}:\n{traceback.format_exc()}\n");
-            return False;
-        }
-    }
-
     can touch(visitor: interact_graph_walker) -> bool {
         # implementation of touch for retrieval interact
         if(visitor.utterance) {
@@ -67,6 +95,19 @@ node RetrievalInteractAction :InteractAction: {
 
     can execute(visitor: interact_graph_walker) -> dict {
         # implementation of execute for retrieval interact
+
+        # we safe check the references configuration; if references is true, then metadata is also true
+        if(self.references) {
+
+            if (not self.metadata_ref_fields) {
+                self.logger.warning("References are enabled, but metadata_ref_fields is not set. Turning 'references' off.");
+                self.references = False;
+            } elif (not self.metadata) {
+                self.logger.warning("References are enabled, but metadata is not. Setting metadata to True.");
+                self.metadata = True;
+            }
+
+        }
 
         # first prepare the query with context completion
         if(not (query := self.prepare_query(visitor)) ) {
@@ -79,11 +120,23 @@ node RetrievalInteractAction :InteractAction: {
 
         # handle context, if any and queue directive
         if(context := self.retrieve_context(query)) {
-            context_directive = self.directive.format(context=context);
+
+            context_directive = None;
+
+            # determine if references are in effect
+            if(self.references and self.metadata_ref_fields and self.metadata) {
+                # if references are in effect, we need to format the context
+                # and add the field and context in the reference directive
+                context_directive = self.ref_directive.format(context=context, ref_fields=self.metadata_ref_fields);
+            } else {
+                # otherwise, we just add the context as is
+                context_directive = self.directive.format(context=context);
+            }
+
             visitor.interaction_node.add_directive(directive = context_directive);
         } else {
             directives = visitor.interaction_node.get_directives();
-            if(not directives){
+            if(not directives) {
                 visitor.interaction_node.add_directive(directive = self.null_directive);
             }
         }
@@ -134,34 +187,45 @@ node RetrievalInteractAction :InteractAction: {
 
         # :param visitor (InteractGraphWalker) – interact graph walker state containing interaction, utterance, etc.
 
-        # :returns string of context data relevant for RAG or None
+        # :returns JSON string of context data relevant for RAG or None
         # """
+        context_data = [];
 
-        if( vector_store_action := self.get_agent().get_actions().get(action_label = self.vector_store_action) ) {
-
-            texts = "";
+        if(vector_store_action := self.get_agent().get_actions().get(action_label=self.vector_store_action)) {
 
             if(self.mmr) {
-                if(documents := vector_store_action.max_marginal_relevance_search(query = query, k = self.k)) {
-
+                if(documents := vector_store_action.max_marginal_relevance_search(query=query, k=self.k)) {
                     for doc in documents {
-                        texts += f"{doc.page_content} --- ";
+                        context_item = {
+                            "content": doc.page_content
+                        };
+                        if(self.metadata) {
+                            context_item["metadata"] = doc.metadata;
+                        }
+                        context_data.append(context_item);
                     }
-
-                    return texts;
-                }
-            }
-            # perform similarity search
-            if(documents_and_score := vector_store_action.similarity_search_with_score(query = query, k = self.k, filter = filter)) {
-            # iterate through resultset and return top-ranked texts
-
-                for (doc, score) in documents_and_score {
-                    if(self.score_threshold >= score) {
-                        texts += f"{doc.page_content} --- ";
+                    if context_data {
+                        return json.dumps(context_data);
                     }
                 }
-
-                return texts;
+            } else {
+                # perform similarity search
+                if(documents_and_score := vector_store_action.similarity_search_with_score(query=query, k=self.k, filter=filter)) {
+                    for (doc, score) in documents_and_score {
+                        if(score <= self.score_threshold) {
+                            context_item = {
+                                "content": doc.page_content
+                            };
+                            if(self.metadata) {
+                                context_item["metadata"] = doc.metadata;
+                            }
+                            context_data.append(context_item);
+                        }
+                    }
+                    if context_data {
+                        return json.dumps(context_data);
+                    }
+                }
             }
         }
 

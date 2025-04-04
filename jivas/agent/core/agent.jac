@@ -112,7 +112,8 @@ node Agent :GraphNode: {
             and (len(data.get('actions', [])) > 0)) {
             self.get_actions().install_actions(
                 self.id,
-                data['actions']
+                data['actions'],
+                self.jpr_api_key
             );
         }
 
@@ -127,7 +128,7 @@ node Agent :GraphNode: {
         self.agent_logging = agent_logging;
     }
 
-    can export_descriptor(file_path: str="") -> dict {
+    can export_descriptor(file_path: str="", modified_context:bool=False) -> dict {
         # converts an agent to a descriptor and exports it...
         # if file_path is provided, it will output to specified file path
         # otherwise, it will output to agent's descriptor path
@@ -135,12 +136,10 @@ node Agent :GraphNode: {
         try  {
             self.logger.debug(f"exporting agent: {self.name}");
 
-            agent_data = self.export();
+            agent_data = self.export([], modified_context);
             agent_actions = [];
-            transient_export_attrs = ['_package'];
-
             # Gather agent actions
-            agent_actions = (self spawn _export_actions()).action_nodes;
+            agent_actions = (self spawn _export_actions(modified_context=modified_context)).action_nodes;
 
             # Add agent actions to agent data
 
@@ -178,6 +177,7 @@ walker _export_actions {
     has transient_export_attrs:list = ['_package'];
     has action_nodes: list = [];
     has node_index: dict = {};
+    has modified_context: bool = False;
 
     obj __specs__ {
         # make this a private walker
@@ -210,7 +210,7 @@ walker _export_actions {
             self.node_index.update({
                 here.id: {
                     "action": here._package['name'],
-                    "context": here.export(self.transient_export_attrs),
+                    "context": here.export(self.transient_export_attrs, self.modified_context),
                     "children": children
                 }
             });

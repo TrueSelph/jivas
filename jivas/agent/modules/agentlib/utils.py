@@ -12,11 +12,23 @@ from datetime import datetime
 from typing import Any, DefaultDict, Dict, List, Optional
 from uuid import UUID
 
+import ftfy
 import pytz  # To handle timezones
 import requests
 import yaml
+from jvserve.lib.file_interface import (
+    FILE_INTERFACE,
+    file_interface,
+    get_file_interface,
+)
 
 logger = logging.getLogger(__name__)
+
+# ensure .jvdata is the root as it contains sensitive data which we don't
+# want served by jvcli jvfileserve
+jvdata_file_interface = (
+    get_file_interface("") if FILE_INTERFACE == "local" else file_interface
+)
 
 
 class LongStringDumper(yaml.SafeDumper):
@@ -49,9 +61,6 @@ class Utils:
 
         descriptor_path = os.environ.get("JIVAS_DESCRIPTOR_ROOT_PATH", ".jvdata")
 
-        if not os.path.exists(descriptor_path):
-            os.makedirs(descriptor_path)
-
         return descriptor_path
 
     @staticmethod
@@ -80,18 +89,24 @@ class Utils:
     def dump_yaml_file(file_path: str, data: dict) -> None:
         """Dump data to a YAML file."""
         try:
-            with open(file_path, "w") as file:
-                yaml_output = yaml.dump(
-                    data,
-                    Dumper=LongStringDumper,
-                    allow_unicode=True,
-                    default_flow_style=False,
-                    sort_keys=False,
-                )
-                file.write(yaml_output)
+            yaml_output = yaml.dump(
+                data,
+                Dumper=LongStringDumper,
+                allow_unicode=True,
+                default_flow_style=False,
+                sort_keys=False,
+            )
+            jvdata_file_interface.save_file(file_path, yaml_output.encode("utf-8"))
             logger.debug(f"Descriptor successfully written to {file_path}")
         except IOError:
             logger.error(f"Error writing to descriptor file {file_path}")
+
+    @staticmethod
+    def dump_json_file(file_path: str, data: dict) -> None:
+        """Dump data to a JSON file."""
+        jvdata_file_interface.save_file(
+            file_path, json.dumps(data, indent=4).encode("utf-8")
+        )
 
     @staticmethod
     def path_to_module(path: str) -> str:
@@ -392,7 +407,7 @@ class Utils:
 
     @staticmethod
     def order_interact_actions(
-        actions_data: List[Dict[str, Any]]
+        actions_data: List[Dict[str, Any]],
     ) -> Optional[List[Dict[str, Any]]]:
         """Order interact actions based on their dependencies and weights."""
         if not actions_data:
@@ -690,3 +705,67 @@ class Utils:
             return name_parts[0]
         else:
             return ""
+
+    @staticmethod
+    def normalize_text(text: str) -> str:
+        """
+        Normalizes a string by:
+        - Stripping whitespace.
+        - Fixing text encoding.
+        - Removing non-word characters.
+
+        :param text: Input string.
+        :return: Normalized string.
+        """
+        text = text.strip().replace("\\n", "\n")
+        text = ftfy.fix_text(text)
+        return re.sub(r"\W+", "", text)
+
+    @staticmethod
+    def sanitize_dict_context(
+        descriptor_data: dict, action_data: dict, keys_to_remove: list
+    ) -> dict:
+        """
+        Cleans and sanitizes descriptor_data by:
+        - Removing keys that match in descriptor_data and action_data.
+        - Logging warnings for mismatched values.
+        - Removing empty values except boolean `False`.
+        - Removing keys listed in keys_to_remove.
+
+        :param descriptor_data: Dictionary containing descriptor data.
+        :param action_data: Dictionary containing action data.
+        :param keys_to_remove: List of keys to remove.
+        :return: Sanitized dictionary.
+        """
+        logger = logging.getLogger(__name__)
+
+        # Check for matching keys and remove them if they match
+        for key in list(action_data.keys()):
+            if key in descriptor_data:
+                if isinstance(descriptor_data[key], str):
+                    str1 = Utils.normalize_text(descriptor_data[key])
+                    str2 = Utils.normalize_text(action_data[key])
+
+                    if str1 == str2:
+                        del descriptor_data[key]
+                    else:
+                        logger.warning(f"No str match for key: {key}")
+                else:
+                    if descriptor_data[key] == action_data[key]:
+                        del descriptor_data[key]
+                    else:
+                        logger.warning(f"No match for key: {key}")
+
+        # Prepare keys to remove
+        to_remove_key = list(keys_to_remove)
+
+        # Remove empty values (except boolean False)
+        for key in list(descriptor_data.keys()):
+            if not descriptor_data[key] and not isinstance(descriptor_data[key], bool):
+                to_remove_key.append(key)
+
+        # Remove specified keys
+        for key in to_remove_key:
+            descriptor_data.pop(key, None)
+
+        return descriptor_data

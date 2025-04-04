@@ -6,8 +6,6 @@ import:jac from interact_graph_walker {interact_graph_walker}
 walker healthcheck :interact_graph_walker: {
     # performs agent healthcheck; triggers the healthcheck ability of all actions on an agent
 
-    has trace:dict = {};
-
     obj __specs__ {
         # make this walker visible in API
         static has private: bool = False;
@@ -19,32 +17,23 @@ walker healthcheck :interact_graph_walker: {
     }
 
     can on_actions with Actions entry {
-        # head to action
-        visit [-->](`?Action)(?enabled==True);
-    }
+        # call healthcheck on all actions
+        if(trace := here.healthcheck()) {
 
-    can on_action with Action entry {
-        # trigger healthcheck ability
-        self.trace[here.label] = here.healthcheck();;
-    }
-
-    can on_exit with exit {
-        if self.trace {
             Jac.get_context().status = 200;
-            health = {"agent": "OK"};
 
-            for action in self.trace {
-                if self.trace[action] == False {
+            for action_label in trace.keys() {
+                if trace[action_label] == False {
                     Jac.get_context().status = 503;
-                    health = self.trace;
+                    break;
                 }
             }
+
         } else {
             Jac.get_context().status = 503;
-            health = self.trace;
         }
 
-        report health;
+        report trace;
     }
 
 }

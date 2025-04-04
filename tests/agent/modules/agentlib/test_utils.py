@@ -58,34 +58,11 @@ class TestUtils:
         # Mock os.environ.get to return None for unset env var
         mocker.patch.dict("os.environ", {}, clear=True)
 
-        # Mock os.path.exists and os.makedirs
-        mock_exists = mocker.patch("os.path.exists", return_value=False)
-        mock_makedirs = mocker.patch("os.makedirs")
-
         # Call the method
         result = Utils.get_descriptor_root()
 
         # Verify results
         assert result == ".jvdata"
-        mock_exists.assert_called_once_with(".jvdata")
-        mock_makedirs.assert_called_once_with(".jvdata")
-
-    def test_empty_env_var_path(self, mocker: MockerFixture) -> None:
-        """Test that an empty string env var is handled correctly."""
-        # Mock os.environ.get to return empty string
-        mocker.patch.dict("os.environ", {"JIVAS_DESCRIPTOR_ROOT_PATH": ""})
-
-        # Mock os.path.exists and os.makedirs
-        mock_exists = mocker.patch("os.path.exists", return_value=False)
-        mock_makedirs = mocker.patch("os.makedirs")
-
-        # Call the method
-        result = Utils.get_descriptor_root()
-
-        # Verify results
-        assert result == ""
-        mock_exists.assert_called_once_with("")
-        mock_makedirs.assert_called_once_with("")
 
     def test_default_actions_path_when_env_var_not_set(
         self, mocker: MockerFixture
@@ -197,7 +174,7 @@ class TestUtils:
         Utils.dump_yaml_file(file_path, data)
 
         # Assert
-        mock_open.assert_called_once_with(file_path, "w")
+        mock_open.assert_called_once_with(file_path, "wb")
         mock_logger_error.assert_called_once_with(
             f"Error writing to descriptor file {file_path}"
         )
