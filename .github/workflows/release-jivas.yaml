@@ -132,8 +132,8 @@ jobs:
           file: ./docker/jivas.Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner == github.repository_owner && github.repository_owner || github.repository_owner | lowercase }}/jivas:latest
-            ghcr.io/${{ github.repository_owner == github.repository_owner && github.repository_owner || github.repository_owner | lowercase }}/jivas:${{ needs.check-version.outputs.new_version }}
+            ghcr.io/trueselph/jivas:latest
+            ghcr.io/trueselph/jivas:${{ needs.check-version.outputs.new_version }}
             ${{ secrets.DOCKERHUB_USERNAME }}/jivas:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/jivas:${{ needs.check-version.outputs.new_version }}
             registry.v75inc.dev/jivas-jaclang/jivas:latest
