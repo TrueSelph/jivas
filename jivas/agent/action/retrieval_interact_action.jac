@@ -28,11 +28,14 @@ CONTEXT:
     has ref_directive:str = """
 Use CONTEXT as your knowledge base, intelligently assess the user question and perform the following tasks:
 a. Review 'content' in CONTEXT for the appropriate context to produce an accurate answer. Do not include any information outside of the CONTEXT.
-b. For each applicable item in CONTEXT, include after your response, a formatted list of unique references taken from REF_FIELDS under 'metadata' in CONTEXT.
+b. For each applicable item in CONTEXT, include a formatted list of unique content references taken from REF_FIELDS under 'metadata' in CONTEXT based on REF_FORMAT.
 c. If relevant content is not available in CONTEXT, advise the user that you do not have the relevant information at this time.
 
 REF_FIELDS:
 {ref_fields}
+
+REF_FORMAT:
+{ref_format}
 
 CONTEXT:
 {context}
@@ -75,7 +78,9 @@ Ensure that the final output is either the refined query or the original message
     # whether we wish to process context references or not
     has references:bool = False;
     # the field or fields (comma separated) in the metadata to use for crafting the references
-    has metadata_ref_fields:str = "";
+    has metadata_ref_fields:str = "source, filename, page";
+    # an example format used for formatting the references based on the metadata_ref_fields
+    has metadata_ref_format:str = "( [filename](source), pp. <page>; [filename](source), pp. <page>; ... )";
     # the vector store action name bound to this retrieval action
     has vector_store_action:str = "";
 
@@ -126,8 +131,12 @@ Ensure that the final output is either the refined query or the original message
             # determine if references are in effect
             if(self.references and self.metadata_ref_fields and self.metadata) {
                 # if references are in effect, we need to format the context
-                # and add the field and context in the reference directive
-                context_directive = self.ref_directive.format(context=context, ref_fields=self.metadata_ref_fields);
+                # and add the fields, format and context in the reference directive
+                context_directive = self.ref_directive.format(
+                    context=context,
+                    ref_fields=self.metadata_ref_fields,
+                    ref_format=self.metadata_ref_format
+                );
             } else {
                 # otherwise, we just add the context as is
                 context_directive = self.directive.format(context=context);
