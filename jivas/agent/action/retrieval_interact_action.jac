@@ -124,22 +124,27 @@ Ensure that the final output is either the refined query or the original message
         visitor.utterance = query;
 
         # handle context, if any and queue directive
-        if(context := self.retrieve_context(query)) {
+        if(context_data := self.retrieve_context(query)) {
 
             context_directive = None;
+
+            # add raw context to the interaction node
+            visitor.interaction_node.context_data['RetrievalInteractAction_context'] = context_data;
+            # convert context data to JSON for composing the directive
+            context_json = json.dumps(context_data);
 
             # determine if references are in effect
             if(self.references and self.metadata_ref_fields and self.metadata) {
                 # if references are in effect, we need to format the context
                 # and add the fields, format and context in the reference directive
                 context_directive = self.ref_directive.format(
-                    context=context,
+                    context=context_json,
                     ref_fields=self.metadata_ref_fields,
                     ref_format=self.metadata_ref_format
                 );
             } else {
                 # otherwise, we just add the context as is
-                context_directive = self.directive.format(context=context);
+                context_directive = self.directive.format(context=context_json);
             }
 
             visitor.interaction_node.add_directive(directive = context_directive);
@@ -188,7 +193,7 @@ Ensure that the final output is either the refined query or the original message
     }
 
 
-    can retrieve_context(query:str, filter:Optional[str] = "") -> str {
+    can retrieve_context(query:str, filter:Optional[str] = "") -> list {
         # override to implement custom retrieval operation
 
         # """
@@ -196,7 +201,7 @@ Ensure that the final output is either the refined query or the original message
 
         # :param visitor (InteractGraphWalker) – interact graph walker state containing interaction, utterance, etc.
 
-        # :returns JSON string of context data relevant for RAG or None
+        # :returns context data relevant for RAG or [] if no context is found
         # """
         context_data = [];
 
@@ -231,14 +236,11 @@ Ensure that the final output is either the refined query or the original message
                             context_data.append(context_item);
                         }
                     }
-                    if context_data {
-                        return json.dumps(context_data);
-                    }
                 }
             }
         }
 
-        return None;
+        return context_data;
     }
 
 }
