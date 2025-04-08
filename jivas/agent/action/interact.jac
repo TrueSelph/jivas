@@ -27,14 +27,17 @@ walker interact :interact_graph_walker: {
 
     # set up logger
     static has logger: Logger = logging.getLogger(__name__);
+
     # params
     has agent_id: str = "";
     has session_id: str = "";
     has utterance: str = "";
     has channel: str = "default"; # other channels: 'kiosk', 'whatsapp', 'fbm', 'slack', etc.
-    has data: dict = {};
-    has verbose: bool = False;
-    has tts: bool = False;
+    has data: list[dict] = []; # expects [{'label': str, 'meta': str, 'content': str}]
+    has verbose: bool = False; # verbose payload or not
+    has tts: bool = False; # activate text-to-speech response
+    has streaming: bool = False; # activate streaming response
+
     # protected vars
     has response: dict = {};
     has message: InteractionMessage = None;
@@ -269,27 +272,30 @@ walker interact :interact_graph_walker: {
         # add any data to the interaction for processing later...
 
         if (self.data) {
-            required_fields = ["label", "data_type", "content"];
-            if (all([field in self.data for field in required_fields])) {
-                if (self.data["label"]
-                    and self.data["data_type"]
-                    and self.data["content"]) {
-                    self.interaction_node.set_data_item(
-                        label=self.data["label"],
-                        meta={'type': self.data["data_type"]},
-                        content=self.data["content"]
-                    );
-                } else {
-                    Jac.get_context().status = 400;
-                    self.logger.error(
-                        f"malformed data payload; requires {required_fields} {values}"
-                    );
+            required_fields = ["label", "meta", "content"];
+
+            if (isinstance(self.data, list) and all(isinstance(item, dict) for item in self.data)) {
+                for item in self.data {
+                    if (all(field in item and item[field] for field in required_fields)) {
+                        self.interaction_node.set_data_item(
+                            label=item["label"],
+                            meta={'type': item["meta"]},
+                            content=item["content"]
+                        );
+                    } else {
+                        Jac.get_context().status = 400;
+                        self.logger.error(
+                            f"malformed data item; requires {required_fields} in each dictionary"
+                        );
+                        return False;
+                    }
                 }
             } else {
                 Jac.get_context().status = 400;
                 self.logger.error(
-                    f"malformed data payload; requires {required_fields} {values}"
+                    "data must be a list of dictionaries with required fields: 'label', 'meta', 'content'"
                 );
+                return False;
             }
         }
 
