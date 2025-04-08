@@ -9,7 +9,7 @@ import re
 import time
 from collections import defaultdict, deque
 from datetime import datetime
-from typing import Any, DefaultDict, Dict, List, Optional
+from typing import Any, DefaultDict, Dict, List, Optional, Union
 from uuid import UUID
 
 import ftfy
@@ -51,6 +51,7 @@ class LongStringDumper(yaml.SafeDumper):
 
         return super().represent_scalar(tag, value, style)
 
+
 class Utils:
     """Utility class for various helper methods."""
 
@@ -83,10 +84,9 @@ class Utils:
             os.makedirs(daf_root_path)
 
         return daf_root_path
-    
-    
-    staticmethod
-    def serialize_object(obj):
+
+    @staticmethod
+    def serialize_object(obj: Any) -> Union[Dict[str, Any], List[Any], Any]:
         """Convert objects to dictionaries if needed."""
         if isinstance(obj, dict):
             return {k: Utils.serialize_object(v) for k, v in obj.items()}
@@ -101,9 +101,9 @@ class Utils:
     def dump_yaml_file(file_path: str, data: dict) -> None:
         """Dump data to a YAML file."""
         try:
-            data = Utils.serialize_object(data)  
+            serialized_data = Utils.serialize_object(data)
             yaml_output = yaml.dump(
-                data,
+                data=serialized_data,
                 Dumper=LongStringDumper,
                 allow_unicode=True,
                 default_flow_style=False,
