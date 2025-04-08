@@ -51,7 +51,6 @@ class LongStringDumper(yaml.SafeDumper):
 
         return super().represent_scalar(tag, value, style)
 
-
 class Utils:
     """Utility class for various helper methods."""
 
@@ -84,11 +83,25 @@ class Utils:
             os.makedirs(daf_root_path)
 
         return daf_root_path
+    
+    
+    staticmethod
+    def serialize_object(obj):
+        """Convert objects to dictionaries if needed."""
+        if isinstance(obj, dict):
+            return {k: Utils.serialize_object(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [Utils.serialize_object(i) for i in obj]
+        elif hasattr(obj, "__dict__"):
+            return obj.__dict__
+        else:
+            return obj
 
     @staticmethod
     def dump_yaml_file(file_path: str, data: dict) -> None:
         """Dump data to a YAML file."""
         try:
+            data = Utils.serialize_object(data)  
             yaml_output = yaml.dump(
                 data,
                 Dumper=LongStringDumper,
