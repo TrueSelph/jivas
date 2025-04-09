@@ -19,6 +19,7 @@ import:jac from jivas.agent.core.agents { Agents }
 import:jac from jivas.agent.core.app { App }
 import:jac from jivas.agent.action { interact_graph_walker }
 import:py from jac_cloud.core.architype { NodeAnchor }
+import:py json;
 
 
 walker interact :interact_graph_walker: {
@@ -26,14 +27,17 @@ walker interact :interact_graph_walker: {
 
     # set up logger
     static has logger: Logger = logging.getLogger(__name__);
+
     # params
     has agent_id: str = "";
     has session_id: str = "";
     has utterance: str = "";
     has channel: str = "default"; # other channels: 'kiosk', 'whatsapp', 'fbm', 'slack', etc.
-    has data: dict = {};
-    has verbose: bool = False;
-    has tts: bool = False;
+    has data: list[dict] = []; # expects [{'label': str, 'meta': str, 'content': str}]
+    has verbose: bool = False; # verbose payload or not
+    has tts: bool = False; # activate text-to-speech response
+    has streaming: bool = False; # activate streaming response
+
     # protected vars
     has response: dict = {};
     has message: InteractionMessage = None;
@@ -49,7 +53,6 @@ walker interact :interact_graph_walker: {
         static has private: bool = True;
         static has excluded: list = [
             "response",
-            "message",
             "execute",
             "context_data",
             "frame_node",
@@ -267,16 +270,16 @@ walker interact :interact_graph_walker: {
         }
 
         # add any data to the interaction for processing later...
-        if (self.data and isinstance(self.data, list)) {
 
+        if (self.data) {
             required_fields = ["label", "meta", "content"];
 
-            if ( all([isinstance(item, dict) for item in self.data]) ) {
+            if (isinstance(self.data, list) and all(isinstance(item, dict) for item in self.data)) {
                 for item in self.data {
-                    if (all([field in item for field in required_fields])) {
+                    if (all(field in item and item[field] for field in required_fields)) {
                         self.interaction_node.set_data_item(
                             label=item["label"],
-                            meta=item["meta"],
+                            meta={'type': item["meta"]},
                             content=item["content"]
                         );
                     } else {
@@ -290,8 +293,9 @@ walker interact :interact_graph_walker: {
             } else {
                 Jac.get_context().status = 400;
                 self.logger.error(
-                    f"malformed data payload; requires {required_fields} {values}"
+                    "data must be a list of dictionaries with required fields: 'label', 'meta', 'content'"
                 );
+                return False;
             }
         }
 
