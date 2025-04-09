@@ -131,6 +131,7 @@ jobs:
           context: .
           file: ./docker/jivas.Dockerfile
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: |
             ghcr.io/trueselph/jivas:latest
             ghcr.io/trueselph/jivas:${{ needs.check-version.outputs.new_version }}

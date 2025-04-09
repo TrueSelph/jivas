@@ -31,7 +31,6 @@ export_env_vars
 echo "Starting Jivas with configuration:"
 echo "--------------------------------"
 echo "JIVAS_USER: $JIVAS_USER"
-echo "JIVAS_PORT: $JIVAS_PORT"
 echo "JIVAS_BASE_URL: $JIVAS_BASE_URL"
 echo "JIVAS_STUDIO_URL: $JIVAS_STUDIO_URL"
 echo "JIVAS_FILES_URL: $JIVAS_FILES_URL"
@@ -83,7 +82,7 @@ function initialize() {
                     "password": "'"$JIVAS_PASSWORD"'",
                     "email": "'"$JIVAS_USER"'"
                     }' \
-                    "http://localhost:$JIVAS_PORT/user/register"
+                    "http://localhost:8000/user/register"
             else
                 echo "Creating system admin..."
                 jac create_system_admin main.jac --email $JIVAS_USER --password $JIVAS_PASSWORD
