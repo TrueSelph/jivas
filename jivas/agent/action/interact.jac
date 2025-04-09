@@ -26,14 +26,17 @@ walker interact :interact_graph_walker: {
 
     # set up logger
     static has logger: Logger = logging.getLogger(__name__);
+
     # params
     has agent_id: str = "";
     has session_id: str = "";
     has utterance: str = "";
     has channel: str = "default"; # other channels: 'kiosk', 'whatsapp', 'fbm', 'slack', etc.
-    has data: dict = {};
-    has verbose: bool = False;
-    has tts: bool = False;
+    has data: list[dict] = []; # expects [{'label': str, 'meta': str, 'content': str}]
+    has verbose: bool = False; # verbose payload or not
+    has tts: bool = False; # activate text-to-speech response
+    has streaming: bool = False; # activate streaming response
+
     # protected vars
     has response: dict = {};
     has message: InteractionMessage = None;
@@ -290,8 +293,9 @@ walker interact :interact_graph_walker: {
             } else {
                 Jac.get_context().status = 400;
                 self.logger.error(
-                    f"malformed data payload; requires {required_fields} {values}"
+                    "data must be a list of dictionaries with required fields: 'label', 'meta', 'content'"
                 );
+                return False;
             }
         }
 
