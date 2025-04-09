@@ -19,7 +19,6 @@ import:jac from jivas.agent.core.agents { Agents }
 import:jac from jivas.agent.core.app { App }
 import:jac from jivas.agent.action { interact_graph_walker }
 import:py from jac_cloud.core.architype { NodeAnchor }
-import:py json;
 
 
 walker interact :interact_graph_walker: {
@@ -53,6 +52,7 @@ walker interact :interact_graph_walker: {
         static has private: bool = True;
         static has excluded: list = [
             "response",
+            "message",
             "execute",
             "context_data",
             "frame_node",
@@ -270,16 +270,16 @@ walker interact :interact_graph_walker: {
         }
 
         # add any data to the interaction for processing later...
+        if (self.data and isinstance(self.data, list)) {
 
-        if (self.data) {
             required_fields = ["label", "meta", "content"];
 
-            if (isinstance(self.data, list) and all(isinstance(item, dict) for item in self.data)) {
+            if ( all([isinstance(item, dict) for item in self.data]) ) {
                 for item in self.data {
-                    if (all(field in item and item[field] for field in required_fields)) {
+                    if (all([field in item for field in required_fields])) {
                         self.interaction_node.set_data_item(
                             label=item["label"],
-                            meta={'type': item["meta"]},
+                            meta=item["meta"],
                             content=item["content"]
                         );
                     } else {
