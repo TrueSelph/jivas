@@ -40,3 +40,10 @@ docker run -p 8000:8000 -p 8989:8989 -p 9000:9000 -p 8501:8501 \
   -e JIVAS_ENVIRONMENT=development \
   ghcr.io/trueselph/jivas:latest
 ```
+
+or using .env file:
+
+```bash
+docker run --env-file .env -p 8000:8000 -p 8989:8989 -p 9000:9000 -p 8501:8501 \
+  ghcr.io/trueselph/jivas:latest
+```
