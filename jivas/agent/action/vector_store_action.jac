@@ -408,6 +408,16 @@ node VectorStoreAction :Action: {
         return None;
     }
 
+    can metadata_search(metadata:dict, k:int = 10, **kwargs:Any) -> List[Document] {
+        # """
+        # Override to return documents matching metadata.
+        # Ensure to implement any necessary translations of metadata dict into the vectorstore's filter format
+
+        # :param metadata (dict) – Metadata to look up documents similar to.
+        # :returns List of Documents most similar to the query and score for each
+        # """
+    }
+
     can list_documents(page:int = 1, per_page:int = 10) -> dict {
         # """
         # Override to list all documents in the vectorstore with pagination.
