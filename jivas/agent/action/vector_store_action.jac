@@ -3,7 +3,7 @@ import:py json;
 import:py yaml;
 import:py logging;
 import:py traceback;
-import:py from typing { Tuple }
+import:py from typing { Any, Tuple }
 import:py from logging { Logger }
 import:jac from action { Action }
 import:py from jivas.agent.modules.agentlib.utils { LongStringDumper }
@@ -40,6 +40,12 @@ node VectorStoreAction :Action: {
 
         # Raises:
         #     ValueError: If any required environment variable is not set.
+        # """
+    }
+
+    can get_collection(collection_name:str) {
+        # """
+        # Returns a collection by name or None if it doesn't exist
         # """
     }
 
@@ -120,9 +126,15 @@ node VectorStoreAction :Action: {
                     );
                 }
 
-                self.logger.info(f"doc added {ids}");
+                if(not ids) {
+                    self.logger.error(f"Failed to add text to vectorstore");
+                    return False;
+                } else {
+                    self.logger.info(f"text added {ids}");
+                    return True;
+                }
             }
-            return True;
+
         } except Exception as e {
             self.logger.error(f"an exception occurred, {traceback.format_exc()}");
             self.logger.error(importing_error_message);
@@ -199,7 +211,7 @@ node VectorStoreAction :Action: {
         return None;
     }
 
-    can add_texts(texts:list[str], metadatas:list[dict]|None=None, ids:list[str]|None=None, kwargs:dict={}) -> list[str] {
+    can add_texts(texts:list[str], metadatas:list[dict]|None=None, ids:list[str]|None=None, **kwargs:Any) -> list[str] {
         # """
         # Run more texts through the embedding and add to the vectorstore.
 
@@ -225,7 +237,7 @@ node VectorStoreAction :Action: {
         return None;
     }
 
-    can add_documents(documents:list[Document], kwargs:dict={}) -> list[str] {
+    can add_documents(documents:list[Document], **kwargs:Any) -> list[str] {
         # """
         # Add or update documents in the vectorstore.
 
@@ -289,7 +301,7 @@ node VectorStoreAction :Action: {
         }
     }
 
-    can similarity_search(query:str, k:int=10, filter:str|None='', kwargs:dict={}) -> List[Document] {
+    can similarity_search(query:str, k:int=10, filter:str|None='', **kwargs:Any) -> List[Document] {
         # """
         # Return typesense documents most similar to query.
 
@@ -316,7 +328,7 @@ node VectorStoreAction :Action: {
         return None;
     }
 
-    can similarity_search_with_score(query:str, k:int=10, filter:str|None='', kwargs:dict={}) -> List[Tuple[Document,float]] {
+    can similarity_search_with_score(query:str, k:int=10, filter:str|None='', **kwargs:Any) -> List[Tuple[Document,float]] {
         # """
         # Return typesense documents most similar to query.
 
@@ -343,7 +355,7 @@ node VectorStoreAction :Action: {
         return None;
     }
 
-    can max_marginal_relevance_search(query:str, k:int=10, fetch_k:int = 20, lamda_mult:float = 0.5, kwargs:dict={}) -> List[Document,float] {
+    can max_marginal_relevance_search(query:str, k:int=10, fetch_k:int = 20, lamda_mult:float = 0.5, **kwargs:Any) -> List[Document,float] {
         # """
         # Maximal marginal relevance optimizes for similarity to query AND diversity among selected documents.
 
@@ -371,7 +383,7 @@ node VectorStoreAction :Action: {
         return None;
     }
 
-    can vector_similarity_search(embedding:list[float], k:int=10, kwargs:dict={}) -> List[Document] {
+    can vector_similarity_search(embedding:list[float], k:int=10, **kwargs:Any) -> List[Document] {
         # """
         # Return docs most similar to embedding vector.
 
