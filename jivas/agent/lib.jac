@@ -7,7 +7,8 @@ import:jac from jivas.agent.core {
     get_agent,
     update_agent,
     list_agents,
-    delete_agent
+    delete_agent,
+    healthcheck
 }
 
 import:jac from jivas.agent.action {
@@ -16,7 +17,6 @@ import:jac from jivas.agent.action {
     list_actions,
     get_action,
     update_action,
-    healthcheck,
     install_action
 }
 

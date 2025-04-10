@@ -51,7 +51,9 @@ node Action :GraphNode: {
         # override to implement pulse operation
     }
 
-    can healthcheck() -> bool {
+    can healthcheck() -> Union[bool, dict] {
+        # override to implement healthcheck operation
+        # optionally returns a dict of (status:bool, severity:str [error|warning], message:str) if more information is needed
         return True;
     }
 

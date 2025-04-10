@@ -222,6 +222,7 @@ walker import_agent :graph_walker: {
                 }
             }
 
+            # if agent has a descriptor.yaml file, we need to import it
             if(os.path.exists(descriptor_yaml_path)) {
                 with open(descriptor_yaml_path, 'r') as file {
                     try  {
@@ -236,6 +237,10 @@ walker import_agent :graph_walker: {
                     }
                 }
             }
+
+
+
+            # if agent has a memory.yaml file, we need to import it
             if(agent_node and os.path.exists(memory_yaml_path)) {
                 with open(memory_yaml_path, 'r') as file {
                     try  {
@@ -250,26 +255,28 @@ walker import_agent :graph_walker: {
                     }
                 }
             }
+            # if agent has a knowledge.yaml file, we need to import it
             if(agent_node and os.path.exists(knowledge_yaml_path)) {
+
                 with open(knowledge_yaml_path, 'r') as file {
                     try {
-                        knodes_yaml = file.read();
 
-                        yaml_data = yaml.safe_load(knodes_yaml);
-                        if('vec' in yaml_data[0]){
-                            if(typesense_vector_action_node := agent_node.get_actions().get(action_label="TypesenseVectorStoreAction")){
-                                typesense_vector_action_node.add_embeddings(knodes_yaml);
-                            }
-                        }else{
-                            # if theres a configured vector store action, let's grab and import knodes
-                            if(vector_store_action := agent_node.get_vector_store_action()) {
-                                #load the knodes
-                                vector_store_action.import_knodes(knodes_yaml);
+                        knode_yaml = file.read();
+                        knode_yaml_data = yaml.safe_load(knode_yaml);
+
+                        # if theres a configured vector store action for this agent, let's grab and import knodes
+                        if(vector_store_action := agent_node.get_vector_store_action()) {
+                            if('vec' in knode_yaml_data[0]) {
+                                # if we have embeddings with the import
+                                vector_store_action.add_embeddings(knode_yaml);
+                            } else {
+                                #load the knodes, as per norm
+                                vector_store_action.import_knodes(knode_yaml);
                             }
                         }
                     } except Exception as e {
                         self.logger.error(
-                            f"an exception occurred, {traceback.format_exc()}"
+                            f"an exception occurred while importing agent knowledge, {traceback.format_exc()}"
                         );
                     }
                 }
