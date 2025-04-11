@@ -13,7 +13,6 @@ walker get_action :interact_graph_walker: {
     # must be spawned on agent or actions node or supplied with agent_id
     has agent_id: str = "";
     has action_id: str = "";
-    has action_data: dict = {};
     # set up logger
     static has logger: Logger = logging.getLogger(__name__);
 
@@ -38,9 +37,7 @@ walker get_action :interact_graph_walker: {
 
     can on_action with Action entry {
         # load the action data
-        self.action_data = here.export();
-        # report it
-        report self.action_data;
+        report here.export();
     }
 
 }

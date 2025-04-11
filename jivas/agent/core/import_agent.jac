@@ -12,12 +12,12 @@ import:py from jvcli.api { RegistryAPI }
 import:py from jvcli.utils { is_version_compatible }
 import:jac from jivas.agent.core.agent { Agent }
 import:jac from agents { Agents }
-import:jac from graph_walker { graph_walker }
+import:jac from agent_graph_walker { agent_graph_walker }
 import:jac from jivas.agent.memory.memory { Memory }
 import:jac from jivas.agent.action.action { Action }
 import:jac from jivas.agent.action.actions { Actions }
 
-walker import_agent :graph_walker: {
+walker import_agent :agent_graph_walker: {
     # creates or refreshes an agent via json data or yaml source
 
     # set up logger

@@ -17,7 +17,6 @@ import:py from jvcli.utils { is_version_compatible }
 import:py from jvserve.lib.agent_interface { AgentInterface }
 import:jac from action { Action }
 import:jac from interact_action { InteractAction }
-import:jac from interact_graph_walker { interact_graph_walker }
 import:jac from jivas.agent.core.graph_node { GraphNode }
 import:jac from exit_interact_action { ExitInteractAction }
 

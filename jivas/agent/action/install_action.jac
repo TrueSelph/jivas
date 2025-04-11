@@ -7,10 +7,10 @@ import:py from logging { Logger }
 import:py from jivas.agent.modules.agentlib.utils { Utils, jvdata_file_interface }
 import:jac from jivas.agent.core.agent {Agent}
 import:jac from jivas.agent.action.actions { Actions }
-import:jac from jivas.agent.core.graph_walker {graph_walker}
+import:jac from jivas.agent.core.agent_graph_walker {agent_graph_walker}
 import:jac from jivas.agent.core.import_agent {import_agent}
 
-walker install_action :graph_walker: {
+walker install_action :agent_graph_walker: {
     # installs a single action on an agent
 
     has reporting:bool = False;  # Flag to enable reporting
