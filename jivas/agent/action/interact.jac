@@ -313,6 +313,9 @@ walker interact :interact_graph_walker: {
         }
 
         if(next_action_node) {
+            # we'll need to ensure it is also excluded from strict intent routing
+            self.interaction_node.add_intent(next_action_node.label);
+            # now prepend it to the walk path
             self.prepend_interact_action(next_action_node);
         }
     }
@@ -345,6 +348,9 @@ walker interact :interact_graph_walker: {
         }
 
         if(append_action_node) {
+            # we'll need to ensure it is also excluded from strict intent routing
+            self.interaction_node.add_intent(append_action_node.label);
+            # now append it to the walk path
             self.append_interact_action(append_action_node);
         }
     }
