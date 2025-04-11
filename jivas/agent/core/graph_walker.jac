@@ -73,6 +73,10 @@ walker graph_walker {
                         visit agent_node;
                     }
 
+                } else {
+                    Jac.get_context().status = 400;
+                    report "Invalid agent id";
+                    disengage;
                 }
 
             } except Exception as e {

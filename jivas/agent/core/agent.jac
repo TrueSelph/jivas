@@ -29,12 +29,13 @@ node Agent :GraphNode: {
     has tts_action: str = "ElevenlabsTTSAction";
     has stt_action: str = "DeepgramSTTAction";
     has vector_store_action: str = "TypesenseVectorStoreAction";
+    has healthcheck_status: int = 501;
     has meta: dict = {};
 
     can postinit {
         super.postinit();
-        # add of node attributes which are protected from update operation
-        self.protected_attrs += ["id", "actions"];
+        # node attributes which are protected from update operation
+        self.protected_attrs += ["id", "actions", "descriptor", "healthcheck_status", "meta"];
     }
 
     can get_memory() {
@@ -115,6 +116,20 @@ node Agent :GraphNode: {
                 data['actions'],
                 self.jpr_api_key
             );
+        }
+
+        # perform healthcheck and log error / warning details
+        healthcheck_report = self.get_healthcheck_report();
+        if (healthcheck_report['status'] == 200) {
+            self.logger.info(healthcheck_report['message']);
+        } else {
+            for (label, detail) in (healthcheck_report['trace']).items() {
+                if (detail.get("status") == False) {
+                    self.logger.error(f"[{label}] {detail.get("message")}");
+                } elif (detail.get("status") == True and detail.get("severity") == "warning") {
+                    self.logger.warning(f"[{label}] {detail.get("message")}");
+                }
+            }
         }
 
         return agent_node;
@@ -280,13 +295,13 @@ node Agent :GraphNode: {
                     result['status'] = 503;
                     error_warning_trace[key] = {
                         "status": False,
-                        "message": value.get("message"),
+                        "message": value.get("message", f"Agent healthcheck failed on {key}. Inspect configuration and try again."),
                         "severity": value.get("severity")
                     };
                 } elif(value.get("status") == True and value.get("severity") == "warning") {
                     error_warning_trace[key] = {
                         "status": True,
-                        "message": value.get("message"),
+                        "message": value.get("message", f"Agent healthcheck warning on {key}."),
                         "severity": value.get("severity")
                     };
                 }
@@ -310,6 +325,9 @@ node Agent :GraphNode: {
             result['message'] = f"Agent healthcheck failed.";
             result['trace'] = error_warning_trace;
         }
+
+        # update the healthcheck status
+        self.healthcheck_status = result['status'];
 
         return result;
     }

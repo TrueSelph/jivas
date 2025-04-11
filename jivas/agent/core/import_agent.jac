@@ -238,7 +238,15 @@ walker import_agent :graph_walker: {
                 }
             }
 
-
+            # if agent does not pass healthcheck, halt here
+            if(agent_node) {
+                if(agent_node.healthcheck_status != 200) {
+                    self.logger.error(
+                        f"{agent_node.name} failed healthcheck. Any memory or knowledge packaged for import will be deferred."
+                    );
+                    return agent_node;
+                }
+            }
 
             # if agent has a memory.yaml file, we need to import it
             if(agent_node and os.path.exists(memory_yaml_path)) {

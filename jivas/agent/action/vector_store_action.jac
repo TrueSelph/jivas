@@ -491,14 +491,36 @@ node VectorStoreAction :Action: {
         # """
     }
 
-    can healthcheck() -> bool {
+    can healthcheck() -> Union[bool, dict] {
         try {
-            if(self.embedding_model_provider and self.embedding_model_api_key){
-                return True;
+            if(not self.embedding_model_provider){
+                return {
+                    "status": False,
+                    "messgae": "Embedding model provider not set",
+                    "severity": "error"
+                };
             }
-            return False;
+
+            embedded_texts = self.get_embedding_model().embed_documents(["this is a test"]);
+            if not embedded_texts {
+                return {
+                    "status": False,
+                    "messgae": "Embedding model not functional. Check your configuration",
+                    "severity": "error"
+                };
+            }
+
+            # check if the vectorstore is available
+            if(not self.get_vectorstore()) {
+                return {
+                    "status": False,
+                    "messgae": "Vectorstore not configured",
+                    "severity": "error"
+                };
+            }
+
+            return True;
         } except Exception as e {
-            self.logger.error(f"An exception occurred in {self.label}:\n{traceback.format_exc()}\n");
             return False;
         }
     }

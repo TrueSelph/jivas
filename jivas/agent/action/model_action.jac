@@ -57,6 +57,35 @@ node ModelAction :Action: {
         return None;
     }
 
+    can healthcheck() -> Union[bool, dict] {
+
+        if(self.model_name == "" or self.api_key == "") {
+            return False;
+        }
+
+        test_prompt_messages = [{"system" : "Output the result of 2 + 2"}];
+        test_kwargs = {
+            "model_name": self.model_name,
+            "model_temperature": self.model_temperature,
+            "model_max_tokens": self.model_max_tokens
+        };
+
+        try {
+            if( model_action_result := self.call_model(prompt_messages = test_prompt_messages, prompt_variables = {}, kwargs = test_kwargs)) {               # set the interaction message+
+                interaction_message = model_action_result.get_result();
+                if not interaction_message {
+                    return False;
+                } else {
+                    return True;
+                }
+            }
+            return False;
+        } except Exception as e {
+            self.logger.error(f"An exception occurred in {self.label}:\n{traceback.format_exc()}\n");
+            return False;
+        }
+    }
+
 }
 
 obj ModelActionResult {
