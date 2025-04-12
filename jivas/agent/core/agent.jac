@@ -26,15 +26,16 @@ node Agent :GraphNode: {
     has window_time: int = 20; # in seconds, the time window we are monitoring
     has flood_threshold: int = 4; # in messages per window time
     has frame_size: int = 10; # keeps up to 10 interactions in the frame
-    has meta: dict = {};
     has tts_action: str = "ElevenlabsTTSAction";
     has stt_action: str = "DeepgramSTTAction";
     has vector_store_action: str = "TypesenseVectorStoreAction";
+    has healthcheck_status: int = 501;
+    has meta: dict = {};
 
     can postinit {
         super.postinit();
-        # add of node attributes which are protected from update operation
-        self.protected_attrs += ["id", "actions"];
+        # node attributes which are protected from update operation
+        self.protected_attrs += ["id", "actions", "descriptor", "healthcheck_status", "meta"];
     }
 
     can get_memory() {
@@ -117,6 +118,20 @@ node Agent :GraphNode: {
             );
         }
 
+        # perform healthcheck and log error / warning details
+        healthcheck_report = self.get_healthcheck_report();
+        if (healthcheck_report['status'] == 200) {
+            self.logger.info(healthcheck_report['message']);
+        } else {
+            for (label, detail) in (healthcheck_report['trace']).items() {
+                if (detail.get("status") == False) {
+                    self.logger.error(f"[{label}] {detail.get("message")}");
+                } elif (detail.get("status") == True and detail.get("severity") == "warning") {
+                    self.logger.warning(f"[{label}] {detail.get("message")}");
+                }
+            }
+        }
+
         return agent_node;
     }
 
@@ -167,6 +182,181 @@ node Agent :GraphNode: {
         }
 
         return {};
+    }
+
+    can healthcheck() -> Union[bool, dict] {
+        # performs agent core healthcheck and return trace result
+        trace = {};
+
+        # Check each attribute for valid values and add to trace
+        if not self.published {
+            trace['published'] = {
+                "status": False,
+                "message": "Agent must be published to interact with it.",
+                "severity": "error"
+            };
+        }
+
+        if len(self.jpr_api_key.strip()) == 0 {
+            trace['jpr_api_key'] = {
+            "status": True,
+            "message": "JPR API key not set. Your agent will not be able to access private JIVAS package repo items.",
+            "severity": "warning"
+            };
+        }
+
+        if isinstance(self.name, str) and len(self.name.strip()) == 0 {
+            trace['name'] = {
+            "status": False,
+            "message": "Agent name must be a non-empty string with no leading or trailing spaces.",
+            "severity": "error"
+            };
+        }
+
+        if isinstance(self.description, str) and len(self.description.strip()) == 0 {
+            trace['description'] = {
+            "status": False,
+            "message": "Agent description must be a non-empty string with no leading or trailing spaces.",
+            "severity": "error"
+            };
+        }
+
+        if len(self.descriptor.strip()) == 0 {
+            trace['descriptor'] = {
+            "status": False,
+            "message": "Agent descriptor path not set.",
+            "severity": "error"
+            };
+        }
+
+        if not isinstance(self.message_limit, int) or self.message_limit <= 0 {
+            trace['message_limit'] = {
+            "status": False,
+            "message": "Message limit must be a positive integer.",
+            "severity": "error"
+            };
+        }
+
+        if not isinstance(self.flood_block_time, int) or self.flood_block_time <= 0 {
+            trace['flood_block_time'] = {
+            "status": False,
+            "message": "Flood block time must be a positive integer representing seconds.",
+            "severity": "error"
+            };
+        }
+
+        if not isinstance(self.window_time, int) or self.window_time <= 0 {
+            trace['window_time'] = {
+            "status": False,
+            "message": "Window time must be a positive integer representing seconds.",
+            "severity": "error"
+            };
+        }
+
+        if not isinstance(self.flood_threshold, int) or self.flood_threshold <= 0 {
+            trace['flood_threshold'] = {
+            "status": False,
+            "message": "Flood threshold must be a positive integer.",
+            "severity": "error"
+            };
+        }
+
+        if not isinstance(self.frame_size, int) or self.frame_size <= -1 {
+            trace['frame_size'] = {
+            "status": False,
+            "message": "Frame size must be 0 or a positive integer.",
+            "severity": "error"
+            };
+        }
+
+        return trace;
+    }
+
+    can get_healthcheck_report() -> dict {
+        # performs agent healthcheck and actions healthcheck; returns full status report
+
+        result = {
+            'status': 501,
+            'message': 'Agent healthcheck was unable to execute.',
+            'trace': {}
+        };
+
+        error_warning_trace = {};
+        # perform healthcheck on agent core
+        trace = self.healthcheck();
+        # triggers the healthcheck ability of all actions on an agent
+        trace.update( (self spawn _healthcheck_actions()).trace );
+
+        # review trace to assess healthcheck status
+        # iterate through the trace and check for any False values
+        for (key, value) in trace.items() {
+            if (isinstance(value, dict)) {
+                if (value.get("status") == False) {
+                    result['status'] = 503;
+                    error_warning_trace[key] = {
+                        "status": False,
+                        "message": value.get("message", f"Agent healthcheck failed on {key}. Inspect configuration and try again."),
+                        "severity": value.get("severity")
+                    };
+                } elif(value.get("status") == True and value.get("severity") == "warning") {
+                    error_warning_trace[key] = {
+                        "status": True,
+                        "message": value.get("message", f"Agent healthcheck warning on {key}."),
+                        "severity": value.get("severity")
+                    };
+                }
+            } elif (value == False) {
+                result['status'] = 503;
+                error_warning_trace[key] = {
+                    "status": False,
+                    "message": f"Agent healthcheck failed on {key}. Inspect configuration and try again.",
+                    "severity": "error"
+                };
+            }
+        }
+
+        if (result['status'] == 501) {
+            # if we didn't find any issues, set status to 200
+            result['status'] = 200;
+            result['message'] = f"Agent healthcheck passed.";
+            result['trace'] = error_warning_trace;
+        } elif result['status'] == 503 {
+            # if we found issues, report them
+            result['message'] = f"Agent healthcheck failed.";
+            result['trace'] = error_warning_trace;
+        }
+
+        # update the healthcheck status
+        self.healthcheck_status = result['status'];
+
+        return result;
+    }
+
+}
+
+walker _healthcheck_actions {
+    # performs agent healthcheck; triggers the healthcheck ability of all actions on an agent
+
+    has trace:dict = {};
+
+    obj __specs__ {
+        # make this a private walker
+        static has private: bool = True;
+    }
+
+    can on_agent with Agent entry {
+        # head to actions
+        visit [-->](`?Actions);
+    }
+
+    can on_actions with Actions entry {
+        # head to enabled action
+        visit [-->](`?Action)(?enabled==True);
+    }
+
+    can on_action with Action entry {
+        # trigger healthcheck ability
+        self.trace[here.label] = here.healthcheck();
     }
 
 }

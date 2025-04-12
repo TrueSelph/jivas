@@ -20,6 +20,7 @@ walker list_actions :interact_graph_walker: {
     obj __specs__ {
         # make this walker visible in API
         static has private: bool = False;
+        static has excluded: list = ['actions'];
     }
 
     can on_agent with Agent entry {

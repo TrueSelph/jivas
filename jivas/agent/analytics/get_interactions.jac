@@ -4,13 +4,13 @@ import:py traceback;
 import:py from logging { Logger }
 import:jac from jivas.agent.core.agent { Agent }
 import:jac from jivas.agent.action.action { Action }
-import:jac from jivas.agent.core.graph_walker { graph_walker }
+import:jac from jivas.agent.core.agent_graph_walker { agent_graph_walker }
 import:jac from jivas.agent.action.actions { Actions }
 import:jac from jivas.agent.memory.memory { Memory }
 import:jac from jivas.agent.memory.frame { Frame }
 
 
-walker get_interactions :graph_walker: {
+walker get_interactions :agent_graph_walker: {
     # returns the list of interactions of a frame.
     has interactions:dict = {};
     has session_id:str = "";

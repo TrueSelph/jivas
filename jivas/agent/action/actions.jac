@@ -17,7 +17,6 @@ import:py from jvcli.utils { is_version_compatible }
 import:py from jvserve.lib.agent_interface { AgentInterface }
 import:jac from action { Action }
 import:jac from interact_action { InteractAction }
-import:jac from interact_graph_walker { interact_graph_walker }
 import:jac from jivas.agent.core.graph_node { GraphNode }
 import:jac from exit_interact_action { ExitInteractAction }
 
@@ -643,14 +642,6 @@ node Actions :GraphNode: {
         return Utils.order_interact_actions(action_data_index.values());
     }
 
-    can healthcheck() {
-        # performs agent healthcheck; triggers the healthcheck ability of all actions on an agent
-        # this is a wrapper for the _healthcheck_actions walker
-
-        self.logger.info("performing agent healthcheck");
-        return ((self spawn _healthcheck_actions()).trace);
-    }
-
 }
 
 walker _get_actions {
@@ -708,27 +699,5 @@ walker _get_interact_actions {
         # attempt to visit any child actions
         visit [-->](`?InteractAction);
     }
-}
-
-walker _healthcheck_actions {
-    # performs agent healthcheck; triggers the healthcheck ability of all actions on an agent
-
-    has trace:dict = {};
-
-    obj __specs__ {
-        # make this a private walker
-        static has private: bool = True;
-    }
-
-    can on_actions with Actions entry {
-        # head to action
-        visit [-->](`?Action)(?enabled==True);
-    }
-
-    can on_action with Action entry {
-        # trigger healthcheck ability
-        self.trace[here.label] = here.healthcheck();;
-    }
-
 }
 

@@ -92,6 +92,7 @@ node VectorStoreAction :Action: {
 
         # Try to parse the content as JSON
         importing_error_message= "";
+
         if(isinstance(data, str)) {
             try {
                 knodes = json.loads(data);
@@ -109,30 +110,45 @@ node VectorStoreAction :Action: {
             knodes = data;
         }
 
-        try{
-            for doc in knodes {
-                if(doc.get('id')){
-                    metadatas = [doc['metadata']];
+        try {
+
+            failed = [];
+            successful = [];
+
+            self.logger.info(f"Importing {knodes} ...");
+
+            for knode in knodes {
+
+                if(knode.get('id')){
+                    metadatas = [knode['metadata']];
                     ids = self.add_texts(
-                        texts=[str(doc['text'])],
+                        texts=[str(knode['text'])],
                         metadatas=metadatas,
-                        ids = [doc['id']]
+                        ids = [knode['id']]
                     );
                 }else{
-                    metadatas = [doc['metadata']];
+                    metadatas = [knode['metadata']];
                     ids = self.add_texts(
-                        texts=[str(doc['text'])],
+                        texts=[str(knode['text'])],
                         metadatas=metadatas
                     );
                 }
 
                 if(not ids) {
-                    self.logger.error(f"Failed to add text to vectorstore");
-                    return False;
+                    self.logger.error(f"Failed to add text to vectorstore - {str(knode['text'][:50])}...");
+                    failed.append(knode);
                 } else {
-                    self.logger.info(f"text added {ids}");
-                    return True;
+                    self.logger.info(f"Added to vectorstore - [{ids}] {str(knode['text'][:50])}...");
+                    successful.append(knode);
                 }
+            }
+
+            if(failed) {
+                self.logger.error(f"Failed to import {len(failed)} knodes");
+                return False;
+            } else {
+                self.logger.info(f"Successfully imported {len(successful)} knodes");
+                return True;
             }
 
         } except Exception as e {
@@ -475,14 +491,36 @@ node VectorStoreAction :Action: {
         # """
     }
 
-    can healthcheck() -> bool {
+    can healthcheck() -> Union[bool, dict] {
         try {
-            if(self.embedding_model_provider and self.embedding_model_api_key){
-                return True;
+            if(not self.embedding_model_provider){
+                return {
+                    "status": False,
+                    "messgae": "Embedding model provider not set",
+                    "severity": "error"
+                };
             }
-            return False;
+
+            embedded_texts = self.get_embedding_model().embed_documents(["this is a test"]);
+            if not embedded_texts {
+                return {
+                    "status": False,
+                    "messgae": "Embedding model not functional. Check your configuration",
+                    "severity": "error"
+                };
+            }
+
+            # check if the vectorstore is available
+            if(not self.get_vectorstore()) {
+                return {
+                    "status": False,
+                    "messgae": "Vectorstore not configured",
+                    "severity": "error"
+                };
+            }
+
+            return True;
         } except Exception as e {
-            self.logger.error(f"An exception occurred in {self.label}:\n{traceback.format_exc()}\n");
             return False;
         }
     }

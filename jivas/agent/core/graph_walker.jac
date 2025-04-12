@@ -3,11 +3,10 @@ import:py traceback;
 import:py from logging { Logger }
 import:py from jivas.agent.modules.agentlib.utils { Utils }
 import:jac from app { App }
-import:jac from agents { Agents }
 
 walker graph_walker {
     # base walker designed to traverse along app graph;
-    has agent_id: str = "";
+
     has reporting: bool = True;
 
     # set up logger
@@ -52,34 +51,4 @@ walker graph_walker {
         }
     }
 
-    can on_app with App entry {
-        # spawn agents node if not there
-        visit [-->](`?Agents) else {
-            self.logger.debug('agents node created');
-            agents_node = here ++> Agents();
-            visit agents_node;
-        }
-    }
-
-    can on_agents with Agents entry {
-
-        if(self.agent_id) {
-
-            try {
-
-                if(agent_node := &self.agent_id) {
-
-                    if agent_node.published {
-                        visit agent_node;
-                    }
-
-                }
-
-            } except Exception as e {
-                Jac.get_context().status = 400;
-                report "Invalid agent id";
-                disengage;
-            }
-        }
-    }
 }

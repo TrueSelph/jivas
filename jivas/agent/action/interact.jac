@@ -32,7 +32,7 @@ walker interact :interact_graph_walker: {
     has session_id: str = "";
     has utterance: str = "";
     has channel: str = "default"; # other channels: 'kiosk', 'whatsapp', 'fbm', 'slack', etc.
-    has data: list[dict] = []; # expects [{'label': str, 'meta': str, 'content': str}]
+    has data: list[dict] = []; # expects [{'label': str, 'meta': dict, 'content': str}]
     has verbose: bool = False; # verbose payload or not
     has tts: bool = False; # activate text-to-speech response
     has streaming: bool = False; # activate streaming response
@@ -313,6 +313,9 @@ walker interact :interact_graph_walker: {
         }
 
         if(next_action_node) {
+            # we'll need to ensure it is also excluded from strict intent routing
+            self.interaction_node.add_intent(next_action_node.label);
+            # now prepend it to the walk path
             self.prepend_interact_action(next_action_node);
         }
     }
@@ -345,6 +348,9 @@ walker interact :interact_graph_walker: {
         }
 
         if(append_action_node) {
+            # we'll need to ensure it is also excluded from strict intent routing
+            self.interaction_node.add_intent(append_action_node.label);
+            # now append it to the walk path
             self.append_interact_action(append_action_node);
         }
     }

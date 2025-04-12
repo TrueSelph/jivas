@@ -3,11 +3,11 @@ import:py logging;
 import:py traceback;
 import:py from logging { Logger }
 import:py from datetime { datetime, timedelta }
-import:jac from jivas.agent.core.graph_walker { graph_walker }
+import:jac from jivas.agent.core.agent_graph_walker { agent_graph_walker }
 import:jac from jivas.agent.core.agent { Agent }
 import:py from jac_cloud.core.architype { NodeAnchor }
 
-walker get_channels_by_date :graph_walker: {
+walker get_channels_by_date :agent_graph_walker: {
 
     has start_date: str = "";
     has end_date: str = "";

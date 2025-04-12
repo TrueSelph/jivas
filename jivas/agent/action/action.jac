@@ -2,7 +2,6 @@ import:py logging;
 import:py traceback;
 import:py from logging { Logger }
 import:jac from jivas.agent.core.graph_node { GraphNode }
-import:jac from interact_graph_walker { interact_graph_walker }
 
 node Action :GraphNode: {
     # represents an execution on the agent action graph
@@ -51,7 +50,13 @@ node Action :GraphNode: {
         # override to implement pulse operation
     }
 
-    can healthcheck() -> bool {
+    can analytics() {
+        # override to furnish analytics data for the action
+    }
+
+    can healthcheck() -> Union[bool, dict] {
+        # override to implement healthcheck operation
+        # optionally returns a dict of (status:bool, severity:str [error|warning], message:str) if more information is needed
         return True;
     }
 

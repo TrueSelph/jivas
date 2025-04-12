@@ -4,6 +4,7 @@ import:py io;
 import:py logging;
 import:py traceback;
 import:py from logging { Logger }
+import:jac from app { App }
 import:jac from jivas.agent.core.agent {Agent}
 import:jac from agents {Agents}
 import:jac from graph_walker {graph_walker}
@@ -21,6 +22,15 @@ walker init_agents :graph_walker: {
     obj __specs__ {
         # make this walker visible in API
         static has private: bool = False;
+    }
+
+    can on_app with App entry {
+        # spawn agents node if not there
+        visit [-->](`?Agents) else {
+            self.logger.debug('agents node created');
+            agents_node = here ++> Agents();
+            visit agents_node;
+        }
     }
 
     can on_agents with Agents entry {
