@@ -41,15 +41,15 @@ echo "--------------------------------"
 set -m
 
 # Start main process in the background
-jac jvserve main.jac &
+jvcli server launch &
 
 # Create JIVAS_FILES_ROOT_PATH if it doesn't exist
 if [ ! -d "$JIVAS_FILES_ROOT_PATH" ]; then
     mkdir -p $JIVAS_FILES_ROOT_PATH
 fi
 
-# Launch file server if in development mode
-if [ "$JIVAS_ENVIRONMENT" == "development" ]; then
+# Launch file server if in development mode and JIVAS_FILEINTERFACE is set to local
+if [ "$JIVAS_ENVIRONMENT" == "development" ] && [ "$JIVAS_FILEINTERFACE" == "local" ]; then
     echo "Starting file server..."
     jac jvfileserve $JIVAS_FILES_ROOT_PATH &
 fi
@@ -57,13 +57,12 @@ fi
 # Rest of script remains unchanged
 function initialize() {
     if lsof -i :8000 >/dev/null; then
-        # Try to login first
-        JIVAS_TOKEN=$(curl --silent --show-error --no-progress-meter \
-        --request POST \
-        --header 'Content-Type: application/json' \
-        --header 'Accept: application/json' \
-        --data '{"password": "'$JIVAS_PASSWORD'","email": "'$JIVAS_USER'"}' \
-        "http://localhost:8000/user/login" | jq -r '.token')
+        # Try to login first using jvcli
+        echo "Attempting to login with jvcli..."
+        LOGIN_OUTPUT=$(jvcli server login --email "$JIVAS_USER" --password "$JIVAS_PASSWORD" 2>&1)
+
+        # Extract token from login output
+        JIVAS_TOKEN=$(echo "$LOGIN_OUTPUT" | grep "Token:" | sed 's/Token: //')
 
         echo $JIVAS_TOKEN
 
@@ -71,30 +70,14 @@ function initialize() {
         if [ -z "$JIVAS_TOKEN" ] || [ "$JIVAS_TOKEN" == "null" ]; then
             echo "Login failed. Creating system admin..."
 
-            # if DATABASE_HOST is set create system admin, if not use signup
-            if [ -z "$DATABASE_HOST" ]; then
-                echo "Database host is not set. Using signup endpoint"
-                curl --silent --show-error --no-progress-meter \
-                    --request POST \
-                    --header 'Content-Type: application/json' \
-                    --header 'Accept: application/json' \
-                    --data '{
-                    "password": "'"$JIVAS_PASSWORD"'",
-                    "email": "'"$JIVAS_USER"'"
-                    }' \
-                    "http://localhost:8000/user/register"
-            else
-                echo "Creating system admin..."
-                jac create_system_admin main.jac --email $JIVAS_USER --password $JIVAS_PASSWORD
-            fi
+            jvcli server createadmin
 
             # Attempt to login again after creating the superadmin
-            JIVAS_TOKEN=$(curl --silent --show-error --no-progress-meter \
-            --request POST \
-            --header 'Content-Type: application/json' \
-            --header 'Accept: application/json' \
-            --data '{"password": "'$JIVAS_PASSWORD'","email": "'$JIVAS_USER'"}' \
-            "http://localhost:8000/user/login" | jq -r '.token')
+            LOGIN_OUTPUT=$(jvcli server login --email "$JIVAS_USER" --password "$JIVAS_PASSWORD" 2>&1)
+
+            # Extract token from login output
+            JIVAS_TOKEN=$(echo "$LOGIN_OUTPUT" | grep "Token:" | sed 's/Token: //')
+            echo $JIVAS_TOKEN
         fi
 
         # Print token
@@ -103,13 +86,7 @@ function initialize() {
         echo "Initializing jivas graph..."
 
         # Initialize agents
-        curl --silent --show-error --no-progress-meter \
-        --request POST \
-        -H 'accept: application/json' \
-        -H 'Content-Type: application/json' \
-        -H "Authorization: Bearer $JIVAS_TOKEN" \
-        --data '{}' \
-        "http://localhost:8000/walker/init_agents"
+        jvcli server initagents
 
         fg %1
 
