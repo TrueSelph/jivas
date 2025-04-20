@@ -259,9 +259,16 @@ walker interact :interact_graph_walker: {
 
         # add new interaction node to the frame, or assume one which is open and already added
         # interaction nodes may be programmatically added and initialized in webhook type actions before interact is called
+        add_interaction = False;
         self.interaction_node = self.frame_node.get_last_interaction();
 
-        if(self.interaction_node.is_closed()) {
+        if self.interaction_node is None {
+            add_interaction = True;
+        } elif self.interaction_node.is_closed() {
+            add_interaction = True;
+        }
+
+        if(add_interaction) {
             self.interaction_node = self.frame_node.add_interaction(
                 utterance=self.utterance,
                 channel=self.channel
