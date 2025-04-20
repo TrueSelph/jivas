@@ -44,7 +44,6 @@ walker interact :interact_graph_walker: {
     has context_data: dict = {};
     has frame_node: Frame = None;
     has interaction_node: Interaction = None;
-    has last_interaction_node: InteractAction = None;
     has agent_node: Agent = None;
 
     obj __specs__ {
@@ -57,7 +56,6 @@ walker interact :interact_graph_walker: {
             "context_data",
             "frame_node",
             "interaction_node",
-            "last_interaction_node",
             "agent_node"
         ]; # Supported in jac-cloud > 0.0.3
     }
@@ -84,7 +82,10 @@ walker interact :interact_graph_walker: {
 
         # the interact walk, sorts the interact actions by weight to preserve execution order before walk
 
-        if (resume_action_node := self.frame_node.get_resume_action(self.last_interaction_node)) {
+        # since we have a fresh interaction node at this point, we have to up the depth of retraces to get the last one
+        last_interaction_node = self.frame_node.get_last_interaction(retraces=2);
+
+        if (resume_action_node := self.frame_node.get_resume_action(last_interaction_node)) {
             # add any resumption directives from the last interaction node of the frame...
             root_action_node = resume_action_node.get_root_action();
             self.interaction_node.add_intent(root_action_node.label);
@@ -256,14 +257,23 @@ walker interact :interact_graph_walker: {
             );
         }
 
-        # save last interaction, if any
-        self.last_interaction_node = self.frame_node.get_last_interaction();
+        # add new interaction node to the frame, or assume one which is open and already added
+        # interaction nodes may be programmatically added and initialized in webhook type actions before interact is called
+        add_interaction = False;
+        self.interaction_node = self.frame_node.get_last_interaction();
 
-        # add new interaction node to the frame
-        self.interaction_node = self.frame_node.add_interaction(
-            utterance=self.utterance,
-            channel=self.channel
-        );
+        if self.interaction_node is None {
+            add_interaction = True;
+        } elif self.interaction_node.is_closed() {
+            add_interaction = True;
+        }
+
+        if(add_interaction) {
+            self.interaction_node = self.frame_node.add_interaction(
+                utterance=self.utterance,
+                channel=self.channel
+            );
+        }
 
         if (not self.interaction_node) {
             return False;
@@ -593,6 +603,9 @@ walker interact :interact_graph_walker: {
             self.frame_node.prune_interactions(
                 frame_size=self.agent_node.frame_size
             );
+
+            # close the interaction
+            self.interaction_node.close();
 
         } else {
             self.message = SilentInteractionMessage();
