@@ -39,12 +39,10 @@ node Frame :GraphNode: {
         }
     }
 
-    can get_last_interaction() -> Interaction {
-        # retrieves the last interaction in this frame
-        if(result := [-:Tail:->](`?Interaction)) {
-            return Utils.node_obj(result);
-        }
-        return None;
+    can get_last_interaction(retraces:int=1) -> Interaction {
+        # retrieves the last interaction in this frame by default;
+        # can attempt to retrace by a number specified in the retraces param to retrieve older interactions
+        return (self spawn _get_interaction_by_retraces(retraces = retraces)).interaction_node;
     }
 
     can is_first_interaction -> bool {
@@ -108,6 +106,9 @@ node Frame :GraphNode: {
                 message=TextInteractionMessage(content=message).export()
             ).export()
         );
+
+        # close the unprompted interaction
+        interaction_node.close();
 
         return self.insert_interaction(interaction_node, last_interaction_node);
     }
@@ -301,6 +302,34 @@ walker _get_interactions {
     can on_interaction with Interaction entry {
         self.interactions.append(here);
         visit [-:Advance:->](`?Interaction);
+    }
+}
+
+walker _get_interaction_by_retraces {
+    # retraces from frame by a factor of 'retraces' to retrieve any interaction found
+    has retraces:int = 1;
+    has walks:int = 0;
+    has interaction_node:Interaction = None;
+
+    obj __specs__ {
+        # make this a private walker
+        static has private: bool = True;
+    }
+
+    can on_frame with Frame entry {
+        visit [-:Tail:->](`?Interaction);
+    }
+
+    can on_interaction with Interaction entry {
+
+        self.walks += 1;
+
+        if(self.retraces == self.walks) {
+            self.interaction_node = here;
+            disengage;
+        }
+
+        visit [-:Retrace:->](`?Interaction);
     }
 }
 

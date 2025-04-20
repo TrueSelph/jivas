@@ -21,6 +21,7 @@ node Interaction :GraphNode: {
     has events: list = [];
     has response: dict = {};
     has data:dict = {};
+    has closed:bool = False; # flag to determine whether interaction is complete / closed or not
 
     can attach_interaction(interaction_node:Interaction) {
         # attaches a new interaction node to this one
@@ -158,6 +159,14 @@ node Interaction :GraphNode: {
 
     can get_functions(action_label:str) -> list {
         return self.functions.get(action_label, []);
+    }
+
+    can is_closed() -> bool {
+        return self.closed;
+    }
+
+    can close() {
+        self.closed = True;
     }
 
 }
