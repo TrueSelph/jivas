@@ -223,7 +223,7 @@ walker interact :interact_graph_walker: {
             message_window = {key: utc.localize(value) if isinstance(value, datetime) else datetime.strptime(value, "%Y-%m-%d %H:%M:%S.%f") for key, value in message_window.items() if key in keys};
             ::py::
 
-            if (message_window.get("end", 0) <= now) {
+            if (utc.localize(message_window.get("end", 0)) <= now) {
                 # reset window
                 message_window["start"] = now;
                 message_window["end"] = now + timedelta(seconds=window_time);

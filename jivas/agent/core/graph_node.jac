@@ -8,14 +8,10 @@ import:py from dataclasses { fields, MISSING }
 node GraphNode {
     # base graph node for all nodes in agent graph, under app node.
     has id: str = "";
-    # flag to permit export of children nodes in agent graph export
-    has graph_children: bool = False;
-    # flag to permit export of itself in agent graph export
-    has graph_self: bool = True;
     # list of node attributes which are protected from update operation
     has protected_attrs: list = ["id"];
     # list of node attributes which should be excluded from export
-    has transient_attrs: list = ['__jac__', 'protected_attrs', 'transient_attrs', 'graph_children', 'graph_self', 'package_path'];
+    has transient_attrs: list = ['__jac__', 'protected_attrs', 'transient_attrs', 'package_path'];
     # for storing extended attributes
     has _context: dict = {};
     # set up logger

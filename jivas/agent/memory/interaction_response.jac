@@ -18,7 +18,7 @@ obj InteractionMessage {
 
     can load(data:dict) {
         # loads a compatible interaction message data struct
-        if (data) {
+        if (data and isinstance(data, dict)) {
             for attr in data.keys() {
                 # set if attribute is a valid attribute
                 if (hasattr(self, attr)) {

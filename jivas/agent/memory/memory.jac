@@ -21,6 +21,7 @@ node Memory :GraphNode: {
 
     can get_frame(agent_id:str, session_id:str, force_session:bool=False, lookup:bool=False) -> Frame {
         # attempt to retrieve an existing session or spawn then traverse to a new one if force is on
+        # if lookup is on, it operates in search mode
 
         frame_node = Utils.node_obj( [-->](`?Frame)(?session_id == session_id) );
 
@@ -37,27 +38,33 @@ node Memory :GraphNode: {
         return frame_node;
     }
 
-    can get_frames() -> list[Frame] {
-        # returns a list of all frame nodes attached to memory
+    can get_frames(session_id:str="") -> list[Frame] {
+        # returns a list of all frame nodes attached to memory or specific ones by session_id if supplied
+
+        if session_id {
+            return [-->](`?Frame)(?session_id == session_id);
+        }
+
         return [-->](`?Frame);
     }
 
-    can import_memory(data:dict, overwrite:bool=True) {
+    can import_memory(data:dict, overwrite:bool=True) -> bool {
         # imports a structured memory dump into memory
         # set overwrite to True in order to wipe memory first
         if not data or not isinstance(data, dict) {
             return False;
         }
 
-        if overwrite {
-            # first purge memory
-            self.purge();
-        }
-
-        # grab agent node
-        agent_node = self.get_agent();
-
         try {
+
+            if overwrite {
+                # first purge memory
+                self.purge();
+            }
+
+            # grab agent node
+            agent_node = self.get_agent();
+
             for frame_data in data.get('memory') {
 
                 # add the session id if we can grab it
@@ -68,7 +75,8 @@ node Memory :GraphNode: {
                     # add the properties under context
                     frame_node.update(frame_data.get('frame', {}).get('context', {}));
 
-                    for interaction_data in frame_data.get('frame', {}).get('interactions', []) {
+                    interactions = frame_data.get('frame', {}).get('interactions', []);
+                    for interaction_data in interactions {
                         # get last interaction node
                         last_interaction_node = frame_node.get_last_interaction();
                         # create the interaction node
@@ -89,6 +97,7 @@ node Memory :GraphNode: {
             }
 
             return True;
+
         } except Exception as e {
             self.logger.warning(f"uploaded memory failed: {e}");
         }
@@ -96,27 +105,29 @@ node Memory :GraphNode: {
         return False;
     }
 
-    can export_memory(agent_id:str, session_id:str, json:bool, save_to_file:bool) {
-        # return a structured memory dump
-        return (self spawn _export_memory(agent_id=agent_id, session_id=session_id, json=json, save_to_file=save_to_file)).frame_data;
+    can export_memory(session_id:str="") {
+        # return a structured memory dump of all agent frames or only those with session_id if supplied
+        return (self spawn _export_memory(session_id=session_id)).frame_data;
     }
 
-    can memory_healthcheck(agent_id:str, session_id:str = "", verbose:bool=False) {
+    can memory_healthcheck(session_id:str = "") {
+
         # init stats
-        total_users = 0;
+        total_frames = 0;
         total_interactions = 0;
 
-        # grab all frames and count length
-        total_users = len(self.get_frames());
+        # grab frames and count length
+        frames = self.get_frames(session_id);
+        total_frames = len(frames);
 
         # loop through frames and count interactions
-        for user in self.get_frames() {
+        for frame in frames {
             # count interactions and add to total
-            total_interactions += len(user.get_interactions());
+            total_interactions += len(frame.get_interactions());
         }
 
         return {
-            "total_users": total_users,
+            "total_frames": total_frames,
             "total_interactions": total_interactions
         };
     }
@@ -175,20 +186,13 @@ walker _purge {
 }
 
 walker _export_memory {
-    # walker which carries out the traversal and purging of frames and related interactions
+    # visits all frames which belong to an optional session_id and returns them and related interactions
 
     # set up logger
     static has logger:Logger = logging.getLogger(__name__);
 
-    has status:int = 200;
-    has response:str = "";
-    has session_id:str = "";
-    has agent_id:str = ""; # TODO: Add agent id validation
+    has session_id:str = ""; # optional, if not supplied, all frames will be exported
     has frame_data:dict = {}; # dict with id of frame as key mapping to all interactions on that frame
-    has file_url:str = "";
-    has file_path:str = "";
-    has json:bool = false;
-    has save_to_file:bool = false;
 
     obj __specs__ {
         # make this a private walker
@@ -201,28 +205,26 @@ walker _export_memory {
             "memory": []
         };
 
-        # navigate to frames
         if(self.session_id) {
-            # only export the session
+            # if session_id is supplied, filter frames
             visit [-->](`?Frame)(?session_id == self.session_id);
         } else {
-            # export all frames
+            # otherwise export all frames
             visit [-->](`?Frame);
         }
     }
 
     can on_frame with Frame entry {
 
-        # grab interactions object
-        interactions = here.get_interactions();
+        interaction_data = [];
 
-        # init interactions
-        interaction_nodes = [];
+        # grab interactions
+        interactions = here.get_interactions();
 
         # fix interaction object by exporting what we
         for interaction_node in interactions {
             # add to interactions
-            interaction_nodes.append({"interaction": {"context": interaction_node.export()}});
+            interaction_data.append({"interaction": {"context": interaction_node.export()}});
         }
 
         # grab interactions and add to frame data
@@ -230,36 +232,11 @@ walker _export_memory {
             {
                 "frame": {
                     "context": here.export(),
-                    "interactions": interaction_nodes
+                    "interactions": interaction_data
                 }
             }
         );
 
     }
 
-    can export_memory with exit {
-        # load env variables from .env file
-        dotenv.load_dotenv();
-
-        # output the yaml
-        if(None) {
-            # create file path
-            file_name = f"memory/{str(uuid.uuid4())}";
-
-            if(not self.json){
-                # set file path
-                self.file_path = f"{file_name}.yaml";
-
-                # write to file
-                Utils.dump_yaml_file(self.file_path, self.frame_data);
-            }else{
-                # set file path
-                self.file_path = f"{file_name}.json";
-
-                # write to file
-                Utils.dump_json_file(self.file_path, self.frame_data);
-            }
-
-        }
-    }
 }
