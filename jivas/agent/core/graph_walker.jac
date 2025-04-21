@@ -17,6 +17,13 @@ walker graph_walker {
         static has private: bool = True;
     }
 
+    can on_root with `root entry {
+        # spawn app node if not there
+        visit [-->](`?App) else {
+            self.logger.error('App graph not initialized. Import an agent and try again.');
+        }
+    }
+
     can export(ignore_keys: list = ['__jac__']) {
         # convert the object to dictionary
         node_export = Utils.export_to_dict(self, ignore_keys);
@@ -40,15 +47,6 @@ walker graph_walker {
 
     can postupdate {
         # can be overriden to execute following a walker update
-    }
-
-    can on_root with `root entry {
-        # spawn app node if not there
-        visit [-->](`?App) else {
-            self.logger.debug('app node created');
-            app_node = here ++> App();
-            visit app_node;
-        }
     }
 
 }

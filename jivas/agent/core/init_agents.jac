@@ -4,14 +4,12 @@ import:py io;
 import:py logging;
 import:py traceback;
 import:py from logging { Logger }
-import:jac from app { App }
-import:jac from jivas.agent.core.agent {Agent}
-import:jac from agents {Agents}
-import:jac from graph_walker {graph_walker}
+import:jac from agents { Agents }
+import:jac from agent_graph_walker { agent_graph_walker }
 import:jac from import_agent {import_agent}
 import:py from jivas.agent.modules.agentlib.utils { jvdata_file_interface }
 
-walker init_agents :graph_walker: {
+walker init_agents :agent_graph_walker: {
     # initializes agents on the graph using the existing file-based descriptor
 
     has reporting:bool = False;
@@ -22,15 +20,9 @@ walker init_agents :graph_walker: {
     obj __specs__ {
         # make this walker visible in API
         static has private: bool = False;
-    }
-
-    can on_app with App entry {
-        # spawn agents node if not there
-        visit [-->](`?Agents) else {
-            self.logger.debug('agents node created');
-            agents_node = here ++> Agents();
-            visit agents_node;
-        }
+        static has excluded: list = [
+            "agent_id" # inherited agent_id not relevant for list agents params
+        ];
     }
 
     can on_agents with Agents entry {

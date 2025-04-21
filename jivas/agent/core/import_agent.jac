@@ -10,14 +10,14 @@ import:py from logging { Logger }
 import:py from jivas.agent.modules.agentlib.utils { Utils }
 import:py from jvcli.api { RegistryAPI }
 import:py from jvcli.utils { is_version_compatible }
+import:jac from app { App }
 import:jac from jivas.agent.core.agent { Agent }
 import:jac from agents { Agents }
-import:jac from agent_graph_walker { agent_graph_walker }
 import:jac from jivas.agent.memory.memory { Memory }
 import:jac from jivas.agent.action.action { Action }
 import:jac from jivas.agent.action.actions { Actions }
 
-walker import_agent :agent_graph_walker: {
+walker import_agent {
     # creates or refreshes an agent via json data or yaml source
 
     # set up logger
@@ -28,11 +28,48 @@ walker import_agent :agent_graph_walker: {
     has daf_version: str = "";
     has jpr_api_key: str = "";
     has reporting: bool = True;
-    has daf_archive:dict = {};
 
     obj __specs__ {
         # make this walker visible in API
         static has private: bool = False;
+    }
+
+    # sets up app graph on first time traversal prior to agent import
+
+    can on_root with `root entry {
+        # spawn app node if not there
+        visit [-->](`?App) else {
+            self.logger.info('App node created');
+            app_node = here ++> App();
+            visit app_node;
+        }
+    }
+
+    can on_app with App entry {
+        # spawn agents node if not there
+        visit [-->](`?Agents) else {
+            self.logger.info('Agents node created');
+            agents_node = here ++> Agents();
+            visit agents_node;
+        }
+    }
+
+    can on_agents with Agents entry {
+
+        # routine to import a JIVAS agent by descriptor
+        if(self.descriptor) {
+            if(agent_node := self.import_from_descriptor(here, self.descriptor)) {
+                if(self.reporting) {
+                    report agent_node.export();
+                }
+            }
+        } elif (self.daf_name) {
+            if(agent_node := self.import_from_daf(here, self.daf_name, self.daf_version, self.jpr_api_key)) {
+                if(self.reporting) {
+                    report agent_node.export();
+                }
+            }
+        }
     }
 
     can import_from_descriptor(agents_node:Agents, descriptor:str) -> Agent {
@@ -291,27 +328,7 @@ walker import_agent :agent_graph_walker: {
             }
         }
 
-
         return agent_node;
-    }
-
-    can on_agents with Agents entry {
-
-        # routine to import a JIVAS agent by descriptor
-        if(self.descriptor) {
-            if(agent_node := self.import_from_descriptor(here, self.descriptor)) {
-                if(self.reporting) {
-                    report agent_node.export();
-                }
-            }
-        } elif (self.daf_name) {
-            if(agent_node := self.import_from_daf(here, self.daf_name, self.daf_version, self.jpr_api_key)) {
-                if(self.reporting) {
-                    report agent_node.export();
-                }
-            }
-        }
-
     }
 
 }
