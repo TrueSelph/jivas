@@ -7,7 +7,7 @@ import:jac from export_agent { export_agent }
 import:jac from jivas.agent.core.agent { Agent }
 
 walker update_agent :agent_graph_walker: {
-    has agent_id: str = "";
+
     has agent_data: dict = {};
     has with_actions: bool = False; # set True if you'd like actions to be re-registered with this update
     has reporting: bool = True;

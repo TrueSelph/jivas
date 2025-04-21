@@ -16,9 +16,7 @@ walker agent_graph_walker :graph_walker: {
     can on_app with App entry {
         # spawn agents node if not there
         visit [-->](`?Agents) else {
-            self.logger.debug('agents node created');
-            agents_node = here ++> Agents();
-            visit agents_node;
+            self.logger.error('App graph not initialized. Import an agent and try again.');
         }
     }
 
