@@ -23,6 +23,7 @@ node Agent :GraphNode: {
     has jpr_api_key: str = "";
     has agent_logging: bool = True; # when set, agent will log interactions
     has message_limit: int = 1024;
+    has flood_control: bool = True; # set to activate interact flood control
     has flood_block_time: int = 300; # in seconds
     has window_time: int = 20; # in seconds, the time window we are monitoring
     has flood_threshold: int = 4; # in messages per window time
@@ -71,9 +72,7 @@ node Agent :GraphNode: {
         # fetch text to speech action node if enabled and configured
 
         if(tts_action_node := self.get_actions().get(action_label=self.tts_action)) {
-            if(tts_action_node.enabled) {
-                return tts_action_node;
-            }
+            return tts_action_node;
         }
 
         return None;
@@ -83,9 +82,7 @@ node Agent :GraphNode: {
         # fetch speech to text action node if enabled and configured
 
         if(stt_action_node := self.get_actions().get(action_label=self.stt_action)) {
-            if(stt_action_node.enabled) {
-                return stt_action_node;
-            }
+            return stt_action_node;
         }
 
         return None;
@@ -95,9 +92,7 @@ node Agent :GraphNode: {
         # fetch vector store action node if enabled and configured
 
         if(vector_store_action_node := self.get_actions().get(action_label=self.vector_store_action)) {
-            if(vector_store_action_node.enabled) {
-                return vector_store_action_node;
-            }
+            return vector_store_action_node;
         }
 
         return None;
