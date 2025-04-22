@@ -6,7 +6,7 @@ import:py traceback;
 import:py from typing { Any, Tuple }
 import:py from logging { Logger }
 import:jac from action { Action }
-import:py from jivas.agent.modules.agentlib.utils { LongStringDumper }
+import:py from jivas.agent.modules.agentlib.utils { Utils }
 import:jac from interact_graph_walker {interact_graph_walker}
 import:py from langchain_community.document_loaders { TextLoader }
 import:py from langchain_text_splitters { CharacterTextSplitter }
@@ -158,7 +158,7 @@ node VectorStoreAction :Action: {
         }
     }
 
-    can export_knodes(export_json:bool = False, embeddings:bool = True, include_id:bool = False) -> str {
+    can export_knodes(as_json:bool = False, embeddings:bool = False, with_ids:bool = False) -> str {
         # """
         # Export all documents from the vectorstore as knodes.
 
@@ -167,12 +167,14 @@ node VectorStoreAction :Action: {
         try {
 
             if(collection := self.get_collection(self.collection_name)) {
+
                 excluded_fields = '';
-                if include_id {
+
+                if with_ids {
                     if(not embeddings) {
                         excluded_fields = 'vec';
                     }
-                }else{
+                } else {
                     excluded_fields = 'id,vec';
                     if(embeddings) {
                         excluded_fields = 'id';
@@ -213,10 +215,10 @@ node VectorStoreAction :Action: {
                     }
                 }
 
-                if(export_json) {
+                if(as_json) {
                     return json.dumps(documents);
-                }else{
-                    return yaml.dump(documents, Dumper=LongStringDumper);
+                } else {
+                    return Utils.yaml_dumps(documents);
                 }
             }
 

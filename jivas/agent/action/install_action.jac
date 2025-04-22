@@ -116,7 +116,7 @@ walker install_action :agent_graph_walker: {
                 data=descriptor,
                 with_actions=True
             )) {
-                agent_node.export_descriptor();
+                agent_node.dump_descriptor();
                 return agent_node;
             }
         }

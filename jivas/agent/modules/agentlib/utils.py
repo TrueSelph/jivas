@@ -6,7 +6,7 @@ import logging
 import mimetypes
 import os
 import re
-import time
+import unicodedata
 from collections import defaultdict, deque
 from datetime import datetime
 from typing import Any, DefaultDict, Dict, List, Optional
@@ -29,6 +29,8 @@ logger = logging.getLogger(__name__)
 jvdata_file_interface = (
     get_file_interface("") if FILE_INTERFACE == "local" else file_interface
 )
+# for serving publically accessible files
+public_file_interface = file_interface
 
 
 class LongStringDumper(yaml.SafeDumper):
@@ -86,27 +88,44 @@ class Utils:
         return daf_root_path
 
     @staticmethod
-    def dump_yaml_file(file_path: str, data: dict) -> None:
-        """Dump data to a YAML file."""
+    def make_serializable(obj: Any) -> Any:
+        """Recursively convert non-serializable objects in a dict/list to strings."""
+        if isinstance(obj, dict):
+            return {
+                Utils.make_serializable(key): Utils.make_serializable(value)
+                for key, value in obj.items()
+            }
+        elif isinstance(obj, list):
+            return [Utils.make_serializable(item) for item in obj]
+        elif isinstance(obj, (str, int, float, bool, type(None))):
+            return obj
+        else:
+            # For sets, tuples, custom types, etc.
+            return str(obj)
+
+    @staticmethod
+    def yaml_dumps(data: Optional[dict[Any, Any]]) -> str | None:
+        """Converts and formats nested dict to YAML string, handling PyYAML errors."""
+        if not data:
+            return "None"
+
         try:
+            safe_data = Utils.make_serializable(data)
             yaml_output = yaml.dump(
-                data,
-                Dumper=LongStringDumper,
+                safe_data,
+                # Use your custom dumper if needed, else SafeDumper
+                Dumper=globals().get("LongStringDumper", yaml.SafeDumper),
                 allow_unicode=True,
                 default_flow_style=False,
                 sort_keys=False,
             )
-            jvdata_file_interface.save_file(file_path, yaml_output.encode("utf-8"))
-            logger.debug(f"Descriptor successfully written to {file_path}")
-        except IOError:
-            logger.error(f"Error writing to descriptor file {file_path}")
+            if not yaml_output or yaml_output.strip() in ("", "---"):
+                return None
+            return yaml_output
 
-    @staticmethod
-    def dump_json_file(file_path: str, data: dict) -> None:
-        """Dump data to a JSON file."""
-        jvdata_file_interface.save_file(
-            file_path, json.dumps(data, indent=4).encode("utf-8")
-        )
+        except Exception as e:
+            logger.error(f"Error dumping YAML: {e}")
+            return None
 
     @staticmethod
     def path_to_module(path: str) -> str:
@@ -656,39 +675,6 @@ class Utils:
                     return None
 
     @staticmethod
-    def delete_files(
-        directory: str, days: int = 30, filenames_to_delete: list | None = None
-    ) -> None:
-        """Delete files in a directory older than a specified number of days or matching specified filenames."""
-        if filenames_to_delete is None:
-            filenames_to_delete = []
-        # Get the current time
-        current_time = time.time()
-        try:
-            # List all files in the directory
-            for filename in os.listdir(directory):
-                file_path = os.path.join(directory, filename)
-
-                # Check if it's a file
-                if os.path.isfile(file_path):
-                    # Get the file's last modified time
-                    file_mod_time = os.path.getmtime(file_path)
-
-                    # Check if the file is older than the specified number of days or matches a filename to delete
-                    if (current_time - file_mod_time > days * 86400) or (
-                        filename in filenames_to_delete
-                    ):
-                        try:
-                            # Delete the file
-                            os.remove(file_path)
-                            print(f"Deleted: {file_path}")
-                        except Exception as e:
-                            print(f"Failed to delete {file_path}: {e}")
-
-        except Exception as e:
-            print(f"Error deleting files: {e}")
-
-    @staticmethod
     def extract_first_name(full_name: str) -> str:
         """Extract the first name from a full name."""
         # List of common titles to be removed
@@ -722,50 +708,72 @@ class Utils:
         return re.sub(r"\W+", "", text)
 
     @staticmethod
-    def sanitize_dict_context(
-        descriptor_data: dict, action_data: dict, keys_to_remove: list
+    def clean_context(
+        node_context: dict, architype_context: dict, ignore_keys: list
     ) -> dict:
         """
-        Cleans and sanitizes descriptor_data by:
-        - Removing keys that match in descriptor_data and action_data.
-        - Logging warnings for mismatched values.
+        Cleans and sanitizes node_context by:
+        - Removing keys that match in node_context and architype_context.
         - Removing empty values except boolean `False`.
-        - Removing keys listed in keys_to_remove.
+        - Removing keys listed in ignore_keys.
 
-        :param descriptor_data: Dictionary containing descriptor data.
-        :param action_data: Dictionary containing action data.
-        :param keys_to_remove: List of keys to remove.
+        :param node_context: Dictionary containing existing snapshot of spawned node.
+        :param architype_context: Dictionary containing original architype context variables and values.
+        :param ignore_keys: List of keys to remove.
         :return: Sanitized dictionary.
         """
-        logger = logging.getLogger(__name__)
 
         # Check for matching keys and remove them if they match
-        for key in list(action_data.keys()):
-            if key in descriptor_data:
-                if isinstance(descriptor_data[key], str):
-                    str1 = Utils.normalize_text(descriptor_data[key])
-                    str2 = Utils.normalize_text(action_data[key])
+        for key in list(architype_context.keys()):
+            if key in node_context:
+                if isinstance(node_context[key], str):
+                    str1 = Utils.normalize_text(node_context[key])
+                    str2 = Utils.normalize_text(architype_context[key])
 
                     if str1 == str2:
-                        del descriptor_data[key]
-                    else:
-                        logger.warning(f"No str match for key: {key}")
+                        del node_context[key]
+
                 else:
-                    if descriptor_data[key] == action_data[key]:
-                        del descriptor_data[key]
-                    else:
-                        logger.warning(f"No match for key: {key}")
+                    if node_context[key] == architype_context[key]:
+                        del node_context[key]
 
         # Prepare keys to remove
-        to_remove_key = list(keys_to_remove)
+        to_remove_key = list(ignore_keys)
 
         # Remove empty values (except boolean False)
-        for key in list(descriptor_data.keys()):
-            if not descriptor_data[key] and not isinstance(descriptor_data[key], bool):
+        for key in list(node_context.keys()):
+            if not node_context[key] and not isinstance(node_context[key], bool):
                 to_remove_key.append(key)
 
         # Remove specified keys
         for key in to_remove_key:
-            descriptor_data.pop(key, None)
+            node_context.pop(key, None)
 
-        return descriptor_data
+        return node_context
+
+    @staticmethod
+    def to_snake_case(title: str, ascii_only: bool = True) -> str:
+        """
+        Converts a string to a safe, lowercase snake_case suitable for machine names.
+        Args:
+            title: The input string/title.
+            ascii_only: If True, strips out non-ascii characters.
+        Returns:
+            A clean, lowercase, snake_case string.
+        """
+        s = title.strip()
+        if ascii_only:
+            # Normalize unicode
+            s = unicodedata.normalize("NFKD", s)
+            s = s.encode("ascii", "ignore").decode("ascii")
+        else:
+            # Remove combining marks but keep unicode letters
+            s = unicodedata.normalize("NFKC", s)
+        # Replace non-alphanumeric with underscores
+        s = re.sub(r"[^a-zA-Z0-9]+", "_", s)
+        # Lowercase it
+        s = s.lower()
+        # Remove leading/trailing and consecutive underscores
+        s = re.sub(r"_{2,}", "_", s)
+        s = s.strip("_")
+        return s
