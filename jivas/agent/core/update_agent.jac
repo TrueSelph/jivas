@@ -3,7 +3,6 @@ import:py traceback;
 import:py from logging { Logger }
 import:py from jivas.agent.modules.agentlib.utils { Utils }
 import:jac from agent_graph_walker { agent_graph_walker }
-import:jac from export_agent { export_agent }
 import:jac from jivas.agent.core.agent { Agent }
 
 walker update_agent :agent_graph_walker: {
@@ -25,7 +24,7 @@ walker update_agent :agent_graph_walker: {
         if(agent_node := here.update(data = self.agent_data, with_actions = self.with_actions)) {
             if(agent_node) {
                 if(self.reporting) {
-                    report agent_node.export_descriptor();
+                    report agent_node.get_descriptor();
                 }
             } else {
                 self.logger.error(f'unable to update agent');

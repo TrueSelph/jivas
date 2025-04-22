@@ -1,13 +1,14 @@
 import:py logging;
 import:py traceback;
 import:py from logging { Logger }
-import:py from jivas.agent.modules.agentlib.utils { Utils }
+import:py from jivas.agent.modules.agentlib.utils { Utils, jvdata_file_interface }
 import:jac from jivas.agent.core { graph_node, purge }
 import:jac from graph_node { GraphNode }
 import:jac from jivas.agent.action.action { Action }
 import:jac from jivas.agent.action.interact_action { InteractAction }
 import:jac from jivas.agent.action.actions { Actions }
 import:jac from jivas.agent.memory.memory { Memory }
+import:py from typing { Union }
 
 node Agent :GraphNode: {
     # represents an agent on the graph
@@ -35,7 +36,7 @@ node Agent :GraphNode: {
     can postinit {
         super.postinit();
         # node attributes which are protected from update operation
-        self.protected_attrs += ["id", "actions", "descriptor", "healthcheck_status", "meta"];
+        self.protected_attrs += ["id", "actions", "descriptor", "healthcheck_status"];
     }
 
     can get_memory() {
@@ -143,34 +144,33 @@ node Agent :GraphNode: {
         self.agent_logging = agent_logging;
     }
 
-    can export_descriptor(file_path: str="", modified_context:bool=False) -> dict {
-        # converts an agent to a descriptor and exports it...
-        # if file_path is provided, it will output to specified file path
-        # otherwise, it will output to agent's descriptor path
-        # returns descriptor dict.
+    can get_descriptor(as_yaml:bool=False, clean:bool=False) -> Union[str, dict] {
+        # converts an agent to a descriptor and returns it as yaml, json or dict (default)
+        # if 'clean' is set to True, descriptor data will be without snapshot state containing keys and configs (good for dafs)
         try  {
-            self.logger.debug(f"exporting agent: {self.name}");
-
-            agent_data = self.export([], modified_context);
+            agent_data = {};
             agent_actions = [];
-            # Gather agent actions
-            agent_actions = (self spawn _export_actions(modified_context=modified_context)).action_nodes;
+            agent_ignore_keys = [];
+            action_ignore_keys = ['_package'];
 
-            # Add agent actions to agent data
+            if(clean) {
+                agent_ignore_keys = self.protected_attrs + ['meta'];
+                action_ignore_keys = [
+                    'id', 'description', '_package', 'weight', 'api_key', 'secret_key', 'token',
+                    "host", "port", "protocol", "api_key_name", "connection_timeout", "collection_name"
+                ];
+            }
 
+            # get agent data
+            agent_data = self.export(agent_ignore_keys, clean);
+            # get action data
+            agent_actions = (self spawn _export_actions(action_ignore_keys, clean)).action_nodes;
+            # add agent actions to agent data
             agent_data = {**agent_data, **{"actions": agent_actions}};
 
-            # Save agent state to file
-            if (file_path) {
-                Utils.dump_yaml_file(
-                    file_path=file_path,
-                    data=agent_data
-                );
-            } else {
-                Utils.dump_yaml_file(
-                    file_path=self.descriptor,
-                    data=agent_data
-                );
+            # return as YAML
+            if (as_yaml) {
+                return Utils.yaml_dumps(agent_data);
             }
 
             return agent_data;
@@ -182,6 +182,40 @@ node Agent :GraphNode: {
         }
 
         return {};
+    }
+
+    can get_daf_info() -> dict {
+        # prepares daf info struct based on agent descriptor
+        daf_info = {
+            "package": {
+                "name": self.meta.get('namespace', f'default/{Utils.to_snake_case(self.name)}'),
+                "author": self.meta.get('author', ''),
+                "version": self.meta.get('version', '0.0.1'),
+                "meta": {
+                    "title": self.name,
+                    "description": self.description,
+                    "type": "daf"
+                }
+            }
+        };
+        if(dependencies := self.meta.get('dependencies')) {
+            daf_info["package"]["dependencies"] = dependencies;
+        }
+
+        return daf_info;
+    }
+
+    can dump_descriptor() {
+        # exports agent and writes descriptor to .jvdata
+
+        # get agent descriptor data
+        agent_data = self.get_descriptor(clean=False);
+        # Save agent state to file in .jvdata
+        if (yaml_output := Utils.yaml_dumps(agent_data)) {
+            jvdata_file_interface.save_file(self.descriptor, yaml_output.encode("utf-8"));
+        } else {
+            self.logger.error("Unable to dump agent descriptor to file");
+        }
     }
 
     can healthcheck() -> Union[bool, dict] {
@@ -364,10 +398,10 @@ walker _healthcheck_actions {
 walker _export_actions {
     # retrieves a list of all actions and sub actions
     # must be spawned on agent or actions node
-    has transient_export_attrs:list = ['_package'];
+    has ignore_keys:list = ['_package'];
     has action_nodes: list = [];
     has node_index: dict = {};
-    has modified_context: bool = False;
+    has clean: bool = False;
 
     obj __specs__ {
         # make this a private walker
@@ -400,7 +434,7 @@ walker _export_actions {
             self.node_index.update({
                 here.id: {
                     "action": here._package['name'],
-                    "context": here.export(self.transient_export_attrs, self.modified_context),
+                    "context": here.export(self.ignore_keys, self.clean),
                     "children": children
                 }
             });

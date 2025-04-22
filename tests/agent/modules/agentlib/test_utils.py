@@ -1,7 +1,7 @@
 """Tests for jivas.agent.modules.agentlib.utils."""
 
 import os
-import time
+import types
 from datetime import datetime
 from typing import Any, Dict
 from uuid import UUID
@@ -16,6 +16,14 @@ from jivas.agent.modules.agentlib.utils import (
     LongStringDumper,
     Utils,
 )
+
+
+class Dummy:
+    """A dummy class for testing custom object serialization."""
+
+    def __str__(self) -> str:
+        """Returns the dummy instance."""
+        return "DummyInstance"
 
 
 class TestUtils:
@@ -129,55 +137,6 @@ class TestUtils:
         # Assert
         assert result == ""
         mock_makedirs.assert_called_once_with("")
-
-    def test_write_dict_to_yaml_file(self, tmp_path: Any) -> None:
-        """Test writing dictionary data to YAML file."""
-        # Arrange
-        test_file = tmp_path / "test.yaml"
-        test_data: Dict[str, str] = {"key1": "value1", "key2": "value2"}
-
-        # Act
-        Utils.dump_yaml_file(str(test_file), test_data)
-
-        # Assert
-        assert test_file.exists()
-        with open(test_file) as f:
-            loaded_data = yaml.safe_load(f)
-        assert loaded_data == test_data
-
-    def test_write_empty_dict_to_yaml(self, tmp_path: Any) -> None:
-        """Test writing empty dictionary to YAML file."""
-        # Arrange
-        test_file = tmp_path / "empty.yaml"
-        test_data: Dict[str, Any] = {}
-
-        # Act
-        Utils.dump_yaml_file(str(test_file), test_data)
-
-        # Assert
-        assert test_file.exists()
-        with open(test_file) as f:
-            loaded_data = yaml.safe_load(f)
-        assert loaded_data == test_data
-
-    def test_ioerror_exception_handling(self, mocker: MockerFixture) -> None:
-        """Test that IOError is handled correctly when writing to a file."""
-        # Arrange
-        file_path = "invalid/path/to/file.yaml"
-        data = {"key": "value"}
-        mock_open = mocker.patch("builtins.open", side_effect=IOError)
-        mock_logger_error = mocker.patch(
-            "jivas.agent.modules.agentlib.utils.logger.error"
-        )
-
-        # Act
-        Utils.dump_yaml_file(file_path, data)
-
-        # Assert
-        mock_open.assert_called_once_with(file_path, "wb")
-        mock_logger_error.assert_called_once_with(
-            f"Error writing to descriptor file {file_path}"
-        )
 
     def test_convert_path_with_multiple_segments(self) -> None:
         """Test converting a path with multiple segments to module path."""
@@ -1049,67 +1008,6 @@ class TestUtils:
         # Assert
         assert result == input_data
 
-    def test_delete_old_files(self, tmp_path: Any, mocker: MockerFixture) -> None:
-        """Test deleting files older than specified days."""
-        # Arrange
-        test_dir = tmp_path / "test_dir"
-        test_dir.mkdir()
-        test_file = test_dir / "old_file.txt"
-        test_file.write_text("test content")
-
-        # Mock time functions
-        current_time = time.time()
-        old_time = current_time - (31 * 86400)  # 31 days old
-        mocker.patch(
-            "jivas.agent.modules.agentlib.utils.os.path.getmtime", return_value=old_time
-        )
-        mocker.patch(
-            "jivas.agent.modules.agentlib.utils.time.time", return_value=current_time
-        )
-
-        # Act
-        Utils.delete_files(str(test_dir), days=30)
-
-        # Assert
-        assert not test_file.exists()
-
-    def test_delete_files_exception_handling(self, mocker: MockerFixture) -> None:
-        """Test that exceptions are handled correctly during file deletion."""
-        # Arrange
-        directory = "/fake/directory"
-        mocker.patch("os.listdir", side_effect=Exception("List error"))
-        mock_logger_error = mocker.patch("builtins.print")
-
-        # Act
-        Utils.delete_files(directory)
-
-        # Assert
-        mock_logger_error.assert_called_once_with("Error deleting files: List error")
-
-    def test_failed_to_delete_exception_handling(self, mocker: MockerFixture) -> None:
-        """Test that an exception is handled correctly when file deletion fails."""
-        # Arrange
-        directory = "/fake/directory"
-        filenames_to_delete = ["file1.txt"]
-        mocker.patch("os.listdir", return_value=filenames_to_delete)
-        mocker.patch("os.path.isfile", return_value=True)
-        mocker.patch(
-            "os.path.getmtime", return_value=time.time() - 86400 * 31
-        )  # File older than 30 days
-        mock_remove = mocker.patch(
-            "os.remove", side_effect=Exception("Mocked exception")
-        )
-        mock_print = mocker.patch("builtins.print")
-
-        # Act
-        Utils.delete_files(directory, days=30, filenames_to_delete=filenames_to_delete)
-
-        # Assert
-        mock_remove.assert_called_once_with(os.path.join(directory, "file1.txt"))
-        mock_print.assert_called_once_with(
-            f"Failed to delete {os.path.join(directory, 'file1.txt')}: Mocked exception"
-        )
-
     def test_extract_first_name_from_full_name(self) -> None:
         """Test extracting first name from full name."""
         # Arrange
@@ -1131,3 +1029,169 @@ class TestUtils:
 
         # Assert
         assert result == ""
+
+    def test_make_serializable_primitives(self) -> None:
+        """Test make_serializable handles primitive types as-is."""
+        assert Utils.make_serializable(1) == 1
+        assert Utils.make_serializable(3.14) == 3.14
+        assert Utils.make_serializable("hi") == "hi"
+        assert Utils.make_serializable(True) is True
+        assert Utils.make_serializable(None) is None
+
+    def test_make_serializable_nested_dict_and_list(self) -> None:
+        """Test make_serializable handles nested dicts and lists."""
+        data = {"int": 1, "list": [1, 2, {"a": 3}], "dict": {"nested": "val"}}
+        result = Utils.make_serializable(data)
+        assert result == {"int": 1, "list": [1, 2, {"a": 3}], "dict": {"nested": "val"}}
+
+    def test_make_serializable_non_serializable(self) -> None:
+        """Test make_serializable converts non-serializable objects to strings."""
+        dt = types.SimpleNamespace(x=10)
+        myset = {1, 2, 3}
+        mytuple = (4, 5)
+
+        class MyClass:
+            def __str__(self) -> str:
+                return "MyClassInstance"
+
+        d = {
+            "obj": dt,
+            "set": myset,
+            "tuple": mytuple,
+            "custom": MyClass(),
+        }
+        result = Utils.make_serializable(d)
+        assert result["obj"].startswith("namespace") and "x=10" in result["obj"]
+        assert result["set"].startswith("{1") or result["set"].startswith(
+            "{2"
+        )  # As str
+        assert result["tuple"] == str(mytuple)
+        assert result["custom"] == "MyClassInstance"
+
+    def test_make_serializable_empty_collections(self) -> None:
+        """Test make_serializable returns empty collections as is or stringifies empty sets."""
+        assert Utils.make_serializable({}) == {}
+        assert Utils.make_serializable([]) == []
+        assert Utils.make_serializable(set()) == "set()"  # As str
+
+    def test_make_serializable_mixed(self) -> None:
+        """Test make_serializable with a mixed list including sets and objects."""
+        data = [{"num": 1}, (2, 3), {4, 5}, Dummy()]
+        result = Utils.make_serializable(data)
+        assert result[0] == {"num": 1}
+        assert result[1] == str((2, 3))
+        # Result[2] as str({'4, 5'}) - order is arbitrary
+        assert result[2] == "{4, 5}" or result[2] == "{5, 4}"
+        assert result[3] == "DummyInstance"
+
+    def test_yaml_dumps_basic(self) -> None:
+        """Test yaml_dumps correctly serializes a basic dict."""
+        d = {"a": 1, "b": "string", "c": True}
+        yml = Utils.yaml_dumps(d)
+        assert yml is not None
+        assert "a: 1" in yml
+        assert "b: string" in yml
+        assert "c: true" in yml
+
+    def test_yaml_dumps_nested(self) -> None:
+        """Test yaml_dumps handles nested structures and tuples."""
+        d = {"a": [1, 2, {"b": (1, 2)}]}
+        yml = Utils.yaml_dumps(d)
+        assert yml is not None
+        assert "a:" in yml
+        assert "- 1" in yml
+        assert "- 2" in yml
+        assert "b: (1, 2)" in yml
+
+    def test_yaml_dumps_non_serializable(self) -> None:
+        """Test yaml_dumps serializes dicts with custom object values."""
+        d = {"foo": Dummy()}
+        yml = Utils.yaml_dumps(d)
+        assert yml is not None
+        assert "foo: DummyInstance" in yml
+
+    def test_yaml_dumps_serialization_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test yaml_dumps returns None if yaml.dump raises an exception."""
+        # Patch yaml.dump to simulate an exception
+        monkeypatch.setattr(
+            "yaml.dump", lambda *a, **kw: (_ for _ in ()).throw(Exception("fail"))
+        )
+        d = {"a": 1}
+        assert Utils.yaml_dumps(d) is None
+
+    def test_normalize_text_basic(self) -> None:
+        """Test that normalize_text handles basic cases."""
+        # Arrange
+        input_text = "  This is a   test.   "
+        expected_output = "Thisisatest"
+
+        # Act
+        result = Utils.normalize_text(input_text)
+
+        # Assert
+        assert result == expected_output
+
+    def test_clean_context_match_and_remove(self) -> None:
+        """Test that matching keys/values are removed."""
+        # Arrange
+        node_context = {"key1": "value", "key2": "another"}
+        architype_context = {"key1": "value", "key2": "different"}
+        ignore_keys: list[str] = []
+
+        # Act
+        result = Utils.clean_context(node_context, architype_context, ignore_keys)
+
+        # Assert
+        assert result == {"key2": "another"}
+
+    def test_clean_context_remove_empty_values(self) -> None:
+        """Test that empty values are removed."""
+        # Arrange
+        node_context: dict = {"key1": "", "key2": None, "key3": [], "key4": False}
+        architype_context: dict = {}
+        ignore_keys: list[str] = []
+
+        # Act
+        result = Utils.clean_context(node_context, architype_context, ignore_keys)
+
+        # Assert
+        assert result == {"key4": False}
+
+    def test_clean_context_ignore_keys(self) -> None:
+        """Test that keys in ignore_keys are removed."""
+        # Arrange
+        node_context = {"key1": "value", "key2": "another"}
+        architype_context = {"key1": "different"}
+        ignore_keys: list[str] = ["key1"]
+
+        # Act
+        result = Utils.clean_context(node_context, architype_context, ignore_keys)
+
+        # Assert
+        assert result == {"key2": "another"}
+
+    def test_to_snake_case_basic(self) -> None:
+        """Test that to_snake_case converts a title to snake case."""
+        # Arrange
+        input_title = "Test Title for Conversion"
+        expected_output = "test_title_for_conversion"
+
+        # Act
+        result = Utils.to_snake_case(input_title)
+
+        # Assert
+        assert result == expected_output
+
+    def test_to_snake_case_strip_non_ascii(self) -> None:
+        """Test that to_snake_case strips non-ASCII characters when ascii_only is True."""
+        # Arrange
+        input_title = "Tést Tïtle wîth âccêntš"
+        expected_output = "test_title_with_accents"
+
+        # Act
+        result = Utils.to_snake_case(input_title)
+
+        # Assert
+        assert result == expected_output

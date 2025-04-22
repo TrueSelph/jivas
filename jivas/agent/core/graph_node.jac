@@ -8,14 +8,10 @@ import:py from dataclasses { fields, MISSING }
 node GraphNode {
     # base graph node for all nodes in agent graph, under app node.
     has id: str = "";
-    # flag to permit export of children nodes in agent graph export
-    has graph_children: bool = False;
-    # flag to permit export of itself in agent graph export
-    has graph_self: bool = True;
     # list of node attributes which are protected from update operation
     has protected_attrs: list = ["id"];
     # list of node attributes which should be excluded from export
-    has transient_attrs: list = ['__jac__', 'protected_attrs', 'transient_attrs', 'graph_children', 'graph_self', 'package_path'];
+    has transient_attrs: list = ['__jac__', 'protected_attrs', 'transient_attrs', 'package_path'];
     # for storing extended attributes
     has _context: dict = {};
     # set up logger
@@ -37,24 +33,31 @@ node GraphNode {
         return type(super()).__name__;
     }
 
-    can export(ignore_keys: list = [], modified_context: bool = False) -> dict {
+    can export(ignore_keys: list = [], clean: bool = False) -> dict {
+        # exports graph node as dict; if clean is set, exports a snapshot of node which matches architype initializations
 
-        if(modified_context) {
+        if(clean) {
             ignore_keys = ignore_keys + self.transient_attrs;
 
-            cls = type(self);
-            default_values = {};
-            for f in fields(self){
-                if f.default is not MISSING{
-                    default_values[f.name] = f.default;
+            architype_context = {};
+            for f in fields(self) {
+                if f.default is not MISSING {
+                    architype_context[f.name] = f.default;
                 }
-                elif f.default_factory is not MISSING{
-                    default_values[f.name] = f.default_factory();
+                elif f.default_factory is not MISSING {
+                    architype_context[f.name] = f.default_factory();
                 }
             }
 
             node_export = Utils.export_to_dict(self, ignore_keys);
-            return Utils.sanitize_dict_context(descriptor_data = node_export, action_data = default_values, keys_to_remove= ignore_keys);
+            # we have to merge contents of _context into top-level dict; _context contains injected attributes
+            if (isinstance(node_export['_context'], dict)) {
+                node_export.update(node_export['_context']);
+                # now remove the original _context
+                del node_export['_context'];
+            }
+
+            return Utils.clean_context(node_context=node_export, architype_context=architype_context, ignore_keys=ignore_keys);
 
         } else {
             # set the keys to ignore

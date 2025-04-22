@@ -6,6 +6,7 @@ import:py requests;
 import:py tarfile;
 import:py logging;
 import:py traceback;
+import:py from typing { Union }
 import:py from logging { Logger }
 import:py from jivas.agent.modules.agentlib.utils { Utils }
 import:py from jvcli.api { RegistryAPI }
@@ -72,8 +73,9 @@ walker import_agent {
         }
     }
 
-    can import_from_descriptor(agents_node:Agents, descriptor:str) -> Agent {
-        # imports an agent from an agent descriptor
+    can import_from_descriptor(agents_node:Agents, descriptor:Union[str, dict]) -> Agent {
+        # imports an agent from an agent descriptor supplied as YAML, JSON or dict
+
         agent_data = {};
         agent_node = None;
 
@@ -94,7 +96,7 @@ walker import_agent {
                 agent_data = yaml.safe_load(descriptor);
             } except yaml.YAMLError {}
 
-        }else{
+        } else {
             agent_data = descriptor;
         }
 
@@ -113,8 +115,7 @@ walker import_agent {
                 return None;
             }
 
-        }
-        else {
+        } else {
             agent_name = agent_data.get('name');
             # if agent has same name as existing agent, update
             if(_node := agents_node.get_by_name(agent_name)) {
@@ -152,7 +153,7 @@ walker import_agent {
                 with_actions=True
             )) {
                 # write out descriptor
-                agent_node.export_descriptor();
+                agent_node.dump_descriptor();
                 return agent_node;
             }
 
@@ -165,6 +166,7 @@ walker import_agent {
         # imports the agent as a digital agent freight package
         agent_node = None;
         safe_to_import = False;
+        daf_info = {};
         # daf packages root folder
         package_root = Utils.get_daf_root();
         # extract the namespace, package name
@@ -179,10 +181,9 @@ walker import_agent {
                 with open(info_yaml_path, 'r') as file {
                     try  {
                         # load the package info content
-                        _info = yaml.safe_load(file);
+                        daf_info = yaml.safe_load(file);
                         # grab info package version
-                        package_version = _info.get('package', {}).get('version', None);
-
+                        package_version = daf_info.get('package', {}).get('version', None);
                         # validate the version, if present
                         if(version) {
                             if(is_version_compatible(version, package_version)) {
@@ -191,7 +192,6 @@ walker import_agent {
                         } else {
                             safe_to_import = True;
                         }
-
                     } except yaml.YAMLError as e {
                         self.logger.error(
                             f"an exception occurred, {traceback.format_exc()}"
@@ -209,7 +209,6 @@ walker import_agent {
 
                 try {
                     package_file = requests.get(package_data["file"]);
-
                     # Save and extract the package
                     target_dir = os.path.join(package_root, daf_name);
                     os.makedirs(target_dir, exist_ok=True);
@@ -238,18 +237,11 @@ walker import_agent {
             descriptor_yaml_path = os.path.join(package_path, 'descriptor.yaml');
             memory_yaml_path = os.path.join(package_path, 'memory.yaml');
             knowledge_yaml_path = os.path.join(package_path, 'knowledge.yaml');
-            meta = {};
 
             if(os.path.exists(info_yaml_path)) {
                 with open(info_yaml_path, 'r') as file {
                     try  {
-                        info_yaml = yaml.safe_load(file);
-                        meta = {
-                            "namespace": info_yaml['package']['name'],
-                            "version": info_yaml['package']['version'],
-                            "author": info_yaml['package']['author'],
-                            "dependencies": info_yaml['package']['dependencies']
-                        };
+                        daf_info = yaml.safe_load(file);
                     } except Exception as e {
                         self.logger.error(
                             f"an exception occurred, {traceback.format_exc()}"
@@ -263,9 +255,17 @@ walker import_agent {
             if(os.path.exists(descriptor_yaml_path)) {
                 with open(descriptor_yaml_path, 'r') as file {
                     try  {
-                        descriptor_yaml = yaml.safe_load(file);
-                        descriptor_yaml["meta"] = meta;
-                        agent_node = self.import_from_descriptor(agents_node, yaml.dump(descriptor_yaml));
+                        descriptor_data = yaml.safe_load(file);
+                        # add the daf info as metadata
+                        descriptor_data["meta"] = {
+                            "namespace": daf_info.get('package', {}).get('name'),
+                            "version": daf_info.get('package', {}).get('version'),
+                            "author": daf_info.get('package', {}).get('author'),
+                            "dependencies": daf_info.get('package', {}).get('dependencies')
+                        };
+
+                        agent_node = self.import_from_descriptor(agents_node, descriptor_data);
+
                     } except Exception as e {
                         self.logger.error(
                             f"an exception occurred, {traceback.format_exc()}"
@@ -279,7 +279,7 @@ walker import_agent {
             if(agent_node) {
                 if(agent_node.healthcheck_status != 200) {
                     self.logger.error(
-                        f"{agent_node.name} failed healthcheck. Any memory or knowledge packaged for import will be deferred."
+                        f"{agent_node.name} failed healthcheck. Any memory or knowledge queued for import will be deferred."
                     );
                     return agent_node;
                 }

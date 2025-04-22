@@ -3,7 +3,8 @@
 import:jac from jivas.agent.core {
     init_agents,
     import_agent,
-    export_agent,
+    export_descriptor,
+    export_daf,
     get_agent,
     update_agent,
     list_agents,

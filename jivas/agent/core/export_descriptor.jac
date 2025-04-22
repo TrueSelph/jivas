@@ -3,8 +3,11 @@ import:jac from jivas.agent.core.agent { Agent }
 import:jac from jivas.agent.action.action { Action }
 import:jac from jivas.agent.action.actions { Actions }
 
-walker export_agent :agent_graph_walker: {
-    # accepts agent_id and returns dict of exported agent descriptor
+walker export_descriptor :agent_graph_walker: {
+    # accepts agent_id and returns dict / yaml of exported agent descriptor
+
+    has as_yaml: bool = False;
+    has clean:bool = False;
 
     obj __specs__ {
         # make this walker visible in API
@@ -12,8 +15,6 @@ walker export_agent :agent_graph_walker: {
     }
 
     can on_agent with Agent entry {
-        if(self.reporting) {
-            report here.export_descriptor();
-        }
+        report here.get_descriptor(as_yaml=self.as_yaml, clean=self.clean);
     }
 }
