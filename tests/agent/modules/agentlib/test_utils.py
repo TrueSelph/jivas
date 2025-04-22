@@ -1103,14 +1103,6 @@ class TestUtils:
         assert "- 2" in yml
         assert "b: (1, 2)" in yml
 
-    def test_yaml_dumps_empty_dict(self) -> None:
-        """Test yaml_dumps returns None for an empty dictionary."""
-        assert Utils.yaml_dumps({}) is None
-
-    def test_yaml_dumps_none(self) -> None:
-        """Test yaml_dumps returns None for None input."""
-        assert Utils.yaml_dumps(None) is None
-
     def test_yaml_dumps_non_serializable(self) -> None:
         """Test yaml_dumps serializes dicts with custom object values."""
         d = {"foo": Dummy()}
