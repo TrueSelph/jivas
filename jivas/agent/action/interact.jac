@@ -162,12 +162,6 @@ walker interact :interact_graph_walker: {
             return False;
         }
 
-        # load config from jivas.agent_node or defaults
-        message_limit = self.agent_node.message_limit;
-        flood_block_time = self.agent_node.flood_block_time;
-        window_time = self.agent_node.window_time;
-        flood_threshold = self.agent_node.flood_threshold;
-
         # load or spawn a frame for this interaction
         self.frame_node = self.agent_node.get_memory().get_frame(
             agent_id=self.agent_node.id,
@@ -181,13 +175,7 @@ walker interact :interact_graph_walker: {
         }
 
         # validate message length
-        chunks = Utils.chunk_long_message(
-            message=self.utterance,
-            max_length=message_limit,
-            chunk_length=message_limit
-        );
-
-        if (len(chunks) > 1) {
+        if (not self.is_valid_message_length(self.utterance, self.agent_node.message_limit)) {
             Jac.get_context().status = 400;
             self.logger.warning(
                 "unable to process message; message length exceeds limit"
@@ -195,66 +183,11 @@ walker interact :interact_graph_walker: {
             return False;
         }
 
-        # for converting datetimes before comparison
-        utc = pytz.UTC;
-
-        # handle flood control
-        now = datetime.now(timezone.utc);
-
-        # check if flood is active
-        flood = self.frame_node.variable_get(key="flood");
-
-        if (flood) {
-            # check if flood is still active
-            if (utc.localize(flood["expiration"]) > now) {
-                Jac.get_context().status = 429;
-                self.logger.warning("flood control active");
-                return False;
-            }
-        }
-
-        # track message window count
-        message_window = self.frame_node.variable_get(key="message_window");
-
-        if (message_window) {
-            # Convert items to datetime objects
-            keys = ["start", "end"];
-            ::py::
-            message_window = {key: utc.localize(value) if isinstance(value, datetime) else datetime.strptime(value, "%Y-%m-%d %H:%M:%S.%f") for key, value in message_window.items() if key in keys};
-            ::py::
-
-            if (utc.localize(message_window.get("end", 0)) <= now) {
-                # reset window
-                message_window["start"] = now;
-                message_window["end"] = now + timedelta(seconds=window_time);
-                message_window["count"] = 0;
-            } else {
-                # increment message count
-                message_window["count"] = message_window.get("count", 0) + 1;
-            }
-
-            # check if message count exceeds threshold
-            if (message_window.get("count", 0) > flood_threshold) {
-                # set flood control
-                flood = {"expiration": now + timedelta(seconds=flood_block_time)};
-                self.frame_node.variable_set(key="flood", value=flood);
-
-                Jac.get_context().status = 429;
-                self.logger.warning("flood control active");
-                return False;
-            }
-        } else {
-            # initialize message window
-            message_window = {
-                "start": now,
-                "end": now + timedelta(seconds=window_time),
-                "count": 1
-            };
-
-            self.frame_node.variable_set(
-                key="message_window",
-                value=message_window
-            );
+        # flood control
+        if self.is_flood_active() {
+            Jac.get_context().status = 429;
+            self.logger.warning(f"flood control active on {self.frame_node.session_id}");
+            return False;
         }
 
         # add new interaction node to the frame, or assume one which is open and already added
@@ -310,6 +243,110 @@ walker interact :interact_graph_walker: {
         }
 
         return True;
+    }
+
+    can is_valid_message_length(utterance:str, max_length:int) -> bool {
+        # validates the acceptable length of a message
+
+        chunks = Utils.chunk_long_message(
+            message=utterance,
+            max_length=max_length,
+            chunk_length=max_length
+        );
+
+        if (len(chunks) > 1) {
+            return False;
+        } else {
+            return True;
+        }
+    }
+
+    can is_flood_active() {
+        # evaluates and tracks for flood control in incoming requests
+        # returns TRUE if flood is in effect
+
+        flood_control = self.agent_node.flood_control;
+        flood_block_time = self.agent_node.flood_block_time;
+        window_time = self.agent_node.window_time;
+        flood_threshold = self.agent_node.flood_threshold;
+
+        # handle flood control logic if flood control set
+        if flood_control {
+            # For converting datetimes before comparison
+            utc = pytz.UTC;
+            # Handle flood control
+            now = datetime.now(timezone.utc);  # already timezone-aware
+            # Check if flood is active
+            flood = self.frame_node.variable_get(key="flood");
+
+            if flood {
+                # Standardize expiration time to UTC-aware datetime
+                expiration = flood["expiration"];
+                if isinstance(expiration, str) {
+                    expiration = datetime.strptime(expiration, "%Y-%m-%d %H:%M:%S.%f").replace(tzinfo=utc);
+                } elif isinstance(expiration, datetime) and expiration.tzinfo is None {
+                    expiration = expiration.replace(tzinfo=utc);
+                }
+                # Now compare
+                if expiration > now {
+                    return True;
+                }
+            }
+            # Track message window count
+            message_window = self.frame_node.variable_get(key="message_window");
+
+            if message_window {
+                # Standardize 'start' and 'end' to aware datetimes
+                for key in ["start", "end"] {
+                    value = message_window.get(key);
+                    if isinstance(value, str) {
+                        message_window[key] = datetime.strptime(value, "%Y-%m-%d %H:%M:%S.%f").replace(tzinfo=utc);
+                    } elif isinstance(value, datetime) {
+                        if value.tzinfo is None {
+                            message_window[key] = value.replace(tzinfo=utc);
+                        } else {
+                            message_window[key] = value;
+                        }
+                    }
+                }
+                # Reset window if expired
+                if message_window.get("end", datetime.min.replace(tzinfo=utc)) <= now {
+                    message_window["start"] = now;
+                    message_window["end"] = now + timedelta(seconds=window_time);
+                    message_window["count"] = 0;
+                } else {
+                    # Increment message count
+                    message_window["count"] = message_window.get("count", 0) + 1;
+                }
+                # Check if message count exceeds threshold
+                if message_window.get("count", 0) > flood_threshold {
+                    # Set flood control
+                    flood = {"expiration": now + timedelta(seconds=flood_block_time)};
+                    self.frame_node.variable_set(key="flood", value=flood);
+                    return True;
+                }
+
+                # Save updated message_window
+                self.frame_node.variable_set(key="message_window", value=message_window);
+
+            } else {
+                # Initialize message window
+                message_window = {
+                    "start": now,
+                    "end": now + timedelta(seconds=window_time),
+                    "count": 1
+                };
+                self.frame_node.variable_set(
+                    key="message_window",
+                    value=message_window
+                );
+            }
+
+            return False;
+        } else {
+            return False;
+        }
+
     }
 
     can set_next_action(action_label:str, action_node:Optional[InteractAction]=None) {

@@ -27,25 +27,25 @@ node Actions :GraphNode: {
     # action packages root folder
     static has package_root: str = Utils.get_actions_root();
 
-    can get(action_type: str="", action_label: str="") {
-        # returns an action by label or by type
-
+    can get(action_type: str="", action_label: str="", filter_enabled_actions:bool=True) {
+        # returns an action by label or by type, enabled actions by default
         result = None;
 
         if action_type and not action_label {
             # there can be multiple actions of the same type, this returns a list
-            result = self.get_by_type(action_type);
+            result = self.get_by_type(action_type, filter_enabled_actions);
         } elif action_label and not action_type {
             # there can only be one action with a particular label, this returns a action
-            result = self.get_by_label(action_label);
+            result = self.get_by_label(action_label, filter_enabled_actions);
         }
 
         return result;
     }
 
-    can get_by_label(action_label: str) -> Action {
+    can get_by_label(action_label: str, filter_enabled_actions:bool=True) -> Action {
         # returns an action by label
-        for action_node in self.get_all() {
+        actions = self.get_all(filter_enabled_actions=filter_enabled_actions);
+        for action_node in actions {
             if (action_node.label == action_label) {
                 return action_node;
             }
@@ -54,11 +54,12 @@ node Actions :GraphNode: {
         return None;
     }
 
-    can get_by_type(action_type: str) -> list {
+    can get_by_type(action_type: str, filter_enabled_actions:bool=True) -> list {
         # returns an action by type; there may be multiple instances of the same action so a list is returned
-
         result = [];
-        for action_node in self.get_all() {
+        actions = self.get_all(filter_enabled_actions=filter_enabled_actions);
+
+        for action_node in actions {
             if (action_type == action_node.get_type()) {
                 result.append(action_node);
             }
