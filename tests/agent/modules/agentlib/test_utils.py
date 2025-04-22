@@ -1128,3 +1128,78 @@ class TestUtils:
         )
         d = {"a": 1}
         assert Utils.yaml_dumps(d) is None
+
+    def test_normalize_text_basic(self) -> None:
+        """Test that normalize_text handles basic cases."""
+        # Arrange
+        input_text = "  This is a   test.   "
+        expected_output = "Thisisatest"
+
+        # Act
+        result = Utils.normalize_text(input_text)
+
+        # Assert
+        assert result == expected_output
+
+    def test_clean_context_match_and_remove(self) -> None:
+        """Test that matching keys/values are removed."""
+        # Arrange
+        node_context = {"key1": "value", "key2": "another"}
+        architype_context = {"key1": "value", "key2": "different"}
+        ignore_keys: list[str] = []
+
+        # Act
+        result = Utils.clean_context(node_context, architype_context, ignore_keys)
+
+        # Assert
+        assert result == {"key2": "another"}
+
+    def test_clean_context_remove_empty_values(self) -> None:
+        """Test that empty values are removed."""
+        # Arrange
+        node_context: dict = {"key1": "", "key2": None, "key3": [], "key4": False}
+        architype_context: dict = {}
+        ignore_keys: list[str] = []
+
+        # Act
+        result = Utils.clean_context(node_context, architype_context, ignore_keys)
+
+        # Assert
+        assert result == {"key4": False}
+
+    def test_clean_context_ignore_keys(self) -> None:
+        """Test that keys in ignore_keys are removed."""
+        # Arrange
+        node_context = {"key1": "value", "key2": "another"}
+        architype_context = {"key1": "different"}
+        ignore_keys: list[str] = ["key1"]
+
+        # Act
+        result = Utils.clean_context(node_context, architype_context, ignore_keys)
+
+        # Assert
+        assert result == {"key2": "another"}
+
+    def test_to_snake_case_basic(self) -> None:
+        """Test that to_snake_case converts a title to snake case."""
+        # Arrange
+        input_title = "Test Title for Conversion"
+        expected_output = "test_title_for_conversion"
+
+        # Act
+        result = Utils.to_snake_case(input_title)
+
+        # Assert
+        assert result == expected_output
+
+    def test_to_snake_case_strip_non_ascii(self) -> None:
+        """Test that to_snake_case strips non-ASCII characters when ascii_only is True."""
+        # Arrange
+        input_title = "Tést Tïtle wîth âccêntš"
+        expected_output = "test_title_with_accents"
+
+        # Act
+        result = Utils.to_snake_case(input_title)
+
+        # Assert
+        assert result == expected_output
