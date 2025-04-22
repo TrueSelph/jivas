@@ -23,6 +23,12 @@ node Interaction :GraphNode: {
     has data:dict = {};
     has closed:bool = False; # flag to determine whether interaction is complete / closed or not
 
+    can postinit {
+        super.postinit();
+        # add of node attributes which are protected from update operation
+        self.protected_attrs += ['agent_id'];
+    }
+
     can attach_interaction(interaction_node:Interaction) {
         # attaches a new interaction node to this one
         self +:Advance:+> interaction_node;

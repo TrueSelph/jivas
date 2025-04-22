@@ -16,6 +16,12 @@ node Frame :GraphNode: {
     has user_name: str = "";
     has variables: dict = {};
 
+    can postinit {
+        super.postinit();
+        # add of node attributes which are protected from update operation
+        self.protected_attrs += ['agent_id'];
+    }
+
     can variable_get(key:str, default:Optional[Any] = None) -> Any {
         # retrieves a named variable by key
         if (variable := self.variables.get(key)) {
