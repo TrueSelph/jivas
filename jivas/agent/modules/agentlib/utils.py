@@ -6,6 +6,7 @@ import logging
 import mimetypes
 import os
 import re
+import subprocess
 import unicodedata
 from collections import defaultdict, deque
 from datetime import datetime
@@ -56,6 +57,15 @@ class LongStringDumper(yaml.SafeDumper):
 
 class Utils:
     """Utility class for various helper methods."""
+
+    @staticmethod
+    def jac_clean_actions() -> None:
+        """Performs jac clean on actions root folder."""
+
+        actions_root_path = os.environ.get("JIVAS_ACTIONS_ROOT_PATH", "actions")
+        if os.path.isdir(actions_root_path):
+            logger.info("Running jac clean on actions directory")
+            subprocess.run(["jac", "clean"], cwd=actions_root_path, check=True)
 
     @staticmethod
     def get_descriptor_root() -> str:

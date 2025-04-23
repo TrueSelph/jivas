@@ -3,6 +3,7 @@ import:py uuid;
 import:py base64;
 import:py logging;
 import:py traceback;
+import:py from typing { Union }
 import:py from logging { Logger }
 import:jac from action { Action }
 import:py from jvserve.lib.file_interface { file_interface }
@@ -66,5 +67,18 @@ node TTSAction :Action: {
         }
 
         return None;
+    }
+
+    can healthcheck() -> Union[bool, dict] {
+
+        if(not self.api_key) {
+            return {
+                "status": False,
+                "message": f"API key is not set.",
+                "severity": "error"
+            };
+        }
+
+        return True;
     }
 }

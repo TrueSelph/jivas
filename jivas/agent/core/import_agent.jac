@@ -152,8 +152,6 @@ walker import_agent {
                 data=agent_data,
                 with_actions=True
             )) {
-                # write out descriptor
-                agent_node.dump_descriptor();
                 return agent_node;
             }
 

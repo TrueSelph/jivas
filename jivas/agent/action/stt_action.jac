@@ -1,5 +1,6 @@
 import:py logging;
 import:py traceback;
+import:py from typing { Union }
 import:py from logging { Logger }
 import:jac from action { Action }
 
@@ -33,6 +34,19 @@ node STTAction :Action: {
         # """
 
         # override with specifics of STT model then save in audio
+    }
+
+    can healthcheck() -> Union[bool, dict] {
+
+        if(not self.api_key) {
+            return {
+                "status": False,
+                "message": f"API key is not set.",
+                "severity": "error"
+            };
+        }
+
+        return True;
     }
 
 }
