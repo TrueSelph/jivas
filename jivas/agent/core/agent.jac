@@ -28,7 +28,7 @@ node Agent :GraphNode: {
     has window_time: int = 20; # in seconds, the time window we are monitoring
     has flood_threshold: int = 4; # in messages per window time
     has frame_size: int = 10; # keeps up to 10 interactions in the frame
-    has tts_action: str = "ElevenlabsTTSAction";
+    has tts_action: str = "ElevenLabsTTSAction";
     has stt_action: str = "DeepgramSTTAction";
     has vector_store_action: str = "TypesenseVectorStoreAction";
     has healthcheck_status: int = 501;
