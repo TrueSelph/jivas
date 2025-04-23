@@ -128,6 +128,11 @@ node Agent :GraphNode: {
             }
         }
 
+        if agent_node {
+            # update jvdata descriptor if agent node is valid
+            self.dump_descriptor();
+        }
+
         return agent_node;
     }
 
