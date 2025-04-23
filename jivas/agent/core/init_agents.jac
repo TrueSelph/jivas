@@ -7,7 +7,7 @@ import:py from logging { Logger }
 import:jac from agents { Agents }
 import:jac from agent_graph_walker { agent_graph_walker }
 import:jac from import_agent {import_agent}
-import:py from jivas.agent.modules.agentlib.utils { jvdata_file_interface }
+import:py from jivas.agent.modules.agentlib.utils { Utils, jvdata_file_interface }
 
 walker init_agents :agent_graph_walker: {
     # initializes agents on the graph using the existing file-based descriptor
@@ -28,6 +28,10 @@ walker init_agents :agent_graph_walker: {
     can on_agents with Agents entry {
 
         if(agent_nodes := here.get_all()) {
+
+            # jac clean actions folder first
+            Utils.jac_clean_actions();
+
             for agent_node in agent_nodes {
 
                 try {
