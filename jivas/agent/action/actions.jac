@@ -302,6 +302,8 @@ node Actions :GraphNode: {
             # TODO: remove the action module folder and related modules
             Jac.destroy(action_node);
         }
+        # jac clean actions folder
+        Utils.jac_clean_actions();
     }
 
     # UTILS
