@@ -29,9 +29,6 @@ walker init_agents :agent_graph_walker: {
 
         if(agent_nodes := here.get_all()) {
 
-            # jac clean actions folder first
-            Utils.jac_clean_actions();
-
             for agent_node in agent_nodes {
 
                 try {

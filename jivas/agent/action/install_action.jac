@@ -17,6 +17,7 @@ walker install_action :agent_graph_walker: {
     has override_action:bool = True;  # when set, will install with action defaults instead of preserving descriptor settings
     has package_name: str = "";  # Action name
     has version: str = "";  # Action version
+    has jpr_api_key: str = ""; # any jpr_api_key for package access
 
     static has logger:Logger = logging.getLogger(__name__);  # Logger instance
 
@@ -44,7 +45,11 @@ walker install_action :agent_graph_walker: {
         }
 
         # Handle the actions entry point
-        jpr_api_key = descriptor_data.get('jpr_api_key');
+        jpr_api_key = self.jpr_api_key;
+        # use supplied jpr_api_key if provided, fall back on agent's jpr key
+        if(not jpr_api_key) {
+            jpr_api_key = descriptor_data.get('jpr_api_key');
+        }
         dep_action_info = here.get_actions().get_action_info(namespace_package_name=self.package_name, version=self.version, jpr_api_key=jpr_api_key);
 
         if(dep_action_info) {
