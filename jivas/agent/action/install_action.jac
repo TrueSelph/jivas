@@ -28,7 +28,7 @@ walker install_action :agent_graph_walker: {
     can on_agent with Agent entry {
         # updates the agent descriptor with the action to be installed; returns the updated descriptor data
 
-        descriptor_data = None;
+        descriptor_data = {};
 
         try {
         	file_bytes = jvdata_file_interface.get_file(here.descriptor);
@@ -36,94 +36,75 @@ walker install_action :agent_graph_walker: {
             descriptor_data = yaml.safe_load(file);
 
             if(not descriptor_data) {
-                self.logger.error(f"unable to load descriptor: {here.descriptor}");
+                message = f"unable to load descriptor: {here.descriptor}";
+                self.logger.error(message);
+                Jac.get_context().status = 500;
+                report message;
                 return None;
             }
         } except Exception as e {
-            self.logger.error(f"an exception occurred, {traceback.format_exc()}");
+            message = f"an exception occurred, {traceback.format_exc()}";
+            self.logger.error(message);
+            Jac.get_context().status = 500;
+            report message;
             return None;
         }
 
-        # Handle the actions entry point
-        jpr_api_key = self.jpr_api_key;
-        # use supplied jpr_api_key if provided, fall back on agent's jpr key
-        if(not jpr_api_key) {
-            jpr_api_key = descriptor_data.get('jpr_api_key');
-        }
-        dep_action_info = here.get_actions().get_action_info(namespace_package_name=self.package_name, version=self.version, jpr_api_key=jpr_api_key);
+        dep_action_info = here.get_actions().get_action_info(
+            namespace_package_name=self.package_name,
+            version=self.version,
+            jpr_api_key=self.jpr_api_key
+        );
 
         if(dep_action_info) {
-            action_info = {
-                "action": dep_action_info.get('name'),
-                "context": {
-                    "version": dep_action_info.get('version'),
-                    "enabled": True
-                }
-            };
 
-            action_exists = False;
-            for action in descriptor_data['actions'] {
-                if(action['action'] == self.package_name) {
-                    if(self.override_action) {
-                        action['context'] = action_info['context'];
-                    } else{
-                        action['context'].update(action_info['context']);
-                    }
-                    action_exists = True;
-                }
-            }
-
-            if(not action_exists) {
-                descriptor_data['actions'].append(action_info);
-            }
-
-            self.import_from_descriptor(descriptor_data);
-        }
-
-    }
-
-    can import_from_descriptor(descriptor:dict) -> Agent {
-        # Import agent from descriptor
-        if (descriptor.get('id', None)) {
             try {
-                agent_node = &descriptor["id"];
+                action_info = {
+                    "action": dep_action_info.get('name'),
+                    "context": {
+                        "version": dep_action_info.get('version'),
+                        "enabled": True
+                    }
+                };
+
+                action_exists = False;
+                for action in descriptor_data['actions'] {
+                    if(action['action'] == self.package_name) {
+                        if(self.override_action) {
+                            action['context'] = action_info['context'];
+                        } else{
+                            action['context'].update(action_info['context']);
+                        }
+                        action_exists = True;
+                    }
+                }
+
+                if(not action_exists) {
+                    # if the action does not exist, insert it
+                    descriptor_data['actions'].append(action_info);
+                }
+
+                if ( here.update(data=descriptor_data, with_actions=True, jpr_api_key=self.jpr_api_key)) {
+                    Jac.get_context().status = 200;
+                    report f"{self.package_name} {self.version} installed successfully";
+                } else {
+                    Jac.get_context().status = 500;
+                    report f"unable to install action {self.package_name} {self.version}";
+                }
+
             } except Exception as e {
-                self.logger.error(f"an exception occurred, {traceback.format_exc()}");
+                message = f"an exception occurred, {traceback.format_exc()}";
+                self.logger.error(message);
+                Jac.get_context().status = 500;
+                report message;
                 return None;
             }
-        }
-        else {
-            agent_name = descriptor.get('name');
-            if(_node := agents_node.get_by_name(agent_name)) {
-                agent_node = _node;
-            } else {
-                if( agent_node := Agent(
-                    name=agent_name,
-                    description=descriptor.get('description', '')
-                )) {
-                    if(not agents_node.get_by_id(agent_node.id)) {
-                        agents_node ++> agent_node;
-                    }
-                    self.logger.info(f"agent created: {agent_node.name}");
-                } else {
-                    self.logger.error(f"unable to create agent: {agent_name}");
-                }
-            }
+
+        } else {
+            Jac.get_context().status = 403;
+            report f"unable to locate action {self.package_name} {self.version}";
         }
 
-        if(agent_node) {
-            descriptor_root = Utils.get_descriptor_root();
-            agent_node.descriptor = f"{descriptor_root}/{agent_node.id}.yaml";
-            agent_node.get_memory();
-            agent_node.get_actions();
-
-            if(agent_node := agent_node.update(
-                data=descriptor,
-                with_actions=True
-            )) {
-                return agent_node;
-            }
-        }
-        return None;
     }
+
 }

@@ -98,7 +98,7 @@ node Agent :GraphNode: {
         return None;
     }
 
-    can update(data: dict={}, with_actions: bool=False) -> Agent {
+    can update(data: dict={}, with_actions: bool=False, jpr_api_key: str = "") -> Agent {
         # performs a shallow update (no action updates), or deep update (re-registers all actions)
 
         # trigger the parent update routine
@@ -107,10 +107,16 @@ node Agent :GraphNode: {
         # now handle actions if present and with_actions flag is set...
         if (with_actions
             and (len(data.get('actions', [])) > 0)) {
+
+            # use supplied jpr_api_key if provided, fall back on agent's jpr key
+            if(not jpr_api_key) {
+                jpr_api_key = self.jpr_api_key;
+            }
+
             self.get_actions().install_actions(
                 self.id,
                 data['actions'],
-                self.jpr_api_key
+                jpr_api_key
             );
         }
 

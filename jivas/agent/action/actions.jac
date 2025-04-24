@@ -19,6 +19,7 @@ import:jac from action { Action }
 import:jac from interact_action { InteractAction }
 import:jac from jivas.agent.core.graph_node { GraphNode }
 import:jac from exit_interact_action { ExitInteractAction }
+import:jac from jivas.agent.core.purge { purge }
 
 node Actions :GraphNode: {
 
@@ -245,7 +246,7 @@ node Actions :GraphNode: {
 
     }
 
-    can install_actions(agent_id:str, data: dict, jpr_api_key:str=None) {
+    can install_actions(agent_id:str, data: dict, jpr_api_key:str=None) -> bool {
         # accepts the list of action data and related configurations and coordinates the importation and registration of action packages
         loaded_actions_data = None;
 
@@ -256,7 +257,7 @@ node Actions :GraphNode: {
         # if actions data is empty, quit right here with error
         if(not loaded_actions_data) {
             self.logger.error('no actions loaded; unable to proceed with actions install');
-            return None;
+            return False;
         }
 
         # purge all actions and related imported modules
@@ -274,6 +275,8 @@ node Actions :GraphNode: {
         for action_node in self.get_all() {
             action_node.post_register();
         }
+
+        return True;
     }
 
     can deregister_action(action_type: str="", action_label: str="") {
@@ -297,11 +300,16 @@ node Actions :GraphNode: {
 
     can deregister_actions() {
         # gracefully disposes of each action, calling the on_deregister on each action node before destruction
+
+        # call deregister on all legit actions
         for action_node in self.get_all() {
             action_node.on_deregister();
             # TODO: remove the action module folder and related modules
-            Jac.destroy(action_node);
         }
+
+        # remove all nodes under Actions except Actions itself
+        self spawn purge(purge_spawn_node=False);
+
         # jac clean actions folder
         Utils.jac_clean_actions();
     }
