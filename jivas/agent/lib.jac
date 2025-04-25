@@ -22,10 +22,14 @@ import:jac from jivas.agent.action {
     uninstall_action
 }
 
+import:jac from jivas.agent.memory {
+    get_frames,
+    get_interactions
+}
+
 import:jac from jivas.agent.analytics {
     get_channels_by_date,
     get_users_by_date,
     get_interactions_by_date,
-    get_interactions,
     get_interaction_logs
 }
