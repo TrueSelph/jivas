@@ -1,14 +1,12 @@
-import:py os;
 import:py io;
 import:py yaml;
 import:py logging;
 import:py traceback;
 import:py from logging { Logger }
 import:py from jivas.agent.modules.agentlib.utils { Utils, jvdata_file_interface }
-import:jac from jivas.agent.core.agent {Agent}
-import:jac from jivas.agent.action.actions { Actions }
+import:jac from jivas.agent.core.agent { Agent }
 import:jac from jivas.agent.core.agent_graph_walker {agent_graph_walker}
-import:jac from jivas.agent.core.import_agent {import_agent}
+
 
 walker install_action :agent_graph_walker: {
     # installs a single action on an agent
@@ -28,26 +26,15 @@ walker install_action :agent_graph_walker: {
     can on_agent with Agent entry {
         # updates the agent descriptor with the action to be installed; returns the updated descriptor data
 
-        descriptor_data = {};
+        action_exists = False;
+        descriptor_data = here.get_descriptor();
 
-        try {
-        	file_bytes = jvdata_file_interface.get_file(here.descriptor);
-			file = io.BytesIO(file_bytes);
-            descriptor_data = yaml.safe_load(file);
-
-            if(not descriptor_data) {
-                message = f"unable to load descriptor: {here.descriptor}";
-                self.logger.error(message);
-                Jac.get_context().status = 500;
-                report message;
-                return None;
-            }
-        } except Exception as e {
-            message = f"an exception occurred, {traceback.format_exc()}";
+        if not descriptor_data {
+            message = f"unable to load descriptor data";
             self.logger.error(message);
             Jac.get_context().status = 500;
             report message;
-            return None;
+            return False;
         }
 
         dep_action_info = here.get_actions().get_action_info(
@@ -56,53 +43,68 @@ walker install_action :agent_graph_walker: {
             jpr_api_key=self.jpr_api_key
         );
 
-        if(dep_action_info) {
+        if not dep_action_info {
+            message = f"unable to locate action {self.package_name} {self.version}";
+            self.logger.error(message);
+            Jac.get_context().status = 403;
+            report message;
+            return False;
+        }
 
-            try {
-                action_info = {
-                    "action": dep_action_info.get('name'),
-                    "context": {
-                        "version": dep_action_info.get('version'),
-                        "enabled": True
+        try {
+
+            action_info = {
+                "action": dep_action_info.get('name'),
+                "context": {
+                    "version": dep_action_info.get('version'),
+                    "enabled": True
+                }
+            };
+
+            # evaluate whether the action already exists
+            for action in descriptor_data['actions'] {
+
+                if(action['action'] == self.package_name) {
+
+                    if(self.override_action) {
+                        # if it exists and overrive is set, replace its context
+                        action['context'] = action_info['context'];
+                    } else{
+                        # if it exists and override is not set, update its version
+                        action['context']['version'] = action_info['context']['version'];
                     }
-                };
-
-                action_exists = False;
-                for action in descriptor_data['actions'] {
-                    if(action['action'] == self.package_name) {
-                        if(self.override_action) {
-                            action['context'] = action_info['context'];
-                        } else{
-                            action['context'].update(action_info['context']);
-                        }
-                        action_exists = True;
-                    }
+                    action_exists = True;
+                    break;
                 }
 
-                if(not action_exists) {
-                    # if the action does not exist, insert it
-                    descriptor_data['actions'].append(action_info);
-                }
+            }
 
-                if ( here.update(data=descriptor_data, with_actions=True, jpr_api_key=self.jpr_api_key)) {
-                    Jac.get_context().status = 200;
-                    report f"{self.package_name} {self.version} installed successfully";
-                } else {
-                    Jac.get_context().status = 500;
-                    report f"unable to install action {self.package_name} {self.version}";
-                }
+            if(not action_exists) {
+                # if the action does not exist, insert it
+                descriptor_data['actions'].append(action_info);
+            }
 
-            } except Exception as e {
-                message = f"an exception occurred, {traceback.format_exc()}";
+            # now that the descriptor data is updated, update the agent and actions, this will reinstall actions and update descriptor
+            if ( here.update(data=descriptor_data, with_actions=True, jpr_api_key=self.jpr_api_key) ) {
+                message = f"{self.package_name} {self.version} installed successfully";
+                self.logger.info(message);
+                Jac.get_context().status = 200;
+                report message;
+                return True;
+            } else {
+                message = f"unable to install action {self.package_name} {self.version}";
                 self.logger.error(message);
                 Jac.get_context().status = 500;
                 report message;
-                return None;
+                return False;
             }
 
-        } else {
-            Jac.get_context().status = 403;
-            report f"unable to locate action {self.package_name} {self.version}";
+        } except Exception as e {
+            message = f"unable to complete operation, {traceback.format_exc()}";
+            self.logger.error(message);
+            Jac.get_context().status = 500;
+            report message;
+            return False;
         }
 
     }

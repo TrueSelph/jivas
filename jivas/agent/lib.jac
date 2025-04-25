@@ -18,7 +18,8 @@ import:jac from jivas.agent.action {
     list_actions,
     get_action,
     update_action,
-    install_action
+    install_action,
+    uninstall_action
 }
 
 import:jac from jivas.agent.analytics {
