@@ -19,6 +19,7 @@ import:jac from action { Action }
 import:jac from interact_action { InteractAction }
 import:jac from jivas.agent.core.graph_node { GraphNode }
 import:jac from exit_interact_action { ExitInteractAction }
+import:jac from jivas.agent.core.purge { purge }
 
 node Actions :GraphNode: {
 
@@ -27,24 +28,24 @@ node Actions :GraphNode: {
     # action packages root folder
     static has package_root: str = Utils.get_actions_root();
 
-    can get(action_type: str="", action_label: str="", filter_enabled_actions:bool=True) {
+    can get(action_type: str="", action_label: str="", only_enabled:bool=True) {
         # returns an action by label or by type, enabled actions by default
         result = None;
 
         if action_type and not action_label {
             # there can be multiple actions of the same type, this returns a list
-            result = self.get_by_type(action_type, filter_enabled_actions);
+            result = self.get_by_type(action_type, only_enabled);
         } elif action_label and not action_type {
             # there can only be one action with a particular label, this returns a action
-            result = self.get_by_label(action_label, filter_enabled_actions);
+            result = self.get_by_label(action_label, only_enabled);
         }
 
         return result;
     }
 
-    can get_by_label(action_label: str, filter_enabled_actions:bool=True) -> Action {
+    can get_by_label(action_label: str, only_enabled:bool=True) -> Action {
         # returns an action by label
-        actions = self.get_all(filter_enabled_actions=filter_enabled_actions);
+        actions = self.get_all(only_enabled=only_enabled);
         for action_node in actions {
             if (action_node.label == action_label) {
                 return action_node;
@@ -54,10 +55,10 @@ node Actions :GraphNode: {
         return None;
     }
 
-    can get_by_type(action_type: str, filter_enabled_actions:bool=True) -> list {
+    can get_by_type(action_type: str, only_enabled:bool=True) -> list {
         # returns an action by type; there may be multiple instances of the same action so a list is returned
         result = [];
-        actions = self.get_all(filter_enabled_actions=filter_enabled_actions);
+        actions = self.get_all(only_enabled=only_enabled);
 
         for action_node in actions {
             if (action_type == action_node.get_type()) {
@@ -68,12 +69,12 @@ node Actions :GraphNode: {
         return result;
     }
 
-    can get_all(filter_interact_actions:bool=False, filter_enabled_actions:bool=False) -> list {
+    can get_all(only_interact_actions:bool=False, only_enabled:bool=False) -> list {
         # returns a list of all actions, even nested ones
-        if (filter_interact_actions) {
-            return ((self spawn _get_interact_actions(filter_enabled=filter_enabled_actions)).action_nodes);
+        if (only_interact_actions) {
+            return ((self spawn _get_interact_actions(filter_enabled=only_enabled)).action_nodes);
         }
-        return ((self spawn _get_actions(filter_enabled=filter_enabled_actions)).action_nodes);
+        return ((self spawn _get_actions(filter_enabled=only_enabled)).action_nodes);
     }
 
     can queue_interact_actions(actions:list) -> list {
@@ -245,7 +246,7 @@ node Actions :GraphNode: {
 
     }
 
-    can install_actions(agent_id:str, data: dict, jpr_api_key:str=None) {
+    can install_actions(agent_id:str, data: dict, jpr_api_key:str=None) -> bool {
         # accepts the list of action data and related configurations and coordinates the importation and registration of action packages
         loaded_actions_data = None;
 
@@ -256,7 +257,7 @@ node Actions :GraphNode: {
         # if actions data is empty, quit right here with error
         if(not loaded_actions_data) {
             self.logger.error('no actions loaded; unable to proceed with actions install');
-            return None;
+            return False;
         }
 
         # purge all actions and related imported modules
@@ -274,6 +275,8 @@ node Actions :GraphNode: {
         for action_node in self.get_all() {
             action_node.post_register();
         }
+
+        return True;
     }
 
     can deregister_action(action_type: str="", action_label: str="") {
@@ -283,25 +286,30 @@ node Actions :GraphNode: {
         target = [];
 
         if action_type and not action_label {
-            target = self.get_by_type(action_type);
+            target = self.get_by_type(action_type=action_type, only_enabled=False);
         } elif action_label and not action_type {
-            target.append(self.get_by_label(action_label));
+            target.append(self.get_by_label(action_label=action_label, only_enabled=False));
         }
         for action_node in target {
             action_node.on_deregister();
             # TODO: remove the action module folder and related modules
-            Jac.destroy(action_node);
+            action_node spawn purge();
         }
 
     }
 
     can deregister_actions() {
         # gracefully disposes of each action, calling the on_deregister on each action node before destruction
+
+        # call deregister on all legit actions
         for action_node in self.get_all() {
             action_node.on_deregister();
             # TODO: remove the action module folder and related modules
-            Jac.destroy(action_node);
         }
+
+        # remove all nodes under Actions except Actions itself
+        self spawn purge(purge_spawn_node=False);
+
         # jac clean actions folder
         Utils.jac_clean_actions();
     }
