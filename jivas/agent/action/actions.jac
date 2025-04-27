@@ -103,7 +103,7 @@ node Actions :GraphNode: {
                     # load the action info content
                     _info = yaml.safe_load(file);
                     # grab info package version
-                    package_version = _info.get('package', {}).get('version', None);
+                    package_version = _info.get('package', {}).get('version', '>=0.0.1');
 
                     # validate the version
                     if is_version_compatible(package_version, version) {
@@ -189,11 +189,11 @@ node Actions :GraphNode: {
 
             if (singleton) {
                 # check if action is a singleton action with duplicate type
-                if (existing_action := self.get(action_type=label)) {
+                if (existing_action := self.get(action_type=label, only_enabled=False)) {
                     self.logger.error(f"action already exists: {label}");
                     return None;
                 }
-            } elif (existing_action := (self.get(action_label=label))) {
+            } elif (existing_action := (self.get(action_label=label, only_enabled=False))) {
                 # check if non singleton action has unique label
                 self.logger.error(f"action already exists: {existing_action.label}");
                 return None;
@@ -215,7 +215,7 @@ node Actions :GraphNode: {
                 if (not parent) {
                     action_parent_node = self;
                 } else {
-                    action_parent_node = self.get_by_type(action_type=parent);
+                    action_parent_node = self.get_by_type(action_type=parent, only_enabled=False);
                 }
                 # map the action
                 action_parent_node ++> action_node;
@@ -316,34 +316,87 @@ node Actions :GraphNode: {
 
     # UTILS
 
-    can index_action_data(data:dict) {
-        # returns a flat dictionary of action data where the key is the action package name and value is the action data
-        action_data_index = {};
+    can index_action_packages(agent_id:str, action_list:list, action_index:dict={}, jpr_api_key:str="") -> dict {
+        # recursive operation which flattens the action list, loads all actions and their dependencies, ensuring dependencies go first
+        # returns a loaded list of valid actions as a dictionary, indexed by namespace_package name
 
-        ::py::
+        for action_data in action_list {
 
-        def flatten_actions(action_list):
-            for action_data in action_list:
-                if namespace_package_name := action_data.get('action', None):
-                    action_data_index[namespace_package_name] = action_data
+            if namespace_package_name := action_data.get('action', None) {
+                # validate the existence of action package and add package metadata to action in index
+                package_version = action_data.get('context', {}).get('version', '>=0.0.1');
 
-                    # Handle child actions recursively
-                    if "children" in action_data:
-                        flatten_actions(action_data["children"])
+                if( action_info := self.get_action_info(namespace_package_name, package_version, jpr_api_key) ) {
+                    action_data['context']['agent_id'] = agent_id;
+                    action_data['context']['_package'] = action_info;
+                    # grab the action architype name
+                    architype = action_info.get('architype', None);
+                    # label, if set will be used, otherwise use architype
+                    action_data['context']['label'] = action_data.get('context', {}).get('label', architype);
+                    # apply the description in the info file to the action entry
+                    action_data['context']['description'] = action_info.get('meta', {}).get('description', '');
 
-        # Start the flattening with the top-level data
-        flatten_actions(data)
+                    # handle any dependencies of this action recusrively and add them first, if not already there
+                    if( action_deps := action_info.get('dependencies', {}).get('actions', {}) ) {
 
-        ::py::
+                        action_dep_list = [];
+                        for action_dep in action_deps.keys() {
+                            # prepare dependency action data list
+                            action_dep_version = action_deps[action_dep];
+                            action_dep_list.append( {
+                                "action": action_dep,
+                                "context": {
+                                    "version": action_dep_version,
+                                    "enabled": True
+                                }
+                            });
+                        }
 
-        return action_data_index;
+                        # recursively add dependency entries to action index
+                        action_index = self.index_action_packages(
+                            agent_id=agent_id,
+                            action_list=action_dep_list,
+                            action_index=action_index,
+                            jpr_api_key=jpr_api_key
+                        );
+
+                        # need to skip to next iteration if the dependency is not resolved so action is not added to index
+                        ::py::
+                        if not all(key in action_index for key in action_deps):
+                            continue
+                        ::py::
+
+                    }
+
+                    # only add it if it doesnt already exist in index
+                    if(not action_index.get(namespace_package_name)) {
+                        action_index[namespace_package_name] = action_data;
+                    }
+
+                } else {
+                    self.logger.error(f"unable to find action {namespace_package_name} {package_version}");
+                }
+
+                # Handle child actions recursively
+                if "children" in action_data {
+                    action_index = self.index_action_packages(
+                        agent_id=agent_id,
+                        action_list=action_data["children"],
+                        action_index=action_index,
+                        jpr_api_key=jpr_api_key
+                    );
+                }
+            }
+        }
+
+        return action_index;
     }
 
-    can index_pip_packages(indexed_action_data:dict) {
+    can index_pip_packages(action_data_index:dict) {
         # returns a flat dictionary of pip packages where the key is the package name and value is the package version
         pip_packages_index = {};
 
-        for (namespace_package_name, action_data) in indexed_action_data.items() {
+        for (namespace_package_name, action_data) in action_data_index.items() {
             if(pip_packages := action_data.get('context', {}).get('_package', {}).get('dependencies', {}).get('pip', {})) {
                 pip_packages_index.update(pip_packages);
             }
@@ -396,27 +449,6 @@ node Actions :GraphNode: {
         }
     }
 
-    can has_pip_packages(packages:dict) {
-        # """
-        # Checks if multiple pip packages are installed.
-
-        # Args:
-        #     packages (dict): Dictionary in {"package": "version"} format.
-        #                     e.g. {"numpy": ">=1.23.0", "pandas": "1.5.0"}
-
-        # Returns:
-        #     bool: True if all packages are installed and versions match, otherwise False.
-        # """
-
-        for (pkg, ver) in packages.items() {
-            if (not self.has_pip_package(pkg, ver)) {
-                return False;
-            }
-        }
-
-        return True;
-    }
-
     can has_pip_package(package_name:str, version:str=None) {
         # """
         # Checks if a pip package is installed and optionally verifies the version with optional comparator operators.
@@ -447,91 +479,100 @@ node Actions :GraphNode: {
         }
     }
 
-    can load_action_packages(agent_id:str, data: dict, jpr_api_key:str=None) {
+    can has_pip_packages(packages:dict) {
+        # """
+        # Checks if multiple pip packages are installed.
+
+        # Args:
+        #     packages (dict): Dictionary in {"package": "version"} format.
+        #                     e.g. {"numpy": ">=1.23.0", "pandas": "1.5.0"}
+
+        # Returns:
+        #     bool: True if all packages are installed and versions match, otherwise False.
+        # """
+
+        for (pkg, ver) in packages.items() {
+            if (not self.has_pip_package(pkg, ver)) {
+                return False;
+            }
+        }
+
+        return True;
+    }
+
+    can load_action_package(indexed_action_data:dict, jpr_api_key:str="") -> dict {
+        # loads a single action package based on indexed action package information
+        # loading entails downloading the package or ensuring the package exists in the actions root
+        # returns empty dict if loading goes wrong, otherwise returns loaded, refreshed action data
+
+        namespace_package_name = indexed_action_data.get('context', {}).get('_package', {}).get('name');
+        package_path = indexed_action_data.get('context', {}).get('_package', {}).get('config', {}).get('path', None);
+        # if an action package is already downloaded, there will be a 'path' variable in the '_package' key
+        # if not, we need to download it and refresh the _package values
+        if package_path is None {
+
+            package_version = indexed_action_data.get('context', {}).get('version', '>=0.0.1');
+
+            try {
+                self.logger.info(f'attempting to download action for {namespace_package_name} {package_version}');
+                # download package from package repo
+                package_data = RegistryAPI.download_package(namespace_package_name, package_version, api_key=jpr_api_key);
+
+                if not package_data {
+                    self.logger.error(f'unable to download package {namespace_package_name} {package_version} ...skipping');
+                    return {};
+                }
+
+                package_file = requests.get(package_data["file"]);
+
+                # Save and extract the package
+                target_dir = os.path.join(self.package_root, namespace_package_name);
+                os.makedirs(target_dir, exist_ok=True);
+
+                # Assuming the package_data is a ZIP file
+                with tarfile.open(
+                    fileobj=io.BytesIO(package_file.content),
+                    mode="r:gz"
+                ) as tar_file {
+                    tar_file.extractall(target_dir);
+                }
+
+                # attempt to refresh and replace action _package data, now that the path is in place
+                if( action_info := self.get_action_info(namespace_package_name, package_version, jpr_api_key) ) {
+
+                    indexed_action_data['context']['_package'] = action_info;
+                    if( not action_info.get('config', {}).get('path', None) ) {
+                        # if download and reload unsuccessful,
+                        # remove the entry from the index
+                        # report and skip to next item
+                        self.logger.error(f'unable to download package {namespace_package_name}...skipping');
+                        return {};
+                    }
+
+                }
+            } except Exception as e {
+                self.logger.error(f'unable to download and load package {namespace_package_name}...skipping, {e}');
+                return {};
+            }
+
+        }
+
+        return indexed_action_data;
+    }
+
+    can load_action_packages(agent_id:str, data: list, jpr_api_key:str=None) -> list {
         # accepts an agent descriptor listing of actions, prepares a loading manifest of ordered deps, loads them and returns loaded action data
 
         # grab flattened list of action data indexed by namespace package name
-        action_data_index = self.index_action_data(data);
+        action_data_index = self.index_action_packages(agent_id=agent_id, action_list=data, jpr_api_key=jpr_api_key);
 
-        try {
-
-            # make a working copy to iterate thru
-            action_data_index_copy = action_data_index.copy();
-            # go through index and load up package info and dependencies
-            for (namespace_package_name, action_data) in action_data_index_copy.items() {
-
-                (namespace, package_name) = namespace_package_name.split('/');
-                package_version = action_data.get('context', {}).get('version', None);
-
-                if( action_info := self.get_action_info(namespace_package_name, package_version, jpr_api_key) ) {
-
-                    action_data['context']['_package'] = action_info;
-                    action_data['context']['agent_id'] = agent_id;
-                    # grab the action architype name
-                    architype = action_info.get('architype', None);
-                    # label, if set will be used, otherwise use architype
-                    action_data['context']['label'] = action_data.get('context', {}).get('label', architype);
-                    # apply the description in the info file to the action entry
-                    action_data['context']['description'] = action_info.get('meta', {}).get('description', '');
-
-                    # if action dependencies exist, check and load as needed
-                    action_deps = action_info.get('dependencies', {}).get('actions', {});
-
-                    loaded_action_deps = {};
-
-                    for action_dep in action_deps.keys() {
-                        if action_dep not in action_data_index.keys() {
-                            action_dep_version = action_deps[action_dep];
-
-                            if( dep_action_info := self.get_action_info( action_dep, action_dep_version, jpr_api_key )) {
-                                # add action descriptor entry based on dep action info
-                                loaded_action_deps[action_dep] = {
-                                    "action": action_dep,
-                                    "context": {
-                                        "version": action_dep_version,
-                                        "enabled": True,
-                                        "agent_id": agent_id,
-                                        "_package": dep_action_info,
-                                        "label": dep_action_info.get('architype', None),
-                                        "description": dep_action_info.get('meta', {}).get('description', '')
-                                    }
-                                };
-                            } else {
-                                self.logger.error(f"unable to find action {action_dep} {action_dep_version}");
-                                continue;
-                            }
-                        }
-                    }
-                    # add loaded deps to the action data index
-                    action_data_index.update(loaded_action_deps);
-                    # update the action_data on the corresponding index key
-                    action_data_index[namespace_package_name] = action_data;
-
-                } else {
-                    # if we were unable to successfully get info and load a package on index, remove it
-                    if(namespace_package_name in action_data_index) {
-                        # remove the issue index so it is not loaded
-                        del action_data_index[namespace_package_name];
-                        # raise the error
-                        self.logger.error(f"unable to find action {namespace_package_name} {package_version}");
-                        continue;
-                    }
-                }
-            }
-
-        } except ImportError as e {
-            self.logger.error(
-                f"an exception occurred wile loading action, {traceback.format_exc()}"
-            );
+        if not action_data_index {
+            return [];
         }
 
-        # now that action data index is loaded, we proceed to
-        # download and load what's needed, which includes action and pip packages
-
+        # preprocess all pip depenedencies and install them in batch
         # make sure we upgrade pip before we proceed
         subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "pip", "--root-user-action=ignore"]);
-
-        # preprocess all pip depenedencies and install them in batch
         indexed_pip_packages = self.index_pip_packages(action_data_index);
         self.batch_pip_package_install(indexed_pip_packages);
 
@@ -539,114 +580,45 @@ node Actions :GraphNode: {
         action_data_index_copy = action_data_index.copy();
         for (namespace_package_name, action_data) in action_data_index_copy.items() {
 
-            package_path = action_data.get('context', {}).get('_package', {}).get('config', {}).get('path', None);
-            # if an action package is already downloaded, there will be a 'path' variable in the '_package' key
-            # if not, we need to download it and refresh the _package values
-            if package_path is None {
+            # load the action in question
+            loaded_action_data = self.load_action_package(indexed_action_data=action_data, jpr_api_key=jpr_api_key);
 
-                package_version = action_data.get('context', {}).get('version', None);
-
-                try {
-                    self.logger.info(f'attempting to download action for {namespace_package_name} {package_version}');
-                    # download package from package repo
-                    package_data = RegistryAPI.download_package(namespace_package_name, package_version, api_key=jpr_api_key);
-
-                    if not package_data {
-                        # remove the entry from the index
-                        if(namespace_package_name in action_data_index) {
-                            del action_data_index[namespace_package_name];
-                        }
-                        self.logger.error(f'unable to download package {namespace_package_name} {package_version} ...skipping');
-                        continue;
-                    }
-
-                    package_file = requests.get(package_data["file"]);
-
-                    # Save and extract the package
-                    target_dir = os.path.join(self.package_root, namespace_package_name);
-                    os.makedirs(target_dir, exist_ok=True);
-
-                    # Assuming the package_data is a ZIP file
-                    with tarfile.open(
-                        fileobj=io.BytesIO(package_file.content),
-                        mode="r:gz"
-                    ) as tar_file {
-                        tar_file.extractall(target_dir);
-                    }
-
-                    # attempt to refresh and replace action _package data
-                    if( action_info := self.get_action_info(namespace_package_name, package_version, jpr_api_key) ) {
-
-                        action_data['context']['_package'] = action_info;
-                        if( not action_info.get('config', {}).get('path', None) ) {
-                            # if download and reload unsuccessful,
-                            # remove the entry from the index
-                            if(namespace_package_name in action_data_index) {
-                                del action_data_index[namespace_package_name];
-                            }
-                            # report and skip to next item
-                            self.logger.error(f'unable to download package {namespace_package_name}...skipping');
-                            continue;
-                        }
-
-                    }
-                } except Exception as e {
-                    # remove the entry from the index
-                    if(namespace_package_name in action_data_index) {
-                        del action_data_index[namespace_package_name];
-                    }
-                    self.logger.error(f'unable to download and load package {namespace_package_name}...skipping, {e}');
-                    continue;
-                }
-
+            if not loaded_action_data {
+                # we skip if we are unable to download/load the action
+                continue;
             }
 
-            # now we load the pip packages that aren't loaded
-            if(self.has_pip_packages( action_data.get('context', {}).get('_package', {}).get('dependencies', {}).get('pip', {}) )) {
-                # once successful, we import the action modules into runtime
-                self.import_action(action_data);
+            if(self.has_pip_packages( loaded_action_data.get('context', {}).get('_package', {}).get('dependencies', {}).get('pip', {}) )) {
+                # if all pip deps installed successfully for this action, proceed to loading it
+                self.import_action(loaded_action_data);
             } else {
-                # if we were unable to successfully load a package on index, remove it from the index and report
-                if(namespace_package_name in action_data_index) {
-                    # remove the issue index so it is not loaded
-                    del action_data_index[namespace_package_name];
-                    # raise the error
-                    self.logger.error(f"unable to load pip packages for action {namespace_package_name}");
-                    continue;
-                }
+                # otherwise, report and continue
+                self.logger.error(f'unable to find all pip package dependencies for {namespace_package_name}...skipping');
+                continue;
             }
-        }
 
-        # at this point, our action_data_index only contains all successfully loaded actions
-        # we update the corresponding children and remove the top level dups
+            # handle child action data
+            if("children" in loaded_action_data and action_type == "interact_action") {
+                ::py::
+                def update_child_actions(child_action_list):
+                    for i, child_action_data in enumerate(child_action_list):
+                        action_type = child_action_data.get('context', {}).get('_package', {}).get('meta', {}).get('type','action');
 
-        ::py::
+                        if namespace_package_name := child_action_data.get('action', None):
+                            if namespace_package_name in action_data_index:
+                                child_action_list[i] = action_data_index[namespace_package_name]
+                                # remove the child entry from action_data_index
+                                del action_data_index[namespace_package_name]
 
-        def update_child_actions(child_action_list):
-            for i, child_action_data in enumerate(child_action_list):
-                action_type = child_action_data.get('context', {}).get('_package', {}).get('meta', {}).get('type','action');
+                            # Handle child actions recursively
+                            if "children" in child_action_data and action_type == "interact_action":
+                                update_child_actions(child_action_data["children"])
 
-                if namespace_package_name := child_action_data.get('action', None):
-                    if namespace_package_name in action_data_index:
-                        child_action_list[i] = action_data_index[namespace_package_name]
-                        # remove the child entry from action_data_index
-                        del action_data_index[namespace_package_name]
+                ::py::
 
-                    # Handle child actions recursively
-                    if "children" in child_action_data and action_type == "interact_action":
-                        update_child_actions(child_action_data["children"])
-
-        ::py::
-
-        # make a working copy to iterate thru
-        action_data_index_copy = action_data_index.copy();
-        # handle child actions many levels deep
-        for (namespace_package_name, action_data) in action_data_index_copy.items() {
-            action_type = action_data.get('context', {}).get('_package', {}).get('meta', {}).get('type','action');
-
-            if("children" in action_data and action_type == "interact_action") {
                 update_child_actions(action_data["children"]);
             }
+
         }
 
         # assign ordering weights to all interact actions then return

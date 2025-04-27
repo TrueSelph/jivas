@@ -18,13 +18,19 @@ walker purge {
     can delete with Node entry {
 
         visit [-->]; # queue up next node(s), if any
-        here del --> [-->]; # take care of the current edge(s) to any nodes
 
         if self.walks == 0 and not self.purge_spawn_node {
             skip;
         }
 
+        # try {
         self.logger.info(f"deleting node: {here}");
+        here del --> [-->]; # take care of the current edge(s) to any nodes
+        # } except Exception as e {
+        #     self.logger.error(f"an exception occurred, {traceback.format_exc()}");
+        # }
+
         Jac.destroy(here); # remove the current node
+
     }
 }
