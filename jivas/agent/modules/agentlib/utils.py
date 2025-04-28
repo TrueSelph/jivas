@@ -23,6 +23,8 @@ from jvserve.lib.file_interface import (
     get_file_interface,
 )
 
+import jivas
+
 logger = logging.getLogger(__name__)
 
 # ensure .jvdata is the root as it contains sensitive data which we don't
@@ -57,6 +59,11 @@ class LongStringDumper(yaml.SafeDumper):
 
 class Utils:
     """Utility class for various helper methods."""
+
+    @staticmethod
+    def get_jivas_version() -> str:
+        """Returns the current JIVAS version."""
+        return jivas.__version__
 
     @staticmethod
     def jac_clean_actions() -> None:
