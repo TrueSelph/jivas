@@ -245,12 +245,12 @@ node Actions :GraphNode: {
 
     }
 
-    can install_actions(agent_id:str, data: dict, jpr_api_key:str=None) -> bool {
+    can install_actions(agent_id:str, action_list: list, jpr_api_key:str=None) -> bool {
         # accepts the list of action data and related configurations and coordinates the importation and registration of action packages
         loaded_actions_data = None;
 
         if(agent_id) {
-            loaded_actions_data = self.load_action_packages(agent_id, data, jpr_api_key=jpr_api_key);
+            loaded_actions_data = self.load_actions(agent_id=agent_id, action_list=action_list, jpr_api_key=jpr_api_key);
         }
 
         # if actions data is empty, quit right here with error
@@ -315,14 +315,27 @@ node Actions :GraphNode: {
 
     # UTILS
 
+    can search_action_list(namespace_package_name:str, action_list:list) -> dict {
+        # searches an action list for the entry based on the namespace_package_name
+
+        for action_data in action_list {
+            if action_data.get('action') == namespace_package_name {
+                return action_data;
+            }
+        }
+
+        return {};
+    }
+
     can index_action_packages(agent_id:str, action_list:list, action_index:dict={}, jpr_api_key:str="") -> dict {
-        # recursive operation which flattens the action list, loads all actions and their dependencies, ensuring dependencies go first
+        # recursive operation which flattens the action list, loads all actions, their children and their dependencies,
+        # builds list ensuring dependencies precede dependent actions
         # returns a loaded list of valid actions as a dictionary, indexed by namespace_package name
 
         for action_data in action_list {
 
-            is_not_indexed = ( (action_data.get('context', {}).get('_package', None)) is None );
             namespace_package_name = action_data.get('action', None);
+            is_not_indexed = (namespace_package_name not in action_index.keys());
             package_version = action_data.get('context', {}).get('version', '>=0.0.1');
 
             if ( is_not_indexed and namespace_package_name) {
@@ -339,23 +352,31 @@ node Actions :GraphNode: {
                     # apply the description in the info file to the action entry
                     action_data['context']['description'] = action_info.get('meta', {}).get('description', '');
 
-                    # handle any dependencies of this action recusrively and add them first, if not already there
+                    # handle any dependencies of this action recursively and add them first, if not already there
                     if( action_deps := action_info.get('dependencies', {}).get('actions', {}) ) {
 
                         action_dep_list = [];
                         for action_dep in action_deps.keys() {
-                            # prepare dependency action data list
-                            action_dep_version = action_deps[action_dep];
-                            action_dep_list.append( {
-                                "action": action_dep,
-                                "context": {
-                                    "version": action_dep_version,
-                                    "enabled": True
-                                }
-                            });
+
+                            # only add entry if dependency action entry not already within running action_list
+                            dep_action_entry = self.search_action_list(action_dep, action_list);
+                            if(not dep_action_entry) {
+                                # prepare dependency action data list
+                                action_dep_version = action_deps[action_dep];
+                                action_dep_list.append( {
+                                    "action": action_dep,
+                                    "context": {
+                                        "version": action_dep_version,
+                                        "enabled": True
+                                    }
+                                });
+                            } else {
+                                # append original entry if found
+                                action_dep_list.append(dep_action_entry);
+                            }
                         }
 
-                        # recursively add dependency entries to action index
+                        # recursively add dependency entries to running action index
                         action_index = self.index_action_packages(
                             agent_id=agent_id,
                             action_list=action_dep_list,
@@ -368,26 +389,25 @@ node Actions :GraphNode: {
                         if not all(key in action_index.keys() for key in action_deps.keys()):
                             continue
                         ::py::
-
                     }
 
-                    # only add it if it doesnt already exist in index
-                    if(not action_index.get(namespace_package_name)) {
+                    # Handle child actions recursively
+                    if "children" in action_data {
+                        action_index = self.index_action_packages(
+                            agent_id=agent_id,
+                            action_list=action_data["children"],
+                            action_index=action_index,
+                            jpr_api_key=jpr_api_key
+                        );
+                    }
+
+                    if(namespace_package_name not in action_index.keys()) {
+                        # add it to action index if not already there
                         action_index[namespace_package_name] = action_data;
                     }
 
                 } else {
                     self.logger.error(f"unable to find action {namespace_package_name} {package_version}");
-                }
-
-                # Handle child actions recursively
-                if "children" in action_data {
-                    action_index = self.index_action_packages(
-                        agent_id=agent_id,
-                        action_list=action_data["children"],
-                        action_index=action_index,
-                        jpr_api_key=jpr_api_key
-                    );
                 }
             }
         }
@@ -520,12 +540,13 @@ node Actions :GraphNode: {
 
         namespace_package_name = indexed_action_data.get('context', {}).get('_package', {}).get('name');
         package_version = indexed_action_data.get('context', {}).get('version', '>=0.0.1');
-        jivas_version = indexed_action_data.get('context', {}).get('_package', {}).get('dependencies', {}).get('jivas', None);
+        required_jivas_version = indexed_action_data.get('context', {}).get('_package', {}).get('dependencies', {}).get('jivas', None);
         package_path = indexed_action_data.get('context', {}).get('_package', {}).get('config', {}).get('path', None);
+        jivas_version = Utils.get_jivas_version();
 
         # check jivas version compatibility
-        if (not is_version_compatible("2.0.0-alpha.35", "^2.0.0")) {
-            self.logger.error(f'incompatible JIVAS version for: {namespace_package_name} ( {jivas_version} : {Utils.get_jivas_version()} ) ...skipping');
+        if (not is_version_compatible(jivas_version, required_jivas_version)) {
+            self.logger.error(f'incompatible JIVAS version for: {namespace_package_name} ( required: {required_jivas_version}  system: {jivas_version} ) ...skipping');
             return {};
         }
 
@@ -575,12 +596,12 @@ node Actions :GraphNode: {
         return indexed_action_data;
     }
 
-    can load_action_packages(agent_id:str, data: list, jpr_api_key:str=None) -> list {
+    can load_actions(agent_id:str, action_list:list, jpr_api_key:str=None) -> list {
         # accepts an agent descriptor listing of actions, prepares a loading manifest of ordered deps,
         # loads them and returns ordered, loaded action data
 
-        # grab flattened list of action data indexed by namespace package name
-        action_data_index = self.index_action_packages(agent_id=agent_id, action_list=data, jpr_api_key=jpr_api_key);
+        # grab flattened list of action data indexed by namespace package name, ordered by action deps
+        action_data_index = self.index_action_packages(agent_id=agent_id, action_list=action_list, jpr_api_key=jpr_api_key);
 
         ## NOTHING TO LOAD?
         if not action_data_index {
@@ -602,8 +623,7 @@ node Actions :GraphNode: {
 
             ## ACTION LOADED?
             if not loaded_action_data {
-                # we skip if we are unable to download/load the action
-                # remove the related entry from action_data_index
+                # remove the related entry from action_data_index if unsuccessful
                 del action_data_index[namespace_package_name];
                 continue;
             }
@@ -612,28 +632,13 @@ node Actions :GraphNode: {
             if(not self.has_pip_packages( loaded_action_data.get('context', {}).get('_package', {}).get('dependencies', {}).get('pip', {}) )) {
                 # report and continue
                 self.logger.error(f'missing pip package dependencies for {namespace_package_name}...skipping');
-                # remove the child entry from action_data_index
+                # remove the related entry from action_data_index
                 del action_data_index[namespace_package_name];
                 continue;
             }
-
-            # update action data index with the loaded action data
-            action_data_index[namespace_package_name] = loaded_action_data;
-
-            # ACTION DEPENDENCIES LOADED ?
-            action_deps = loaded_action_data.get('context', {}).get('_package', {}).get('dependencies', {}).get('actions', {});
-            if( not self.has_action_dependencies(action_data_index, action_deps) ) {
-                self.logger.error(f'missing action dependencies for {namespace_package_name}...skipping');
-                # remove the child entry from action_data_index
-                del action_data_index[namespace_package_name];
-                continue;
-            }
-
-            ## IMPORT THE ACTION
-            # if all deps installed successfully for this action, proceed to loading it
-            self.import_action(loaded_action_data);
 
             # HANDLE ANY CHILDREN
+            # we need to unflatten the index and restore child action hierarchy in full, per action
             if("children" in loaded_action_data and action_type == "interact_action") {
                 ::py::
                 def update_child_actions(child_action_list):
@@ -654,10 +659,40 @@ node Actions :GraphNode: {
                 update_child_actions(loaded_action_data["children"]);
             }
 
+            # update action data index with the loaded action data
+            action_data_index[namespace_package_name] = loaded_action_data;
+
+            # ALL ACTION DEPENDENCIES LOADED FOR THIS ACTION ?
+            action_deps = loaded_action_data.get('context', {}).get('_package', {}).get('dependencies', {}).get('actions', {});
+            if( not self.has_action_dependencies(action_data_index, action_deps) ) {
+                self.logger.error(f'missing action dependencies for {namespace_package_name}...skipping');
+                # remove the entry from action_data_index if not
+                del action_data_index[namespace_package_name];
+                continue;
+            }
+
+            ## ALL GOOD, IMPORT THE ACTION LIB
+            # if all deps installed successfully for this action, proceed to importing it in preparation for registration
+            self.import_action(loaded_action_data);
         }
 
-        # RETURN ORDERED AND LOADED INDEX
-        return Utils.order_interact_actions(action_data_index.values());
+        ## REBUILD ACTION DATA LIST WITH ORIGINAL DESCRIPTOR ORDER
+        loaded_action_list = [];
+        for action_data in action_list {
+            namespace_package_name = action_data.get('action');
+            if( loaded_action_data := action_data_index.get(namespace_package_name)) {
+                # add to loaded action list
+                loaded_action_list.append(loaded_action_data);
+                # remove the entry in action_data_index
+                del action_data_index[namespace_package_name];
+            }
+        }
+        # add any remaining values from action_data_index to loaded action list
+        # these may be deps which were not originally added to the descriptor
+        loaded_action_list.extend(action_data_index.values());
+
+        ## RETURN DESCRIPTOR, INTERACT ORDERED, FULLY LOADED ACTION LIST
+        return Utils.order_interact_actions(loaded_action_list);
     }
 
 }

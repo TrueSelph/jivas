@@ -645,120 +645,130 @@ class TestUtils:
         }
 
     def test_basic_ordering(self) -> None:
-        """Test that actions are ordered correctly based on 'before' and 'after' constraints."""
+        """Test basic before/after constraints with namespace normalization."""
         # Arrange
         actions_data: list[Dict[str, Any]] = [
-            self.create_action("A"),
-            self.create_action("B", before="A"),
+            self.create_action("test/A"),
+            self.create_action("test/B", before="A"),  # Should resolve to "test/A"
         ]
 
         # Act
         result = Utils.order_interact_actions(actions_data)
-
-        if result is None:
-            raise ValueError("result is None")
+        assert result is not None, "Result should not be None"
         sorted_names = [action["context"]["_package"]["name"] for action in result]
 
         # Assert
-        assert sorted_names == ["B", "A"]
+        assert sorted_names == ["test/B", "test/A"]
 
     def test_before_all(self) -> None:
-        """Test that 'before: all' places the action first."""
+        """Test 'before: all' places action first in namespace group."""
         # Arrange
         actions_data: list[Dict[str, Any]] = [
-            self.create_action("A"),
-            self.create_action("B", before="all"),
-            self.create_action("C"),
+            self.create_action("test/A"),
+            self.create_action("test/B", before="all"),
+            self.create_action("test/C"),
         ]
 
         # Act
         result = Utils.order_interact_actions(actions_data)
-
-        if result is None:
-            raise ValueError("result is None")
-
+        assert result is not None, "Result should not be None"
         sorted_names = [action["context"]["_package"]["name"] for action in result]
 
         # Assert
-        assert sorted_names == ["B", "A", "C"]
+        assert sorted_names == ["test/B", "test/A", "test/C"]
 
     def test_after_all(self) -> None:
-        """Test that 'after: all' places the action last."""
+        """Test 'after: all' places action last in namespace group."""
         # Arrange
         actions_data: list[Dict[str, Any]] = [
-            self.create_action("A"),
-            self.create_action("B", after="all"),
-            self.create_action("C"),
+            self.create_action("test/A"),
+            self.create_action("test/B", after="all"),
+            self.create_action("test/C"),
         ]
 
         # Act
         result = Utils.order_interact_actions(actions_data)
-
-        if result is None:
-            raise ValueError("result is None")
-
+        assert result is not None, "Result should not be None"
         sorted_names = [action["context"]["_package"]["name"] for action in result]
 
         # Assert
-        assert sorted_names == ["A", "C", "B"]
+        assert sorted_names == ["test/A", "test/C", "test/B"]
 
     def test_complex_dependencies(self) -> None:
-        """Test complex dependencies where multiple actions have before/after constraints."""
+        """Test complex cross-namespace dependencies."""
         # Arrange
         actions_data: list[Dict[str, Any]] = [
-            self.create_action("A"),
-            self.create_action("B", before="A"),
-            self.create_action("C", after="B"),
-            self.create_action("D", before="C"),
+            self.create_action("test/A"),
+            self.create_action("test/B", before="A"),
+            self.create_action("utils/C", after="test/B"),  # Cross-namespace reference
+            self.create_action("test/D", before="utils/C"),
         ]
 
         # Act
         result = Utils.order_interact_actions(actions_data)
-
-        if result is None:
-            raise ValueError("result is None")
-
+        assert result is not None, "Result should not be None"
         sorted_names = [action["context"]["_package"]["name"] for action in result]
 
-        # Assert
-        assert (
-            sorted_names == ["B", "C", "D", "A"]
-            or sorted_names == ["B", "D", "C", "A"]
-            or sorted_names == ["B", "D", "A", "C"]
-            or sorted_names == ["B", "A", "D", "C"]
+        # Filter only valid possibilities
+        acceptable_orders = [
+            ["test/B", "test/D", "utils/C", "test/A"],
+            ["test/B", "test/D", "test/A", "utils/C"],
+            ["test/B", "test/A", "test/D", "utils/C"],
+        ]
+
+        assert sorted_names in acceptable_orders, (
+            f"Unexpected order: {sorted_names}\n" f"Valid options: {acceptable_orders}"
         )
 
     def test_no_dependencies(self) -> None:
-        """Test that when no dependencies are provided, order remains unchanged."""
+        """Test weight-based ordering with same namespace."""
         # Arrange
         actions_data: list[Dict[str, Any]] = [
-            self.create_action("A"),
-            self.create_action("B"),
-            self.create_action("C"),
+            self.create_action("test/A", weight=5),
+            self.create_action("test/B", weight=3),
+            self.create_action("test/C", weight=5),  # Same weight as A
         ]
 
         # Act
         result = Utils.order_interact_actions(actions_data)
-
-        if result is None:
-            raise ValueError("result is None")
-
+        assert result is not None, "Result should not be None"
         sorted_names = [action["context"]["_package"]["name"] for action in result]
 
-        # Assert
-        assert sorted_names == ["A", "B", "C"]
+        # Assert higher weights first, alphabetical tiebreaker
+        assert sorted_names == ["test/A", "test/C", "test/B"]
 
     def test_circular_dependency(self) -> None:
-        """Test that circular dependencies raise an exception."""
+        """Test cross-namespace circular dependencies."""
         # Arrange
         actions_data: list[Dict[str, Any]] = [
-            self.create_action("A", before="B"),
-            self.create_action("B", before="A"),
+            self.create_action("test/A", before="utils/B"),
+            self.create_action("utils/B", before="test/A"),
         ]
 
         # Act & Assert
-        with pytest.raises(ValueError, match="Circular dependency detected!"):
+        with pytest.raises(ValueError, match="Circular dependency detected"):
             Utils.order_interact_actions(actions_data)
+
+    def test_mixed_namespaces_and_types(self) -> None:
+        """Test mixed interact/other actions across namespaces."""
+        # Arrange
+        actions_data: list[Dict[str, Any]] = [
+            self.create_action("utils/A", action_type="other"),
+            self.create_action("test/B", before="all"),
+            self.create_action("analytics/C", after="test/B"),
+        ]
+
+        # Act
+        result = Utils.order_interact_actions(actions_data)
+        assert result is not None, "Result should not be None"
+        sorted_names = [action["context"]["_package"]["name"] for action in result]
+
+        # Assert
+        assert sorted_names == [
+            "test/B",
+            "analytics/C",
+            "utils/A",  # Non-interact action at end
+        ]
 
     def test_mixed_interact_and_other_actions(self) -> None:
         """Test that non-interact actions remain at the end of the ordered list."""
