@@ -114,9 +114,9 @@ node Agent :GraphNode: {
             }
 
             self.get_actions().install_actions(
-                self.id,
-                data['actions'],
-                jpr_api_key
+                agent_id=self.id,
+                action_list=data['actions'],
+                jpr_api_key=jpr_api_key
             );
         }
 
