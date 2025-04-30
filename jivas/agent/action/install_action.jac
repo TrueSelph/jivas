@@ -67,8 +67,10 @@ walker install_action :agent_graph_walker: {
                 if(action['action'] == self.package_name) {
 
                     if(self.override_action) {
-                        # if it exists and overrive is set, replace its context
+                        # if it exists and override is set, deregiter it, replace its context
                         action['context'] = action_info['context'];
+                        # deregistering it ensures the package folder is removed
+                        here.get_actions().deregister_action(action_label=action.get('context', {}).get('label', ''));
                     } else{
                         # if it exists and override is not set, update its version
                         action['context']['version'] = action_info['context']['version'];
