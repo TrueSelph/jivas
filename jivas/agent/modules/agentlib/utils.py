@@ -479,29 +479,38 @@ class Utils:
     def order_interact_actions(
         actions_data: List[Dict[str, Any]],
     ) -> Optional[List[Dict[str, Any]]]:
-        """Order interact actions based on dependencies and weights."""
+        """Order interact actions based on dependencies, weights, and original order."""
         if not actions_data:
             return None
 
-        # Separate interact actions from others
-        other_actions = [
-            action
-            for action in actions_data
-            if action.get("context", {}).get("_package", {}).get("meta", {}).get("type")
-            != "interact_action"
-        ]
-        interact_actions = [
-            action
-            for action in actions_data
-            if action.get("context", {}).get("_package", {}).get("meta", {}).get("type")
-            == "interact_action"
-        ]
+        # Track original positions for tie-breaking
+        original_order: Dict[str, int] = {}
+        interact_actions = []
+        other_actions = []
+
+        # Separate interact actions and record original positions
+        for idx, action in enumerate(actions_data):
+            if (
+                action.get("context", {})
+                .get("_package", {})
+                .get("meta", {})
+                .get("type")
+                == "interact_action"
+            ):
+                name = action["context"]["_package"]["name"]
+                original_order[name] = idx
+                interact_actions.append(action)
+            else:
+                other_actions.append(action)
+
+        if not interact_actions:
+            return None
 
         action_lookup = {a["context"]["_package"]["name"]: a for a in interact_actions}
         graph: DefaultDict[str, List[str]] = defaultdict(list)
         in_degree: DefaultDict[str, int] = defaultdict(int)
 
-        # Extract weights (lower values first)
+        # Extract weights and maintain original order reference
         action_weights = {
             name: a["context"]["_package"]["config"].get("order", {}).get("weight", 0)
             for name, a in action_lookup.items()
@@ -576,11 +585,11 @@ class Utils:
                     graph[other].append(name)
                     in_degree[name] += 1
 
-        # Kahn's algorithm with weight-based ordering
+        # Kahn's algorithm with enhanced sorting
         queue = deque(
             sorted(
                 [n for n in action_lookup if in_degree[n] == 0],
-                key=lambda x: (action_weights[x], x),  # Lower weights first
+                key=lambda x: (action_weights[x], original_order[x], x),
             )
         )
 
@@ -592,13 +601,15 @@ class Utils:
                 in_degree[neighbor] -= 1
                 if in_degree[neighbor] == 0:
                     queue.append(neighbor)
-            # Re-sort remaining nodes with updated degrees
-            queue = deque(sorted(queue, key=lambda x: (action_weights[x], x)))
+            # Re-sort with original order as secondary sort key
+            queue = deque(
+                sorted(queue, key=lambda x: (action_weights[x], original_order[x], x))
+            )
 
         if len(sorted_names) != len(interact_actions):
             raise ValueError("Circular dependency detected")
 
-        # Rebuild final ordered list
+        # Rebuild final ordered list with original order preservation
         ordered = [action_lookup[n] for n in sorted_names] + other_actions
 
         # Update weight values
