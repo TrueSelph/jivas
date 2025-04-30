@@ -854,12 +854,12 @@ class TestUtils:
         )
 
     def test_no_dependencies(self) -> None:
-        """Test weight-based ordering with same namespace."""
+        """Unconstrained actions maintain original order despite weights."""
         # Arrange
         actions_data: list[Dict[str, Any]] = [
-            self.create_action("test/A", weight=5),
-            self.create_action("test/B", weight=3),
-            self.create_action("test/C", weight=5),  # Same weight as A
+            self.create_action("test/A", weight=5),  # Original index 0
+            self.create_action("test/B", weight=3),  # Original index 1
+            self.create_action("test/C", weight=5),  # Original index 2
         ]
 
         # Act
@@ -867,8 +867,8 @@ class TestUtils:
         assert result is not None, "Result should not be None"
         sorted_names = [action["context"]["_package"]["name"] for action in result]
 
-        # Assert lower weights first, alphabetical tiebreaker
-        assert sorted_names == ["test/B", "test/A", "test/C"]
+        # Assert original order preserved (weights ignored)
+        assert sorted_names == ["test/A", "test/B", "test/C"]
 
     def test_mixed_namespaces_and_types(self) -> None:
         """Test mixed interact/other actions across namespaces."""
