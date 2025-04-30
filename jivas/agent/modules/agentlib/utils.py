@@ -6,6 +6,7 @@ import logging
 import mimetypes
 import os
 import re
+import shutil
 import subprocess
 import unicodedata
 from collections import defaultdict, deque
@@ -73,6 +74,39 @@ class Utils:
         if os.path.isdir(actions_root_path):
             logger.info("Running jac clean on actions directory")
             subprocess.run(["jac", "clean"], cwd=actions_root_path, check=True)
+
+    @staticmethod
+    def clean_action(namespace_package_name: str) -> bool:
+        """Completely removes a specific action folder.
+
+        Args:
+            namespace_package_name: The namespace and package name in format 'namespace_folder/action_folder'
+
+        Returns:
+            bool: True if the action folder was successfully removed, False otherwise
+        """
+        actions_root_path = os.environ.get("JIVAS_ACTIONS_ROOT_PATH", "actions")
+        if os.path.isdir(actions_root_path):
+            logger.info(f"Running clean on action {namespace_package_name}")
+
+            # Construct full path to the action folder
+            action_path = os.path.join(actions_root_path, namespace_package_name)
+
+            try:
+                if os.path.exists(action_path):
+                    # Remove the entire action folder and its contents
+                    shutil.rmtree(action_path)
+                    logger.info(f"Successfully removed action folder: {action_path}")
+                    return True
+                else:
+                    logger.warning(f"Action folder not found: {action_path}")
+                    return False
+            except Exception as e:
+                logger.error(f"Failed to remove action folder {action_path}: {str(e)}")
+                return False
+        else:
+            logger.error(f"Actions root directory not found: {actions_root_path}")
+            return False
 
     @staticmethod
     def get_descriptor_root() -> str:

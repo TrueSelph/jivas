@@ -12,7 +12,6 @@ walker uninstall_action :agent_graph_walker: {
     # uninstalls a single action on an agent
 
     has package_name: str = "";  # Action name, e.g. jivas/intro_interact_action
-    has version: str = "";  # Action version, e.g. 0.0.1
 
     static has logger:Logger = logging.getLogger(__name__);  # Logger instance
 
@@ -41,8 +40,7 @@ walker uninstall_action :agent_graph_walker: {
             # find the action to uninstall
             for action in descriptor_data['actions'] {
 
-                if(action.get('action') == self.package_name
-                    and (action.get('context', {}).get('version')) == self.version) {
+                if(action.get('action') == self.package_name) {
                     # remove the entry once found
                     action_label = action.get('context', {}).get('label');
                     actions_node.deregister_action(action_label=action_label);
@@ -57,7 +55,7 @@ walker uninstall_action :agent_graph_walker: {
                 # if the action was removed, update actions
                 descriptor_data['actions'] = updated_actions;
             } else {
-                message = f"unable to find action for uninstall {self.package_name} {self.version}";
+                message = f"unable to find action for uninstall: {self.package_name} {self.version}";
                 self.logger.error(message);
                 Jac.get_context().status = 500;
                 report message;
@@ -81,7 +79,7 @@ walker uninstall_action :agent_graph_walker: {
 
         } except Exception as e {
             message = f"unable to complete operation, {traceback.format_exc()}";
-            self.logger.error(message);
+            self.logger.error(traceback.format_exc());
             Jac.get_context().status = 500;
             report message;
             return False;

@@ -279,7 +279,7 @@ node Actions :GraphNode: {
     }
 
     can deregister_action(action_type: str="", action_label: str="") {
-        # gracefully disposes of each action, calling the on_deregister on each action node before destruction
+        # gracefully disposes of an action, calling the on_deregister on each action node before destruction
         # can perform deregistration by type or by label
 
         target = [];
@@ -291,7 +291,9 @@ node Actions :GraphNode: {
         }
         for action_node in target {
             action_node.on_deregister();
-            # TODO: remove the action module folder and related modules
+            # remove the action module folder and (TODO: related modules)
+            # Utils.clean_action(action_node._package.get('name')); # cant remove this until we can unload module in runtime
+            # purge action from graph
             action_node spawn purge();
         }
 
@@ -357,23 +359,15 @@ node Actions :GraphNode: {
 
                         action_dep_list = [];
                         for action_dep in action_deps.keys() {
-
-                            # only add entry if dependency action entry not already within running action_list
-                            dep_action_entry = self.search_action_list(action_dep, action_list);
-                            if(not dep_action_entry) {
-                                # prepare dependency action data list
-                                action_dep_version = action_deps[action_dep];
-                                action_dep_list.append( {
-                                    "action": action_dep,
-                                    "context": {
-                                        "version": action_dep_version,
-                                        "enabled": True
-                                    }
-                                });
-                            } else {
-                                # append original entry if found
-                                action_dep_list.append(dep_action_entry);
-                            }
+                            # prepare dependency action data list
+                            action_dep_version = action_deps[action_dep];
+                            action_dep_list.append( {
+                                "action": action_dep,
+                                "context": {
+                                    "version": action_dep_version,
+                                    "enabled": True
+                                }
+                            });
                         }
 
                         # recursively add dependency entries to running action index
@@ -401,8 +395,9 @@ node Actions :GraphNode: {
                         );
                     }
 
+                    # add it to action index if not already there
                     if(namespace_package_name not in action_index.keys()) {
-                        # add it to action index if not already there
+                        # add to action index
                         action_index[namespace_package_name] = action_data;
                     }
 
@@ -466,7 +461,6 @@ node Actions :GraphNode: {
         try {
             subprocess.run(command, check=True, stderr=None, stdout=None);
             self.logger.info("Package dependencies installed successfully.");
-
         } except subprocess.CalledProcessError as e {
             self.logger.error(f"An error occurred while installing one or more package dependencies. There may be a conflict or a missing package.");
         }
@@ -681,6 +675,9 @@ node Actions :GraphNode: {
         for action_data in action_list {
             namespace_package_name = action_data.get('action');
             if( loaded_action_data := action_data_index.get(namespace_package_name)) {
+                # refresh descriptor context data if present before adding to finalizing list
+                action_entry = self.search_action_list(namespace_package_name, action_list);
+                loaded_action_data['context'].update(action_entry.get('context', {}));
                 # add to loaded action list
                 loaded_action_list.append(loaded_action_data);
                 # remove the entry in action_data_index
