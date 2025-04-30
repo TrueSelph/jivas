@@ -479,10 +479,11 @@ class Utils:
     def order_interact_actions(
         actions_data: List[Dict[str, Any]],
     ) -> Optional[List[Dict[str, Any]]]:
-        """Order interact actions based on their dependencies and weights."""
+        """Order interact actions based on dependencies and weights."""
         if not actions_data:
             return None
 
+        # Separate interact actions from others
         other_actions = [
             action
             for action in actions_data
@@ -496,107 +497,116 @@ class Utils:
             == "interact_action"
         ]
 
-        action_lookup = {
-            action["context"]["_package"]["name"]: action for action in interact_actions
-        }
-
+        action_lookup = {a["context"]["_package"]["name"]: a for a in interact_actions}
         graph: DefaultDict[str, List[str]] = defaultdict(list)
         in_degree: DefaultDict[str, int] = defaultdict(int)
 
+        # Extract weights (lower values first)
         action_weights = {
-            name: action["context"]["_package"]["config"]
-            .get("order", {})
-            .get("weight", 0)
-            for name, action in action_lookup.items()
+            name: a["context"]["_package"]["config"].get("order", {}).get("weight", 0)
+            for name, a in action_lookup.items()
         }
 
-        # Handle explicit before/after constraints with namespace normalization
+        def has_path(start: str, end: str) -> bool:
+            """Check if path exists from start to end in current graph."""
+            visited = set()
+            queue = deque([start])
+            while queue:
+                node = queue.popleft()
+                if node == end:
+                    return True
+                if node in visited:
+                    continue
+                visited.add(node)
+                queue.extend(n for n in graph[node] if n not in visited)
+            return False
+
+        # Process AFTER constraints first (higher priority)
         for action in interact_actions:
             action_name = action["context"]["_package"]["name"]
             config_order = action["context"]["_package"]["config"].get("order", {})
             namespace = action_name.split("/")[0]
 
-            def normalize_ref(
-                ref: str, namespace: str = namespace
-            ) -> str:  # Bind namespace as default parameter
-                """Add namespace prefix if reference is incomplete"""
-                return f"{namespace}/{ref}" if "/" not in ref else ref
-
-            before = config_order.get("before")
-            after = config_order.get("after")
-
-            if before and before != "all":
-                normalized_before = normalize_ref(before, namespace)
-                if normalized_before in action_lookup:
-                    graph[action_name].append(normalized_before)
-                    in_degree[normalized_before] += 1
-
-            if after and after != "all":
-                normalized_after = normalize_ref(after, namespace)
+            if (after := config_order.get("after")) and after != "all":
+                normalized_after = f"{namespace}/{after}" if "/" not in after else after
                 if normalized_after in action_lookup:
                     graph[normalized_after].append(action_name)
                     in_degree[action_name] += 1
 
-        # Handle "before/after all" constraints
-        before_all_actions = [
-            action["context"]["_package"]["name"]
-            for action in interact_actions
-            if (config := action["context"]["_package"]["config"].get("order", {}))
-            and config.get("before") == "all"
+        # Process BEFORE constraints with cycle checking (lower priority)
+        for action in interact_actions:
+            action_name = action["context"]["_package"]["name"]
+            config_order = action["context"]["_package"]["config"].get("order", {})
+            namespace = action_name.split("/")[0]
+
+            if (before := config_order.get("before")) and before != "all":
+                normalized_before = (
+                    f"{namespace}/{before}" if "/" not in before else before
+                )
+                if normalized_before in action_lookup:
+                    # Only add if doesn't create cycle with existing after constraints
+                    if not has_path(normalized_before, action_name):
+                        graph[action_name].append(normalized_before)
+                        in_degree[normalized_before] += 1
+
+        # Handle global constraints
+        before_all = [
+            name
+            for name, a in action_lookup.items()
+            if a["context"]["_package"]["config"].get("order", {}).get("before")
+            == "all"
+        ]
+        after_all = [
+            name
+            for name, a in action_lookup.items()
+            if a["context"]["_package"]["config"].get("order", {}).get("after") == "all"
         ]
 
-        after_all_actions = [
-            action["context"]["_package"]["name"]
-            for action in interact_actions
-            if (config := action["context"]["_package"]["config"].get("order", {}))
-            and config.get("after") == "all"
-        ]
+        # Process before:all
+        for name in before_all:
+            for other in action_lookup:
+                if other != name and other not in before_all:
+                    graph[name].append(other)
+                    in_degree[other] += 1
 
-        # Process global constraints
-        for action_name in before_all_actions:
-            for other_name in action_lookup:
-                if other_name != action_name and other_name not in before_all_actions:
-                    graph[action_name].append(other_name)
-                    in_degree[other_name] += 1
+        # Process after:all
+        for name in after_all:
+            for other in action_lookup:
+                if other != name and other not in after_all:
+                    graph[other].append(name)
+                    in_degree[name] += 1
 
-        for action_name in after_all_actions:
-            for other_name in action_lookup:
-                if other_name != action_name and other_name not in after_all_actions:
-                    graph[other_name].append(action_name)
-                    in_degree[action_name] += 1
-
-        # Kahn's algorithm with weight-based prioritization
+        # Kahn's algorithm with weight-based ordering
         queue = deque(
             sorted(
-                [name for name in action_lookup if in_degree[name] == 0],
-                key=lambda x: (-action_weights[x], x),  # Higher weights first
+                [n for n in action_lookup if in_degree[n] == 0],
+                key=lambda x: (action_weights[x], x),  # Lower weights first
             )
         )
 
-        sorted_actions_names = []
+        sorted_names = []
         while queue:
             current = queue.popleft()
-            sorted_actions_names.append(current)
+            sorted_names.append(current)
             for neighbor in graph[current]:
                 in_degree[neighbor] -= 1
                 if in_degree[neighbor] == 0:
                     queue.append(neighbor)
-            queue = deque(sorted(queue, key=lambda x: (-action_weights[x], x)))
+            # Re-sort remaining nodes with updated degrees
+            queue = deque(sorted(queue, key=lambda x: (action_weights[x], x)))
 
-        if len(sorted_actions_names) != len(interact_actions):
-            raise ValueError("Circular dependency detected in interact actions")
+        if len(sorted_names) != len(interact_actions):
+            raise ValueError("Circular dependency detected")
 
         # Rebuild final ordered list
-        sorted_actions = [
-            action_lookup[name] for name in sorted_actions_names
-        ] + other_actions
+        ordered = [action_lookup[n] for n in sorted_names] + other_actions
 
-        # Update weight values based on final order
-        for idx, action in enumerate(sorted_actions):
+        # Update weight values
+        for idx, action in enumerate(ordered):
             if action["context"]["_package"]["meta"]["type"] == "interact_action":
                 action["context"]["weight"] = idx
 
-        return sorted_actions
+        return ordered
 
     @staticmethod
     def get_mime_type(

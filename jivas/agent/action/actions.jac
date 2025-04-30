@@ -633,6 +633,7 @@ node Actions :GraphNode: {
 
             # HANDLE ANY CHILDREN
             # we need to unflatten the index and restore child action hierarchy in full, per action
+            action_type = loaded_action_data.get('context', {}).get('_package', {}).get('meta', {}).get('type','action');
             if("children" in loaded_action_data and action_type == "interact_action") {
                 ::py::
                 def update_child_actions(child_action_list):
@@ -689,7 +690,13 @@ node Actions :GraphNode: {
         loaded_action_list.extend(action_data_index.values());
 
         ## RETURN DESCRIPTOR, INTERACT ORDERED, FULLY LOADED ACTION LIST
-        return Utils.order_interact_actions(loaded_action_list);
+        try {
+            ordered_action_list = Utils.order_interact_actions(loaded_action_list);
+            return ordered_action_list;
+        } except Exception as e {
+            self.logger.error('A dependency conflict was detected among configured actions. Unordered actions will be loaded but functionality may be impaired.');
+            return loaded_action_list;
+        }
     }
 
 }
