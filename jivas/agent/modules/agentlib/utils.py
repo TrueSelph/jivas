@@ -11,7 +11,7 @@ import subprocess
 import unicodedata
 from collections import defaultdict, deque
 from datetime import datetime
-from typing import Any, DefaultDict, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 import ftfy
@@ -507,8 +507,8 @@ class Utils:
             return None
 
         action_lookup = {a["context"]["_package"]["name"]: a for a in interact_actions}
-        graph: DefaultDict[str, List[str]] = defaultdict(list)
-        in_degree: DefaultDict[str, int] = defaultdict(int)
+        graph: defaultdict[str, list[str]] = defaultdict(list)
+        in_degree: defaultdict[str, int] = defaultdict(int)
 
         # Extract weights and maintain original order reference
         action_weights = {
@@ -585,11 +585,11 @@ class Utils:
                     graph[other].append(name)
                     in_degree[name] += 1
 
-        # Kahn's algorithm with enhanced sorting
+        # Kahn's algorithm with priority-based sorting
         queue = deque(
             sorted(
                 [n for n in action_lookup if in_degree[n] == 0],
-                key=lambda x: (action_weights[x], original_order[x], x),
+                key=lambda x: (action_weights[x], original_order[x]),
             )
         )
 
@@ -601,18 +601,18 @@ class Utils:
                 in_degree[neighbor] -= 1
                 if in_degree[neighbor] == 0:
                     queue.append(neighbor)
-            # Re-sort with original order as secondary sort key
+            # Re-sort with updated weights and original order
             queue = deque(
-                sorted(queue, key=lambda x: (action_weights[x], original_order[x], x))
+                sorted(queue, key=lambda x: (action_weights[x], original_order[x]))
             )
 
         if len(sorted_names) != len(interact_actions):
             raise ValueError("Circular dependency detected")
 
-        # Rebuild final ordered list with original order preservation
+        # Rebuild final ordered list preserving non-interact actions
         ordered = [action_lookup[n] for n in sorted_names] + other_actions
 
-        # Update weight values
+        # Update weight values based on final order
         for idx, action in enumerate(ordered):
             if action["context"]["_package"]["meta"]["type"] == "interact_action":
                 action["context"]["weight"] = idx
