@@ -4,6 +4,7 @@ import os
 import types
 from datetime import datetime
 from typing import Any, Dict
+from unittest import mock
 from uuid import UUID
 
 import pytest
@@ -28,6 +29,138 @@ class Dummy:
 
 class TestUtils:
     """Tests for the Utils class."""
+
+    @mock.patch("os.path.isdir")
+    @mock.patch("os.path.exists")
+    @mock.patch("shutil.rmtree")
+    def test_clean_action_success(
+        self,
+        mock_rmtree: mock.MagicMock,
+        mock_exists: mock.MagicMock,
+        mock_isdir: mock.MagicMock,
+    ) -> None:
+        """Test successful removal of an action folder."""
+        # Arrange
+        mock_isdir.return_value = True
+        mock_exists.return_value = True
+        namespace_package_name = "test_namespace/test_action"
+
+        # Act
+        result = Utils.clean_action(namespace_package_name)
+
+        # Assert
+        assert result is True
+        mock_rmtree.assert_called_once()
+
+    @mock.patch("os.path.isdir")
+    @mock.patch("os.path.exists")
+    @mock.patch("shutil.rmtree")
+    def test_clean_action_folder_not_found(
+        self,
+        mock_rmtree: mock.MagicMock,
+        mock_exists: mock.MagicMock,
+        mock_isdir: mock.MagicMock,
+    ) -> None:
+        """Test when the action folder doesn't exist."""
+        # Arrange
+        mock_isdir.return_value = True
+        mock_exists.return_value = False
+        namespace_package_name = "test_namespace/nonexistent_action"
+
+        # Act
+        result = Utils.clean_action(namespace_package_name)
+
+        # Assert
+        assert result is False
+        mock_rmtree.assert_not_called()
+
+    @mock.patch("os.path.isdir")
+    @mock.patch("os.path.exists")
+    @mock.patch("shutil.rmtree")
+    def test_clean_action_removal_failure(
+        self,
+        mock_rmtree: mock.MagicMock,
+        mock_exists: mock.MagicMock,
+        mock_isdir: mock.MagicMock,
+    ) -> None:
+        """Test when folder removal fails."""
+        # Arrange
+        mock_isdir.return_value = True
+        mock_exists.return_value = True
+        mock_rmtree.side_effect = Exception("Permission denied")
+        namespace_package_name = "test_namespace/protected_action"
+
+        # Act
+        result = Utils.clean_action(namespace_package_name)
+
+        # Assert
+        assert result is False
+        mock_rmtree.assert_called_once()
+
+    @mock.patch("os.path.isdir")
+    def test_clean_action_root_dir_not_found(self, mock_isdir: mock.MagicMock) -> None:
+        """Test when actions root directory doesn't exist."""
+        # Arrange
+        mock_isdir.return_value = False
+        namespace_package_name = "test_namespace/test_action"
+
+        # Act
+        result = Utils.clean_action(namespace_package_name)
+
+        # Assert
+        assert result is False
+
+    @mock.patch.dict("os.environ", {"JIVAS_ACTIONS_ROOT_PATH": "/custom/actions/path"})
+    @mock.patch("os.path.isdir")
+    @mock.patch("os.path.exists")
+    @mock.patch("shutil.rmtree")
+    def test_clean_action_custom_root_path(
+        self,
+        mock_rmtree: mock.MagicMock,
+        mock_exists: mock.MagicMock,
+        mock_isdir: mock.MagicMock,
+    ) -> None:
+        """Test with custom actions root path from environment variable."""
+        # Arrange
+        mock_isdir.return_value = True
+        mock_exists.return_value = True
+        namespace_package_name = "test_namespace/test_action"
+
+        # Act
+        result = Utils.clean_action(namespace_package_name)
+
+        # Assert
+        assert result is True
+        called_path = os.path.join("/custom/actions/path", namespace_package_name)
+        mock_rmtree.assert_called_once_with(called_path)
+
+    def test_clean_action_invalid_namespace_format(self) -> None:
+        """Test with invalid namespace/package format."""
+        # Invalid formats (missing slash or empty)
+        invalid_formats = ["", "no_slash", "/", "namespace_only/", "/action_only"]
+
+        for invalid_format in invalid_formats:
+            # Act
+            result = Utils.clean_action(invalid_format)
+
+            # Assert
+            assert result is False
+
+    def test_clean_action_with_nested_path(self) -> None:
+        """Test with nested namespace/package path."""
+        # Arrange
+        with mock.patch("os.path.isdir", return_value=True), mock.patch(
+            "os.path.exists", return_value=True
+        ), mock.patch("shutil.rmtree") as mock_rmtree:
+
+            namespace_package_name = "deep/namespace/test_action"
+
+            # Act
+            result = Utils.clean_action(namespace_package_name)
+
+            # Assert
+            assert result is True
+            mock_rmtree.assert_called_once()
 
     def test_short_string_without_newlines(self) -> None:
         """Test that short strings without newlines are not modified."""
