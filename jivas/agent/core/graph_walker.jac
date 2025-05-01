@@ -40,12 +40,12 @@ walker graph_walker {
                 }
             }
         }
-        self.postupdate();
+        self.post_update();
 
         return self;
     }
 
-    can postupdate {
+    can post_update {
         # can be overriden to execute following a walker update
     }
 
