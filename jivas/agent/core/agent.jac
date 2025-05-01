@@ -40,7 +40,7 @@ node Agent :GraphNode: {
         self.protected_attrs += ["id", "actions", "descriptor", "healthcheck_status"];
     }
 
-    can get_memory() {
+    can get_memory() -> Memory {
         # returns a reference to the agent's memory node
 
         memory_node = Utils.node_obj([-->](`?Memory));
@@ -54,7 +54,7 @@ node Agent :GraphNode: {
         return memory_node;
     }
 
-    can get_actions() {
+    can get_actions() -> Actions {
         # returns a reference to the agent's actions node
 
         actions_node = Utils.node_obj([-->](`?Actions));
@@ -68,38 +68,55 @@ node Agent :GraphNode: {
         return actions_node;
     }
 
-    can get_tts_action() {
+    can get_action(action_type:str="", action_label: str="", only_enabled: bool=True) -> Union[Action, None] {
+        # fetch action node if enabled and configured
+        # by action type or label
+
+        if(action_node := self.get_actions().get(
+            action_type=action_type,
+            action_label=action_label,
+            only_enabled=only_enabled)) {
+            return action_node;
+        }
+
+        return None;
+    }
+
+    can get_tts_action() -> Union[Action, None] {
         # fetch text to speech action node if enabled and configured
 
-        if(tts_action_node := self.get_actions().get(action_label=self.tts_action)) {
+        if(tts_action_node := self.get_action(action_label=self.tts_action)) {
             return tts_action_node;
         }
 
         return None;
     }
 
-    can get_stt_action() {
+    can get_stt_action() -> Union[Action, None] {
         # fetch speech to text action node if enabled and configured
 
-        if(stt_action_node := self.get_actions().get(action_label=self.stt_action)) {
+        if(stt_action_node := self.get_action(action_label=self.stt_action)) {
             return stt_action_node;
         }
 
         return None;
     }
 
-    can get_vector_store_action() {
+    can get_vector_store_action() -> Union[Action, None] {
         # fetch vector store action node if enabled and configured
 
-        if(vector_store_action_node := self.get_actions().get(action_label=self.vector_store_action)) {
+        if(vector_store_action_node := self.get_action(action_label=self.vector_store_action)) {
             return vector_store_action_node;
         }
 
         return None;
     }
 
-    can update(data: dict={}, with_actions: bool=False, jpr_api_key: str = "") -> Agent {
-        # performs a shallow update (no action updates), or deep update (re-registers all actions)
+    can update(data: dict={}, with_actions: bool=False, jpr_api_key: str = "", with_healthcheck:bool=False) -> Agent {
+        # performs a shallow update (no action updates),
+        # or deep update (re-registers all actions),
+        # with or without a healtcheck report
+        # if called without params, it will simply dump the descriptor based on the current agent state
 
         # trigger the parent update routine
         agent_node = super.update(data=data);
@@ -120,29 +137,31 @@ node Agent :GraphNode: {
             );
         }
 
-        # perform healthcheck and log error / warning details
-        healthcheck_report = self.get_healthcheck_report();
-        if (healthcheck_report['status'] == 200) {
-            self.logger.info(healthcheck_report['message']);
-        } else {
-            for (label, detail) in (healthcheck_report['trace']).items() {
-                if (detail.get("status") == False) {
-                    self.logger.error(f"[{label}] {detail.get("message")}");
-                } elif (detail.get("status") == True and detail.get("severity") == "warning") {
-                    self.logger.warning(f"[{label}] {detail.get("message")}");
+        if(with_healthcheck) {
+            # perform healthcheck and log error / warning details
+            healthcheck_report = self.healthcheck();
+            if (healthcheck_report['status'] == 200) {
+                self.logger.info(healthcheck_report['message']);
+            } else {
+                for (label, detail) in (healthcheck_report['trace']).items() {
+                    if (detail.get("status") == False) {
+                        self.logger.error(f"[{label}] {detail.get("message")}");
+                    } elif (detail.get("status") == True and detail.get("severity") == "warning") {
+                        self.logger.warning(f"[{label}] {detail.get("message")}");
+                    }
                 }
             }
         }
 
+        # if the agent node is valid, we can update the descriptor
         if agent_node {
-            # update jvdata descriptor if agent node is valid
             self.dump_descriptor();
         }
 
         return agent_node;
     }
 
-    can is_logging() {
+    can is_logging() -> bool {
         return self.agent_logging;
     }
 
