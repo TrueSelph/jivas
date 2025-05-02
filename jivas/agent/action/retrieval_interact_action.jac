@@ -179,7 +179,7 @@ Ensure that the final output is either the refined query or the original message
 
             result = None;
 
-            if(model_action := self.get_agent().get_actions().get(action_label=self.model_action)) {
+            if(model_action := self.get_agent().get_action(action_label=self.model_action)) {
 
                  if( model_action_result := model_action.call_model(
                     prompt_messages = prompt_messages,
@@ -213,7 +213,7 @@ Ensure that the final output is either the refined query or the original message
         # """
         context_data = [];
 
-        if(vector_store_action := self.get_agent().get_actions().get(action_label=self.vector_store_action)) {
+        if(vector_store_action := self.get_agent().get_action(action_label=self.vector_store_action)) {
 
             if(self.mmr) {
                 if(documents := vector_store_action.max_marginal_relevance_search(query=query, k=self.k)) {
@@ -253,7 +253,7 @@ Ensure that the final output is either the refined query or the original message
 
     can healthcheck() -> Union[bool, dict] {
 
-        vector_store_action = self.get_agent().get_actions().get(action_label=self.vector_store_action);
+        vector_store_action = self.get_agent().get_action(action_label=self.vector_store_action);
         if(not vector_store_action) {
             return {
                 "status": False,

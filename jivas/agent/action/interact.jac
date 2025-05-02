@@ -354,7 +354,7 @@ walker interact :interact_graph_walker: {
         next_action_node = None;
 
         if(action_label) {
-            next_action_node = self.agent_node.get_actions().get(action_label=action_label);
+            next_action_node = self.agent_node.get_action(action_label=action_label);
         } elif(action_node) {
             next_action_node = action_node;
         }
@@ -389,7 +389,7 @@ walker interact :interact_graph_walker: {
         append_action_node = None;
 
         if(action_label) {
-            append_action_node = self.agent_node.get_actions().get(action_label=action_label);
+            append_action_node = self.agent_node.get_action(action_label=action_label);
         } elif(action_node) {
             append_action_node = action_node;
         }
@@ -406,7 +406,7 @@ walker interact :interact_graph_walker: {
         # dequeue the supplied action as the next action in the walk path
 
         if(action_label) {
-            action_node = self.agent_node.get_actions().get(action_label=action_label);
+            action_node = self.agent_node.get_action(action_label=action_label);
         }
 
         if(action_node) {
@@ -418,7 +418,7 @@ walker interact :interact_graph_walker: {
         # adds the interact action to the end of the active walk path (before exit)
 
         # first grab exit action
-        if (exit_action := self.agent_node.get_actions().get(action_label="ExitInteractAction") ) {
+        if (exit_action := self.agent_node.get_action(action_label="ExitInteractAction") ) {
             exit_action_node_ref = None;
             # remove and save the exit action
             for (i, node_ref) in enumerate(self.__jac__.next) {
@@ -487,7 +487,7 @@ walker interact :interact_graph_walker: {
 
         if( interact_action and index_interact_action ) {
 
-            if( (exit_action := self.agent_node.get_actions().get(action_label="ExitInteractAction"))
+            if( (exit_action := self.agent_node.get_action(action_label="ExitInteractAction"))
                 and self.in_next_queue(index_interact_action) ) {
                 jac_next_copy = self.__jac__.next.copy();
                 jac_trail = enumerate(jac_next_copy, start=0);
@@ -533,7 +533,7 @@ walker interact :interact_graph_walker: {
         if (action_node.get_type() in ['AccessControlAction', 'ExitInteractAction']) {
             return True;
         }
-        if (access_control_action_node := (self.agent_node.get_actions().get(
+        if (access_control_action_node := (self.agent_node.get_action(
             action_label='AccessControlAction'
         ))) {
 
@@ -552,7 +552,7 @@ walker interact :interact_graph_walker: {
         if (action_node.get_type() in ['IntentInteractAction', 'FunctionInteractAction', 'ExitInteractAction']) {
             return True;
         }
-        if ((function_interact_action_node := self.agent_node.get_actions().get(
+        if ((function_interact_action_node := self.agent_node.get_action(
             action_label='FunctionInteractAction'
         ))) {
             if (function_interact_action_node.enabled
@@ -573,7 +573,7 @@ walker interact :interact_graph_walker: {
         if (action_node.get_type() in ['IntentInteractAction', 'FunctionInteractAction', 'ExitInteractAction']) {
             return True;
         }
-        if (intent_interact_action_node := self.agent_node.get_actions().get(
+        if (intent_interact_action_node := self.agent_node.get_action(
             action_label='IntentInteractAction'
         )) {
             if (intent_interact_action_node.enabled
