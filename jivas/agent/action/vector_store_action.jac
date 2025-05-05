@@ -498,7 +498,7 @@ node VectorStoreAction :Action: {
             if(not self.embedding_model_provider){
                 return {
                     "status": False,
-                    "messgae": "Embedding model provider not set",
+                    "message": "Embedding model provider not set",
                     "severity": "error"
                 };
             }
@@ -507,7 +507,7 @@ node VectorStoreAction :Action: {
             if not embedded_texts {
                 return {
                     "status": False,
-                    "messgae": "Embedding model not functional. Check your configuration",
+                    "message": "Embedding model not functional. Check your configuration",
                     "severity": "error"
                 };
             }
@@ -516,7 +516,7 @@ node VectorStoreAction :Action: {
             if(not self.get_vectorstore()) {
                 return {
                     "status": False,
-                    "messgae": "Vectorstore not configured",
+                    "message": "Vectorstore not configured",
                     "severity": "error"
                 };
             }

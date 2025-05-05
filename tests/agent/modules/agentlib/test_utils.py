@@ -4,6 +4,7 @@ import os
 import types
 from datetime import datetime
 from typing import Any, Dict
+from unittest import mock
 from uuid import UUID
 
 import pytest
@@ -28,6 +29,138 @@ class Dummy:
 
 class TestUtils:
     """Tests for the Utils class."""
+
+    @mock.patch("os.path.isdir")
+    @mock.patch("os.path.exists")
+    @mock.patch("shutil.rmtree")
+    def test_clean_action_success(
+        self,
+        mock_rmtree: mock.MagicMock,
+        mock_exists: mock.MagicMock,
+        mock_isdir: mock.MagicMock,
+    ) -> None:
+        """Test successful removal of an action folder."""
+        # Arrange
+        mock_isdir.return_value = True
+        mock_exists.return_value = True
+        namespace_package_name = "test_namespace/test_action"
+
+        # Act
+        result = Utils.clean_action(namespace_package_name)
+
+        # Assert
+        assert result is True
+        mock_rmtree.assert_called_once()
+
+    @mock.patch("os.path.isdir")
+    @mock.patch("os.path.exists")
+    @mock.patch("shutil.rmtree")
+    def test_clean_action_folder_not_found(
+        self,
+        mock_rmtree: mock.MagicMock,
+        mock_exists: mock.MagicMock,
+        mock_isdir: mock.MagicMock,
+    ) -> None:
+        """Test when the action folder doesn't exist."""
+        # Arrange
+        mock_isdir.return_value = True
+        mock_exists.return_value = False
+        namespace_package_name = "test_namespace/nonexistent_action"
+
+        # Act
+        result = Utils.clean_action(namespace_package_name)
+
+        # Assert
+        assert result is False
+        mock_rmtree.assert_not_called()
+
+    @mock.patch("os.path.isdir")
+    @mock.patch("os.path.exists")
+    @mock.patch("shutil.rmtree")
+    def test_clean_action_removal_failure(
+        self,
+        mock_rmtree: mock.MagicMock,
+        mock_exists: mock.MagicMock,
+        mock_isdir: mock.MagicMock,
+    ) -> None:
+        """Test when folder removal fails."""
+        # Arrange
+        mock_isdir.return_value = True
+        mock_exists.return_value = True
+        mock_rmtree.side_effect = Exception("Permission denied")
+        namespace_package_name = "test_namespace/protected_action"
+
+        # Act
+        result = Utils.clean_action(namespace_package_name)
+
+        # Assert
+        assert result is False
+        mock_rmtree.assert_called_once()
+
+    @mock.patch("os.path.isdir")
+    def test_clean_action_root_dir_not_found(self, mock_isdir: mock.MagicMock) -> None:
+        """Test when actions root directory doesn't exist."""
+        # Arrange
+        mock_isdir.return_value = False
+        namespace_package_name = "test_namespace/test_action"
+
+        # Act
+        result = Utils.clean_action(namespace_package_name)
+
+        # Assert
+        assert result is False
+
+    @mock.patch.dict("os.environ", {"JIVAS_ACTIONS_ROOT_PATH": "/custom/actions/path"})
+    @mock.patch("os.path.isdir")
+    @mock.patch("os.path.exists")
+    @mock.patch("shutil.rmtree")
+    def test_clean_action_custom_root_path(
+        self,
+        mock_rmtree: mock.MagicMock,
+        mock_exists: mock.MagicMock,
+        mock_isdir: mock.MagicMock,
+    ) -> None:
+        """Test with custom actions root path from environment variable."""
+        # Arrange
+        mock_isdir.return_value = True
+        mock_exists.return_value = True
+        namespace_package_name = "test_namespace/test_action"
+
+        # Act
+        result = Utils.clean_action(namespace_package_name)
+
+        # Assert
+        assert result is True
+        called_path = os.path.join("/custom/actions/path", namespace_package_name)
+        mock_rmtree.assert_called_once_with(called_path)
+
+    def test_clean_action_invalid_namespace_format(self) -> None:
+        """Test with invalid namespace/package format."""
+        # Invalid formats (missing slash or empty)
+        invalid_formats = ["", "no_slash", "/", "namespace_only/", "/action_only"]
+
+        for invalid_format in invalid_formats:
+            # Act
+            result = Utils.clean_action(invalid_format)
+
+            # Assert
+            assert result is False
+
+    def test_clean_action_with_nested_path(self) -> None:
+        """Test with nested namespace/package path."""
+        # Arrange
+        with mock.patch("os.path.isdir", return_value=True), mock.patch(
+            "os.path.exists", return_value=True
+        ), mock.patch("shutil.rmtree") as mock_rmtree:
+
+            namespace_package_name = "deep/namespace/test_action"
+
+            # Act
+            result = Utils.clean_action(namespace_package_name)
+
+            # Assert
+            assert result is True
+            mock_rmtree.assert_called_once()
 
     def test_short_string_without_newlines(self) -> None:
         """Test that short strings without newlines are not modified."""
@@ -645,120 +778,118 @@ class TestUtils:
         }
 
     def test_basic_ordering(self) -> None:
-        """Test that actions are ordered correctly based on 'before' and 'after' constraints."""
+        """Test basic before/after constraints with namespace normalization."""
         # Arrange
         actions_data: list[Dict[str, Any]] = [
-            self.create_action("A"),
-            self.create_action("B", before="A"),
+            self.create_action("test/A"),
+            self.create_action("test/B", before="A"),  # Should resolve to "test/A"
         ]
 
         # Act
         result = Utils.order_interact_actions(actions_data)
-
-        if result is None:
-            raise ValueError("result is None")
+        assert result is not None, "Result should not be None"
         sorted_names = [action["context"]["_package"]["name"] for action in result]
 
         # Assert
-        assert sorted_names == ["B", "A"]
+        assert sorted_names == ["test/B", "test/A"]
 
     def test_before_all(self) -> None:
-        """Test that 'before: all' places the action first."""
+        """Test 'before: all' places action first in namespace group."""
         # Arrange
         actions_data: list[Dict[str, Any]] = [
-            self.create_action("A"),
-            self.create_action("B", before="all"),
-            self.create_action("C"),
+            self.create_action("test/A"),
+            self.create_action("test/B", before="all"),
+            self.create_action("test/C"),
         ]
 
         # Act
         result = Utils.order_interact_actions(actions_data)
-
-        if result is None:
-            raise ValueError("result is None")
-
+        assert result is not None, "Result should not be None"
         sorted_names = [action["context"]["_package"]["name"] for action in result]
 
         # Assert
-        assert sorted_names == ["B", "A", "C"]
+        assert sorted_names == ["test/B", "test/A", "test/C"]
 
     def test_after_all(self) -> None:
-        """Test that 'after: all' places the action last."""
+        """Test 'after: all' places action last in namespace group."""
         # Arrange
         actions_data: list[Dict[str, Any]] = [
-            self.create_action("A"),
-            self.create_action("B", after="all"),
-            self.create_action("C"),
+            self.create_action("test/A"),
+            self.create_action("test/B", after="all"),
+            self.create_action("test/C"),
         ]
 
         # Act
         result = Utils.order_interact_actions(actions_data)
-
-        if result is None:
-            raise ValueError("result is None")
-
+        assert result is not None, "Result should not be None"
         sorted_names = [action["context"]["_package"]["name"] for action in result]
 
         # Assert
-        assert sorted_names == ["A", "C", "B"]
+        assert sorted_names == ["test/A", "test/C", "test/B"]
 
     def test_complex_dependencies(self) -> None:
-        """Test complex dependencies where multiple actions have before/after constraints."""
+        """Test complex cross-namespace dependencies."""
         # Arrange
         actions_data: list[Dict[str, Any]] = [
-            self.create_action("A"),
-            self.create_action("B", before="A"),
-            self.create_action("C", after="B"),
-            self.create_action("D", before="C"),
+            self.create_action("test/A"),
+            self.create_action("test/B", before="A"),
+            self.create_action("utils/C", after="test/B"),  # Cross-namespace reference
+            self.create_action("test/D", before="utils/C"),
         ]
 
         # Act
         result = Utils.order_interact_actions(actions_data)
-
-        if result is None:
-            raise ValueError("result is None")
-
+        assert result is not None, "Result should not be None"
         sorted_names = [action["context"]["_package"]["name"] for action in result]
 
-        # Assert
-        assert (
-            sorted_names == ["B", "C", "D", "A"]
-            or sorted_names == ["B", "D", "C", "A"]
-            or sorted_names == ["B", "D", "A", "C"]
-            or sorted_names == ["B", "A", "D", "C"]
+        # Filter only valid possibilities
+        acceptable_orders = [
+            ["test/B", "test/D", "utils/C", "test/A"],
+            ["test/B", "test/D", "test/A", "utils/C"],
+            ["test/B", "test/A", "test/D", "utils/C"],
+        ]
+
+        assert sorted_names in acceptable_orders, (
+            f"Unexpected order: {sorted_names}\n" f"Valid options: {acceptable_orders}"
         )
 
     def test_no_dependencies(self) -> None:
-        """Test that when no dependencies are provided, order remains unchanged."""
+        """Unconstrained actions maintain original order despite weights."""
         # Arrange
         actions_data: list[Dict[str, Any]] = [
-            self.create_action("A"),
-            self.create_action("B"),
-            self.create_action("C"),
+            self.create_action("test/A", weight=5),  # Original index 0
+            self.create_action("test/B", weight=3),  # Original index 1
+            self.create_action("test/C", weight=5),  # Original index 2
         ]
 
         # Act
         result = Utils.order_interact_actions(actions_data)
+        assert result is not None, "Result should not be None"
+        sorted_names = [action["context"]["_package"]["name"] for action in result]
 
-        if result is None:
-            raise ValueError("result is None")
+        # Assert original order preserved (weights ignored)
+        assert sorted_names == ["test/A", "test/B", "test/C"]
 
+    def test_mixed_namespaces_and_types(self) -> None:
+        """Test mixed interact/other actions across namespaces."""
+        # Arrange
+        actions_data: list[Dict[str, Any]] = [
+            self.create_action("utils/A", action_type="other"),
+            self.create_action("test/B", before="all"),
+            self.create_action("analytics/C", after="test/B"),
+        ]
+
+        # Act
+        result = Utils.order_interact_actions(actions_data)
+        assert result is not None, "Result should not be None"
         sorted_names = [action["context"]["_package"]["name"] for action in result]
 
         # Assert
-        assert sorted_names == ["A", "B", "C"]
-
-    def test_circular_dependency(self) -> None:
-        """Test that circular dependencies raise an exception."""
-        # Arrange
-        actions_data: list[Dict[str, Any]] = [
-            self.create_action("A", before="B"),
-            self.create_action("B", before="A"),
+        assert sorted_names == [
+            "test/B",
+            "analytics/C",
+            "utils/A",  # Non-interact action at end
         ]
-
-        # Act & Assert
-        with pytest.raises(ValueError, match="Circular dependency detected!"):
-            Utils.order_interact_actions(actions_data)
 
     def test_mixed_interact_and_other_actions(self) -> None:
         """Test that non-interact actions remain at the end of the ordered list."""

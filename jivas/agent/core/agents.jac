@@ -33,6 +33,7 @@ node Agents :GraphNode: {
             # Delete agent node
             # self del--> agent_node;
             agent_node spawn purge();
+            # self del--> agent_node;
             return agent_node;
         }
 

@@ -1,7 +1,7 @@
 import:py json;
 import:py logging;
 import:py traceback;
-import:py from typing { Optional }
+import:py from typing { Optional, Union }
 import:py from logging { Logger }
 import:jac from interact_action { InteractAction }
 import:jac from interact_graph_walker { InteractGraphWalker }
@@ -91,6 +91,14 @@ Ensure that the final output is either the refined query or the original message
     has model_temperature:float = 0.2;
     has model_max_tokens:int = 10000;
 
+    can on_register() {
+
+        # load the agent's default vector store action if none is specified
+        if not self.vector_store_action {
+            self.vector_store_action = (self.get_agent()).vector_store_action;
+        }
+    }
+
     can touch(visitor: interact_graph_walker) -> bool {
         # implementation of touch for retrieval interact
         if(visitor.utterance) {
@@ -171,7 +179,7 @@ Ensure that the final output is either the refined query or the original message
 
             result = None;
 
-            if(model_action := self.get_agent().get_actions().get(action_label=self.model_action)) {
+            if(model_action := self.get_agent().get_action(action_label=self.model_action)) {
 
                  if( model_action_result := model_action.call_model(
                     prompt_messages = prompt_messages,
@@ -205,7 +213,7 @@ Ensure that the final output is either the refined query or the original message
         # """
         context_data = [];
 
-        if(vector_store_action := self.get_agent().get_actions().get(action_label=self.vector_store_action)) {
+        if(vector_store_action := self.get_agent().get_action(action_label=self.vector_store_action)) {
 
             if(self.mmr) {
                 if(documents := vector_store_action.max_marginal_relevance_search(query=query, k=self.k)) {
@@ -241,6 +249,20 @@ Ensure that the final output is either the refined query or the original message
         }
 
         return context_data;
+    }
+
+    can healthcheck() -> Union[bool, dict] {
+
+        vector_store_action = self.get_agent().get_action(action_label=self.vector_store_action);
+        if(not vector_store_action) {
+            return {
+                "status": False,
+                "message": f"Unable to find a valid vector store action. Check your configuration and try again.",
+                "severity": "error"
+            };
+        }
+
+        return True;
     }
 
 }

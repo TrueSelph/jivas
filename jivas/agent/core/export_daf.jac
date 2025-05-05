@@ -54,7 +54,7 @@ walker export_daf :agent_graph_walker: {
             # prepare knowledge
             daf_knowledge = [];
             try {
-                if(vector_store_action := here.get_actions().get(action_label = here.get_vector_store_action())) {
+                if(vector_store_action := here.get_action(action_label = here.get_vector_store_action())) {
                     if( daf_knowledge_yaml := vector_store_action.export_knodes()) {
                         daf_contents['knowledge.yaml'] = daf_knowledge_yaml;
                     } else {

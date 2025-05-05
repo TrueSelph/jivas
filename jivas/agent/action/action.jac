@@ -89,8 +89,8 @@ node Action :GraphNode: {
         }
         # update the agent descriptor with changes
         self.get_agent().dump_descriptor();
-        # trigger postupdate
-        self.postupdate();
+        # trigger post_update
+        self.post_update();
 
         return self;
     }

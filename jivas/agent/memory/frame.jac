@@ -74,7 +74,7 @@ node Frame :GraphNode: {
             if("resume_action" in last_interaction_node.context_data) {
                 agent_node = self.get_agent();
                 action_label = last_interaction_node.context_data["resume_action"];
-                action_node = agent_node.get_actions().get(action_label = action_label);
+                action_node = agent_node.get_action(action_label = action_label);
             }
         }
 
@@ -377,7 +377,7 @@ walker _prune_interactions {
             # set a course to continue upwards in the chain, deleting old interactions as we go..
             visit [-:Retrace:->](`?Interaction);
             # now, remove the retrace edge to the node before it
-            here del--> [-:Retrace:->](`?Interaction);
+            here del --> [-:Retrace:->](`?Interaction);
             # add a new retrace edge to the frame node from here so it doesnt orphan the rest of the chain..
             if (not [-:Retrace:->](`?Frame)) {
                 here +:Retrace:+> self.frame_node;
@@ -386,7 +386,7 @@ walker _prune_interactions {
         } elif (self.retraces > self.frame_size) {
             # if we're here, it means we are in pruning mode
             visit [-:Retrace:->](`?Interaction) else {
-                del here;
+                Jac.destroy(here);
             }
         } else {
             visit [-:Retrace:->](`?Interaction);

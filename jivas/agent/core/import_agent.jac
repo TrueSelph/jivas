@@ -152,8 +152,6 @@ walker import_agent {
                 data=agent_data,
                 with_actions=True
             )) {
-                # write out descriptor
-                agent_node.dump_descriptor();
                 return agent_node;
             }
 
@@ -256,6 +254,11 @@ walker import_agent {
                 with open(descriptor_yaml_path, 'r') as file {
                     try  {
                         descriptor_data = yaml.safe_load(file);
+
+                        # add jpr_api_key if provided
+                        if(jpr_api_key) {
+                            descriptor_data["jpr_api_key"] = jpr_api_key;
+                        }
                         # add the daf info as metadata
                         descriptor_data["meta"] = {
                             "namespace": daf_info.get('package', {}).get('name'),

@@ -39,7 +39,7 @@ setup(
     package_data={"jivas": []},
     python_requires=">=3.12.0",
     install_requires=[
-        "jvcli>=2.0.21",
+        "jvcli>=2.0.24",
         "jvserve @ git+https://github.com/TrueSelph/jvserve.git@jaclang_update#egg=jvserve",
         "jaclang@git+https://github.com/Jaseci-Labs/jaseci.git@main#subdirectory=jac&egg=jaclang",
         "jac-cloud@git+https://github.com/Jaseci-Labs/jaseci.git@main#subdirectory=jac-cloud&egg=jaclang",
