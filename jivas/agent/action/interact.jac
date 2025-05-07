@@ -20,13 +20,11 @@ import:jac from jivas.agent.core.app { App }
 import:jac from jivas.agent.action { interact_graph_walker }
 import:py from jac_cloud.core.architype { NodeAnchor }
 
-
 walker interact :interact_graph_walker: {
     # Walker for interacting with the agent
 
     # set up logger
     static has logger: Logger = logging.getLogger(__name__);
-
     # params
     has agent_id: str = "";
     has session_id: str = "";
@@ -36,7 +34,7 @@ walker interact :interact_graph_walker: {
     has verbose: bool = False; # verbose payload or not
     has tts: bool = False; # activate text-to-speech response
     has streaming: bool = False; # activate streaming response
-
+    has generator: any = None; # activate streaming response
     # protected vars
     has response: dict = {};
     has message: InteractionMessage = None;
@@ -89,15 +87,16 @@ walker interact :interact_graph_walker: {
             # add any resumption directives from the last interaction node of the frame...
             root_action_node = resume_action_node.get_root_action();
             self.interaction_node.add_intent(root_action_node.label);
-            visit here.queue_interact_actions(
+            visithere.queue_interact_actions(
                 [-->](`?InteractAction)(?enabled == True)
             );
-
-            if( self.subqueue_interact_action(resume_action_node, root_action_node) ) {
+            if (self.subqueue_interact_action(
+                resume_action_node,
+                root_action_node
+            )) {
                 self.interaction_node.context_data["resumed"] = True;
             }
-        }
-        else{
+        } else {
             queued_actions = here.queue_interact_actions(
                 [-->](`?InteractAction)(?enabled == True)
             );
@@ -114,10 +113,9 @@ walker interact :interact_graph_walker: {
         intended = self.is_intended(here);
         has_access = self.has_access(here);
         has_function = self.has_function(here);
-
         if (intended) {
 
-            if(has_access) {
+            if (has_access) {
                 # execute touch
                 self.logger.debug(f"Touching: {here.label}");
                 self.execute = here.touch(visitor=self);
@@ -140,11 +138,11 @@ walker interact :interact_graph_walker: {
                 here.deny(visitor=self);
             }
 
-
         }
     }
 
     can on_exit with exit {
+        self.logger.warning("exiting interact action");
         # prepare and return response, then exit
         self.respond();
     }
@@ -153,7 +151,7 @@ walker interact :interact_graph_walker: {
         # performs validation checks on the interaction
         try  {
             self.agent_node = &self.agent_id;
-            if(not self.agent_node) {
+            if (not self.agent_node) {
                 return False;
             }
         } except Exception as e {
@@ -163,6 +161,7 @@ walker interact :interact_graph_walker: {
         }
 
         # load or spawn a frame for this interaction
+
         self.frame_node = self.agent_node.get_memory().get_frame(
             agent_id=self.agent_node.id,
             session_id=self.session_id
@@ -175,7 +174,11 @@ walker interact :interact_graph_walker: {
         }
 
         # validate message length
-        if (not self.is_valid_message_length(self.utterance, self.agent_node.message_limit)) {
+
+        if (not self.is_valid_message_length(
+            self.utterance,
+            self.agent_node.message_limit
+        )) {
             Jac.get_context().status = 400;
             self.logger.warning(
                 "unable to process message; message length exceeds limit"
@@ -184,14 +187,18 @@ walker interact :interact_graph_walker: {
         }
 
         # flood control
+
         if self.is_flood_active() {
             Jac.get_context().status = 429;
-            self.logger.warning(f"flood control active on {self.frame_node.session_id}");
+            self.logger.warning(
+                f"flood control active on {self.frame_node.session_id}"
+            );
             return False;
         }
 
         # add new interaction node to the frame, or assume one which is open and already added
         # interaction nodes may be programmatically added and initialized in webhook type actions before interact is called
+
         add_interaction = False;
         self.interaction_node = self.frame_node.get_last_interaction();
 
@@ -200,8 +207,7 @@ walker interact :interact_graph_walker: {
         } elif self.interaction_node.is_closed() {
             add_interaction = True;
         }
-
-        if(add_interaction) {
+        if (add_interaction) {
             self.interaction_node = self.frame_node.add_interaction(
                 utterance=self.utterance,
                 channel=self.channel
@@ -217,7 +223,7 @@ walker interact :interact_graph_walker: {
 
             required_fields = ["label", "meta", "content"];
 
-            if ( all([isinstance(item, dict) for item in self.data]) ) {
+            if (all([isinstance(item, dict) for item in self.data])) {
                 for item in self.data {
                     if (all([field in item for field in required_fields])) {
                         self.interaction_node.set_data_item(
@@ -245,7 +251,7 @@ walker interact :interact_graph_walker: {
         return True;
     }
 
-    can is_valid_message_length(utterance:str, max_length:int) -> bool {
+    can is_valid_message_length(utterance: str, max_length: int) -> bool {
         # validates the acceptable length of a message
 
         chunks = Utils.chunk_long_message(
@@ -274,8 +280,10 @@ walker interact :interact_graph_walker: {
         if flood_control {
             # For converting datetimes before comparison
             utc = pytz.UTC;
+
             # Handle flood control
-            now = datetime.now(timezone.utc);  # already timezone-aware
+            now = datetime.now(timezone.utc);# already timezone-aware
+
             # Check if flood is active
             flood = self.frame_node.variable_get(key="flood");
 
@@ -283,8 +291,11 @@ walker interact :interact_graph_walker: {
                 # Standardize expiration time to UTC-aware datetime
                 expiration = flood["expiration"];
                 if isinstance(expiration, str) {
-                    expiration = datetime.strptime(expiration, "%Y-%m-%d %H:%M:%S.%f").replace(tzinfo=utc);
-                } elif isinstance(expiration, datetime) and expiration.tzinfo is None {
+                    expiration = datetime.strptime(expiration, "%Y-%m-%d %H:%M:%S.%f").replace(
+                        tzinfo=utc
+                    );
+                } elif isinstance(expiration, datetime)
+                    and expiration.tzinfo is None {
                     expiration = expiration.replace(tzinfo=utc);
                 }
                 # Now compare
@@ -293,6 +304,7 @@ walker interact :interact_graph_walker: {
                 }
             }
             # Track message window count
+
             message_window = self.frame_node.variable_get(key="message_window");
 
             if message_window {
@@ -300,7 +312,9 @@ walker interact :interact_graph_walker: {
                 for key in ["start", "end"] {
                     value = message_window.get(key);
                     if isinstance(value, str) {
-                        message_window[key] = datetime.strptime(value, "%Y-%m-%d %H:%M:%S.%f").replace(tzinfo=utc);
+                        message_window[key] = datetime.strptime(value, "%Y-%m-%d %H:%M:%S.%f").replace(
+                            tzinfo=utc
+                        );
                     } elif isinstance(value, datetime) {
                         if value.tzinfo is None {
                             message_window[key] = value.replace(tzinfo=utc);
@@ -310,7 +324,11 @@ walker interact :interact_graph_walker: {
                     }
                 }
                 # Reset window if expired
-                if message_window.get("end", datetime.min.replace(tzinfo=utc)) <= now {
+
+                if message_window.get(
+                    "end",
+                    datetime.min.replace(tzinfo=utc)
+                )<= now {
                     message_window["start"] = now;
                     message_window["end"] = now + timedelta(seconds=window_time);
                     message_window["count"] = 0;
@@ -319,6 +337,7 @@ walker interact :interact_graph_walker: {
                     message_window["count"] = message_window.get("count", 0) + 1;
                 }
                 # Check if message count exceeds threshold
+
                 if message_window.get("count", 0) > flood_threshold {
                     # Set flood control
                     flood = {"expiration": now + timedelta(seconds=flood_block_time)};
@@ -327,7 +346,11 @@ walker interact :interact_graph_walker: {
                 }
 
                 # Save updated message_window
-                self.frame_node.variable_set(key="message_window", value=message_window);
+
+                self.frame_node.variable_set(
+                    key="message_window",
+                    value=message_window
+                );
 
             } else {
                 # Initialize message window
@@ -349,17 +372,18 @@ walker interact :interact_graph_walker: {
 
     }
 
-    can set_next_action(action_label:str, action_node:Optional[InteractAction]=None) {
+    can set_next_action(action_label: str, action_node: Optional[InteractAction]=None) {
         # inserts the supplied action as the next action in the walk path
         next_action_node = None;
 
-        if(action_label) {
-            next_action_node = self.agent_node.get_actions().get(action_label=action_label);
-        } elif(action_node) {
+        if (action_label) {
+            next_action_node = self.agent_node.get_actions().get(
+                action_label=action_label
+            );
+        } elif (action_node) {
             next_action_node = action_node;
         }
-
-        if(next_action_node) {
+        if (next_action_node) {
             # we'll need to ensure it is also excluded from strict intent routing
             self.interaction_node.add_intent(next_action_node.label);
             # now prepend it to the walk path
@@ -367,34 +391,34 @@ walker interact :interact_graph_walker: {
         }
     }
 
-    can set_resume_action(action_label:str, action_node:Optional[InteractAction]=None) {
+    can set_resume_action(action_label: str, action_node: Optional[InteractAction]=None) {
         # queues the supplied action as the first action on the next turn
         resume_action_label = None;
 
-        if(action_label) {
+        if (action_label) {
             resume_action_label = action_label;
-        } elif(action_node) {
+        } elif (action_node) {
             resume_action_label = action_node.label;
         }
-
-        if(resume_action_label) {
+        if (resume_action_label) {
             self.frame_node.set_resume_action(
                 action_label=resume_action_label
             );
         }
     }
 
-    can append_action(action_label:str, action_node:Optional[InteractAction]=None) {
+    can append_action(action_label: str, action_node: Optional[InteractAction]=None) {
         # appends the supplied action to the end of the walk path (before exit)
         append_action_node = None;
 
-        if(action_label) {
-            append_action_node = self.agent_node.get_actions().get(action_label=action_label);
-        } elif(action_node) {
+        if (action_label) {
+            append_action_node = self.agent_node.get_actions().get(
+                action_label=action_label
+            );
+        } elif (action_node) {
             append_action_node = action_node;
         }
-
-        if(append_action_node) {
+        if (append_action_node) {
             # we'll need to ensure it is also excluded from strict intent routing
             self.interaction_node.add_intent(append_action_node.label);
             # now append it to the walk path
@@ -402,14 +426,14 @@ walker interact :interact_graph_walker: {
         }
     }
 
-    can dequeue_action(action_label:str, action_node:Optional[InteractAction]=None) {
+    can dequeue_action(action_label: str, action_node: Optional[InteractAction]=None) {
         # dequeue the supplied action as the next action in the walk path
-
-        if(action_label) {
-            action_node = self.agent_node.get_actions().get(action_label=action_label);
+        if (action_label) {
+            action_node = self.agent_node.get_actions().get(
+                action_label=action_label
+            );
         }
-
-        if(action_node) {
+        if (action_node) {
             self.dequeue_interact_action(action_node);
         }
     }
@@ -418,8 +442,11 @@ walker interact :interact_graph_walker: {
         # adds the interact action to the end of the active walk path (before exit)
 
         # first grab exit action
-        if (exit_action := self.agent_node.get_actions().get(action_label="ExitInteractAction") ) {
+        if (exit_action := self.agent_node.get_actions().get(
+            action_label="ExitInteractAction"
+        )) {
             exit_action_node_ref = None;
+
             # remove and save the exit action
             for (i, node_ref) in enumerate(self.__jac__.next) {
                 if (f'{node_ref.id}' == f'{exit_action.__jac__.id}') {
@@ -430,15 +457,14 @@ walker interact :interact_graph_walker: {
             }
 
             # dequeue the action if it already exists in walk path
+
             self.dequeue_interact_action(interact_action);
 
             # add the next action at the end of walk path (without exit)
-            visit interact_action;
-            # then re-add the exit action after it
+            visit interact_action;# then re-add the exit action after it
             self.__jac__.next.append(exit_action_node_ref);
 
             return self.__jac__.next;
-
 
         } else {
             visit interact_action;
@@ -465,15 +491,16 @@ walker interact :interact_graph_walker: {
 
     can prepend_interact_action(interact_action: InteractAction) {
         # adds the interact action to the head of the active walk path
-        if( self.dequeue_interact_action(interact_action) ) {
+        if (self.dequeue_interact_action(interact_action)) {
 
             # backup the clean path
             path = self.__jac__.next;
+
             # reset the walk path
             self.__jac__.next = [];
+
             # reinsert the interact action at the head of walk path
-            visit interact_action;
-            # restore the remaining walk path after the interact action
+            visit interact_action;# restore the remaining walk path after the interact action
             self.__jac__.next.extend(path);
 
             return self.__jac__.next;
@@ -484,11 +511,12 @@ walker interact :interact_graph_walker: {
 
     can subqueue_interact_action(interact_action: InteractAction, index_interact_action: InteractAction) {
         # adds the interact action to the head of a subset of the walk path following index interact action
+        if (interact_action and index_interact_action) {
 
-        if( interact_action and index_interact_action ) {
-
-            if( (exit_action := self.agent_node.get_actions().get(action_label="ExitInteractAction"))
-                and self.in_next_queue(index_interact_action) ) {
+            if ((exit_action := self.agent_node.get_actions().get(
+                action_label="ExitInteractAction"
+            ))
+                and self.in_next_queue(index_interact_action)) {
                 jac_next_copy = self.__jac__.next.copy();
                 jac_trail = enumerate(jac_next_copy, start=0);
 
@@ -496,14 +524,14 @@ walker interact :interact_graph_walker: {
                 for (i, node_ref) in jac_trail {
                     if (f'{node_ref.id}' == f'{index_interact_action.__jac__.id}') {
                         break;
-                    } elif(f'{node_ref.id}' != f'{exit_action.__jac__.id}') {
+                    } elif (f'{node_ref.id}' != f'{exit_action.__jac__.id}') {
                         self.__jac__.next.pop(0);
                     }
                 }
             }
 
             # then prepend interact action
-            if( self.prepend_interact_action(interact_action) ) {
+            if (self.prepend_interact_action(interact_action)) {
                 return self.__jac__.next;
             }
 
@@ -516,7 +544,7 @@ walker interact :interact_graph_walker: {
     can in_next_queue(action_node: InteractAction) -> bool {
         # checks if the action node is in the next queue
         if (action_node) {
-            for node_ref in self.__jac__.next{
+            for node_ref in self.__jac__.next {
                 if (f'{node_ref.id}' == f'{action_node.__jac__.id}') {
                     return True;
                 }
@@ -598,7 +626,7 @@ walker interact :interact_graph_walker: {
             # lets return the generated response, if we have one...
             has_response = self.interaction_node.has_response();
             if (has_response) {
-
+                
                 try  {
 
                     # set the message obj
@@ -614,10 +642,9 @@ walker interact :interact_graph_walker: {
                     } else {
                         self.response = {"response": self.interaction_node.get_response().export()};
                     }
-
-                    if( self.agent_node.is_logging() ) {
+                    if (self.agent_node.is_logging()) {
                         # log interaction
-                        self.log_interaction(data = interaction_data);
+                        self.log_interaction(data=interaction_data);
                     }
 
                 } except Exception as e {
@@ -658,7 +685,6 @@ walker interact :interact_graph_walker: {
 
                 # perform TTS
                 audio = tts_action.invoke(text=content, as_url=True);
-
                 if (audio) {
                     self.response["response"].update({"audio_url": audio});
                 }
