@@ -10,7 +10,6 @@ import:py traceback;
 import:py tarfile;
 import:py requests;
 import:py from logging { Logger }
-import:py from jaclang { jac_import }
 import:py from jivas.agent.modules.agentlib.utils { Utils }
 import:py from jvcli.api { RegistryAPI }
 import:py from jvcli.utils { is_version_compatible }
@@ -157,7 +156,8 @@ node Actions :GraphNode: {
         module_root = action_data.get('context', {}).get('_package', {}).get('config', {}).get('module_root', None);
 
         if(module_root) {
-            jac_import(f"{module_root}.lib", base_path="./");
+            AgentInterface.load_module(module_root);
+            # jac_import(f"{module_root}.lib", base_path="./");
             return True;
         }
 
