@@ -540,7 +540,7 @@ walker interact :interact_graph_walker: {
             access = access_control_action_node.has_action_access(
                 session_id=self.frame_node.session_id,
                 action_label=action_node.get_type(),
-                channel=self.interaction_node.channel
+                channel=self.interaction_node.channel or "default"
             );
         }
 
