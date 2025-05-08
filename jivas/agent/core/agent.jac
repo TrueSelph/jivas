@@ -68,13 +68,13 @@ node Agent :GraphNode: {
         return actions_node;
     }
 
-    can get_action(action_type:str="", action_label: str="", only_enabled: bool=True) -> Union[Action, None] {
+    can get_action(action_label: str="", action_type:str="", only_enabled: bool=True) -> Union[Action, None, list] {
         # fetch action node if enabled and configured
         # by action type or label
 
         if(action_node := self.get_actions().get(
-            action_type=action_type,
             action_label=action_label,
+            action_type=action_type,
             only_enabled=only_enabled)) {
             return action_node;
         }
