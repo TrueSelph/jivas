@@ -9,6 +9,7 @@ import:py logging;
 import:py traceback;
 import:py tarfile;
 import:py requests;
+import:py from typing { Union }
 import:py from logging { Logger }
 import:py from jaclang { jac_import }
 import:py from jivas.agent.modules.agentlib.utils { Utils }
@@ -28,7 +29,7 @@ node Actions :GraphNode: {
     # action packages root folder
     static has package_root: str = Utils.get_actions_root();
 
-    can get(action_type: str="", action_label: str="", only_enabled:bool=True) {
+    can get(action_label: str="", action_type: str="", only_enabled:bool=True) -> Union[Action, list, None] {
         # returns an action by label or by type, enabled actions by default
         result = None;
 
