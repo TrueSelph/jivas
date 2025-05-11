@@ -23,7 +23,6 @@ node InterviewInteractAction :InteractAction: {
     has confirmation_directive: str = "Ask the user to confirm that the information captured is correct.";
     has auto_intents:bool = False;
     has auto_functions:bool = True;
-    has intents:list = [];
     has question_functions:list = [];
     has confirm_function:dict = {
         "type": "function",
@@ -126,21 +125,38 @@ node InterviewInteractAction :InteractAction: {
     can execute(visitor: interact_graph_walker) -> dict {
         # initializes the session and calls the process response ability, then exports the visitor obj
         visitor = self.init_session(visitor);
+        # call process_response which needs to be implemented
         _visitor = self.process_response(visitor);
         if _visitor and isinstance(_visitor, interact_graph_walker) {
             visitor = _visitor;
         }
+        # call exit session for cleanup
+        visitor = self.exit_session(visitor);
         return visitor.export();
     }
 
     # abstract ability meant to contain handling logic for based on the extracted interview data
     can process_response(visitor: interact_graph_walker) -> interact_graph_walker abs;
 
+    can exit_session(visitor: interact_graph_walker) -> interact_graph_walker {
+        # handles removal of completed session data once process_response runs
+        interview_session = self.get_session(visitor);
+
+        if not interview_session {
+            return visitor;
+        }
+        # remove session if previously ABORTED or CONFIRMED
+        if interview_session.get_state() in [SessionState.ABORTED, SessionState.CONFIRMED] {
+            visitor = self.delete_session(visitor);
+        }
+
+        return visitor;
+    }
+
     can healthcheck() -> Union[bool, dict] {
         valid_question_index = True;
         if isinstance(self.question_index, dict) {
-            for key in self.question_index {
-                question_info = self.question_index[key];
+            for (key, question_info) in self.question_index.items() {
                 if not isinstance(question_info, dict) or "question" not in question_info or "extraction_guidance" not in question_info {
                     valid_question_index = False;
                     break;
@@ -150,21 +166,17 @@ node InterviewInteractAction :InteractAction: {
                     valid_question_index = False;
                     break;
                 }
-                for sub_key in ["description", "type", "required"] {
-                    if sub_key not in eg {
-                        valid_question_index = False;
-                        break;
-                    }
-                    if sub_key in ["description", "type"] and not isinstance(eg[sub_key], str) {
-                        valid_question_index = False;
-                        break;
-                    }
-                    if sub_key == "required" and not isinstance(eg[sub_key], bool) {
-                        valid_question_index = False;
-                        break;
-                    }
+                # description: str, type: str, required: bool
+                if "description" not in eg or not isinstance(eg["description"], str) {
+                    valid_question_index = False;
+                    break;
                 }
-                if not valid_question_index {
+                if "type" not in eg or not isinstance(eg["type"], str) {
+                    valid_question_index = False;
+                    break;
+                }
+                if "required" not in eg or not isinstance(eg["required"], bool) {
+                    valid_question_index = False;
                     break;
                 }
             }
@@ -181,33 +193,22 @@ node InterviewInteractAction :InteractAction: {
         return True;
     }
 
-    can generate_intents() -> list {
+    can generate_intents() {
         # generates a list of formatted intents based on question index and sets them to self.intents
-        self.intents = [];
-        prompt = "";
-
-        # if(model_action := self.get_agent().get_action(action_label=self.model_action)) {
-
-        #     prompt_messages = [
-        #         {"system": prompt}
-        #     ];
-
-        #     if (model_action_result := model_action.call_model(
-        #         prompt_messages = prompt_messages,
-        #         prompt_variables = {},
-        #         kwargs = {
-        #             "model_name": self.model_name,
-        #             "model_temperature": self.model_temperature,
-        #             "model_max_tokens": self.model_max_tokens
-        #         },
-        #         interaction_node = visitor.interaction_node
-        #     )) {
-
-        #         # if(tools := model_action_result.get_result()) {
-        #         #     return tools;
-        #         # }
-        #     }
-        # }
+        intents = [];
+        if not isinstance(self.question_index, dict) {
+            return [];
+        }
+        for (field, info) in self.question_index.items() {
+            question = info.get("question", "");
+            guidance = info.get("extraction_guidance", {});
+            description = guidance.get("description", "");
+            required = guidance.get("required", False);
+            # Compose a simple intent statement
+            intent = f"MESSAGE contains {description}";
+            intents.append(intent);
+        }
+        self.anchors = intents;
     }
 
     can generate_functions() -> list {
@@ -221,7 +222,7 @@ node InterviewInteractAction :InteractAction: {
         all_fields = self.get_question_fields();
         required_fields = [key for key in all_fields if self.question_index[key]["extraction_guidance"].get("required", False)];
         interview_session = InterviewSession(all_fields=all_fields, required_fields=required_fields);
-        interview_session.get_next_field();
+        interview_session.get_next_field(); # initialize active field
         visitor.frame_node.variable_set(key=f"{self.get_type()}_session", value=interview_session.export());
 
         return visitor;
@@ -257,6 +258,29 @@ node InterviewInteractAction :InteractAction: {
         return self.question_directive.format(question=self.get_next_question(interview_session)) if (next_question := self.get_next_question(interview_session)) else "";
     }
 
+    can filter_question_functions(interview_session: InterviewSession) -> list {
+        # reutrns a list of question functions which are applicable to the session state and remaining fields
+
+        # cater to OPEN state
+        if interview_session.get_state() == SessionState.OPEN {
+            filtered_functions = [];
+            # return the question functions based on
+            unanswered_fields = interview_session.get_unanswered_fields();
+
+            for function in self.question_functions {
+                field = function.get('function', {}).get('name');
+                if(field in unanswered_fields) {
+                    filtered_functions.append(function);
+                }
+            }
+
+            return filtered_functions;
+        }
+
+        # return all question functions by default
+        return self.question_functions;
+    }
+
     can get_session(visitor:interact_graph_walker) -> InterviewSession {
         # retrieves the active session, if any
         interview_session_data = visitor.frame_node.variable_get(key=f"{self.get_type()}_session");
@@ -276,8 +300,6 @@ node InterviewInteractAction :InteractAction: {
                 session_state = SessionState.REVISION;
             } elif (state == SessionState.ABORTED.value) {
                 session_state = SessionState.ABORTED;
-            } elif (state == SessionState.CLOSED.value) {
-                session_state = SessionState.CLOSED;
             } else {
                 session_state = SessionState.OPEN;
             }
@@ -307,65 +329,47 @@ node InterviewInteractAction :InteractAction: {
 
         # Check for abort response
         abort_response = self.extract([self.abort_function], visitor);
-        if isinstance(abort_response, dict) {
-            if abort_response.get('extract_abort_choice', False) {
-                interview_session.set_state(SessionState.ABORTED);
-                visitor = self.update_session(interview_session.export(), visitor);
-                return visitor;
-            }
-        }
-
-        # Reset session if previously ABORTED or CLOSED
-        if interview_session.get_state() in {SessionState.ABORTED, SessionState.CLOSED} {
-            visitor = self.create_session(visitor);
-            interview_session = self.get_session(visitor);
-        }
-
-        # Handle confirmation for COMPLETED or READY states
-        if interview_session.get_state() in {SessionState.COMPLETED, SessionState.READY} {
-            confirmation_response = self.extract([self.confirm_function], visitor);
-            if isinstance(confirmation_response, dict) {
-                confirmed = confirmation_response.get('extract_confirmation_choice', None);
-                if confirmed is True {
-                    interview_session.set_state(SessionState.CONFIRMED);
-                    visitor = self.update_session(interview_session.export(), visitor);
-                    return visitor;
-                } elif confirmed is False {
-                    interview_session.set_state(SessionState.REVISION);
-                    visitor = self.update_session(interview_session.export(), visitor);
-                }
-            }
-        }
-
-        # Transition CONFIRMED to CLOSED
-        if interview_session.get_state() == SessionState.CONFIRMED {
-            interview_session.set_state(SessionState.CLOSED);
+        if abort_response.get('extract_abort_choice', False) {
+            interview_session.set_state(SessionState.ABORTED);
             visitor = self.update_session(interview_session.export(), visitor);
             return visitor;
         }
 
+        # Handle confirmation for COMPLETED or READY states
+        if interview_session.get_state() in [SessionState.COMPLETED, SessionState.READY] {
+            confirmation_response = self.extract([self.confirm_function], visitor);
+            confirmed = confirmation_response.get('extract_confirmation_choice', None);
+
+            if confirmed is True {
+
+                interview_session.set_state(SessionState.CONFIRMED);
+                visitor = self.update_session(interview_session.export(), visitor);
+
+            } elif confirmed is False {
+
+                interview_session.set_state(SessionState.REVISION);
+                visitor = self.update_session(interview_session.export(), visitor);
+
+            }
+
+            return visitor;
+        }
+
         # Process OPEN or REVISION states
-        if interview_session.get_state() in {SessionState.OPEN, SessionState.REVISION} {
-            question_responses = self.extract(self.question_functions, visitor);
+        if interview_session.get_state() in [SessionState.OPEN, SessionState.REVISION] {
+
+            question_functions = self.filter_question_functions(interview_session);
+            question_responses = self.extract(question_functions, visitor);
             interview_session = self.update_responses(question_responses, interview_session);
             visitor = self.update_session(interview_session.export(), visitor);
 
-            # Determine new state after response updates
+            # if no more fields and we have an extraction, set to completed for confirmation
             if not interview_session.get_next_field() {
                 # new_state = SessionState.READY if interview_session.has_ignored_responses() else SessionState.COMPLETED;
-                new_state = SessionState.COMPLETED;
-                interview_session.set_state(new_state);
+                interview_session.set_state(SessionState.COMPLETED);
                 visitor = self.update_session(interview_session.export(), visitor);
                 return visitor;
             }
-        }
-
-        # Final check if all required fields are collected
-        if not interview_session.get_next_field() {
-            # new_state = SessionState.READY if interview_session.has_ignored_responses() else SessionState.COMPLETED;
-            new_state = SessionState.COMPLETED;
-            interview_session.set_state(new_state);
-            visitor = self.update_session(interview_session.export(), visitor);
         }
 
         return visitor;
@@ -375,6 +379,10 @@ node InterviewInteractAction :InteractAction: {
         # performs function tool calling for extracting question responses based on question
 
         prompt_messages = [];
+
+        if not functions {
+            return {};
+        }
 
         if self.history {
             statements = visitor.frame_node.get_transcript_statements(interactions=self.history_size, max_statement_length=self.max_statement_length);
@@ -399,8 +407,6 @@ node InterviewInteractAction :InteractAction: {
 
             if model_action_result {
                 tools = model_action_result.get_result();
-
-                self.logger.warning(tools);
 
                 if type(tools) == list {
                     responses = {};
@@ -438,7 +444,6 @@ enum SessionState {
     CONFIRMED = 'CONFIRMED', # user has confirmed all responses -> close the session
     REVISION = 'REVISION', # user has not confirmed responses -> prompt for review -> set to complete/ready
     ABORTED = 'ABORTED', # user has chosen to abandon the process -> remove the session
-    CLOSED = 'CLOSED', # the process is complete and closed -> remove the session
 }
 
 obj InterviewSession {
@@ -468,6 +473,18 @@ obj InterviewSession {
         }
 
         return None;
+    }
+
+    can get_answered_fields() -> list {
+        return list(self.responses.keys()) or [];
+    }
+
+    can get_unanswered_fields() -> list {
+        return [field for field in self.all_fields if field not in self.get_answered_fields()];
+    }
+
+    can get_required_fields() -> list {
+        return self.required_fields;
     }
 
     can set_response(field: str, response: str) {
