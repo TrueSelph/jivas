@@ -10,13 +10,11 @@ node InteractAction :Action: {
     has functions: list = [];
     has weight:int = 0;
 
-    can touch(visitor: interact_graph_walker) -> bool {
-        # override to authorize, redirect or deny the interact walker from running execute
-    }
+    # implement to authorize, redirect or deny the interact walker from running execute
+    can touch(visitor: interact_graph_walker) -> bool abs;
 
-    can execute(visitor: interact_graph_walker) -> dict {
-        # override to implement action execution
-    }
+    # implement action execution
+    can execute(visitor: interact_graph_walker) -> dict abs;
 
     can deny(visitor: interact_graph_walker) -> dict {
         # override to implement action access denial
@@ -47,5 +45,4 @@ walker _get_root_action {
             self.root_action = here;
         }
     }
-
 }

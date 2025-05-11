@@ -1,0 +1,486 @@
+import from enum { unique }
+import:jac from interact_action { InteractAction }
+import:jac from interact_graph_walker { interact_graph_walker }
+import:py from jivas.agent.modules.agentlib.openai_function_generator { OpenAIFunctionGenerator }
+
+node InterviewInteractAction :InteractAction: {
+    #*
+    * represents a multiturn interactive execution on the agent action graph
+    * designed to allow implementors to specify a sequence of required and non-required fields
+    * for extracting from the user while maintaining session tracking for the multiturn conversation extractions
+    *#
+
+    has model_action: str = "LangChainModelAction";
+    has model_name: str = "gpt-4o";
+    has model_max_tokens:int = 4096;
+    has model_temperature: float = 0.1;
+
+    has history: bool = True;
+    has history_size: int = 3;
+    has max_statement_length: int = 500;
+
+    has question_directive:str = "Ask the question: '{question}'.";
+    has confirmation_directive: str = "Ask the user to confirm that the information captured is correct.";
+    has auto_intents:bool = False;
+    has auto_functions:bool = True;
+    has intents:list = [];
+    has question_functions:list = [];
+    has confirm_function:dict = {
+        "type": "function",
+        "function": {
+            "name": "extract_confirmation_choice",
+            "description": "Analyzes user responses to determine explicit confirmation. Handles all affirmative (yes/yeah/yep/sure) and negative (no/nope/nah) variations, including those with punctuation or capitalization. Returns false for ambiguous, neutral, or non-committal responses.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "response": {
+                        "type": "boolean",
+                        "description": "True only for explicit affirmations. False for explicit rejections, uncertain responses, or any message not clearly confirming."
+                    }
+                },
+                "required": ["response"]
+            }
+        }
+    };
+    has abort_function:dict = {
+        "type": "function",
+        "function": {
+            "name": "extract_abort_choice",
+            "description": "Identifies explicit user requests to terminate the ongoing interaction. Recognizes direct termination commands ('stop', 'cancel', 'abort'), procedural phrases ('end conversation', 'exit chat'), and common colloquialisms ('nevermind', 'scratch that'). Handles capitalization variations and punctuation. Returns false for ambiguous statements, in-context cancellation requests (e.g., cancel subscription), or continuation attempts.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "response": {
+                        "type": "boolean",
+                        "description": "True only for clear termination attempts targeting the conversation itself. False for indirect statements ('I need to go'), ambiguous phrases ('maybe later'), or cancellation references to external entities."
+                    }
+                },
+                "required": ["response"]
+            }
+        }
+    };
+    has question_index:dict = {
+        #*
+
+        # Question index items can be specified as show below:
+
+        {
+            "full_name": {
+                "question": "What is your full name?",
+                "extraction_guidance": {
+                    "description": "User's complete legal name with optional middle name",
+                    "type": "string",
+                    "format": "First Middle Last",
+                    "examples": ["John Michael Doe", "Jane A. Smith"],
+                    "validation": {
+                        "min_words": 2,
+                        "max_words": 4,
+                        "allowed_characters": "a-zA-Z-' ."
+                    },
+                    "required": True,
+                    "fallback_phrases": ["My name is", "I'm called", "People know me as"]
+                }
+            },
+            "age": {
+                "question": "How old are you?",
+                "extraction_guidance": {
+                    "description": "Current age in whole years since birth",
+                    "type": "integer",
+                    "range": {"min": 0, "max": 120},
+                    "response_rules": "Convert verbal approximations ('early 30s') to specific numbers",
+                    "required": True
+                }
+            }
+        }
+
+        *#
+    };
+
+    can setup() {
+        if self.auto_intents {
+            self.generate_intents();
+        }
+        if self.auto_functions {
+            self.generate_functions();
+        }
+    }
+
+    can on_register() {
+        self.setup();
+    }
+
+    can post_update() {
+        self.setup();
+    }
+
+    can touch(visitor: interact_graph_walker) -> bool {
+        has_intent = False;
+        if(self.get_agent().get_action("IntentInteractAction")) {
+            has_intent = (self.label in visitor.interaction_node.intents);
+        } else {
+            has_intent = True;
+        }
+        return (has_intent and (visitor.utterance or visitor.data));
+    }
+
+    can execute(visitor: interact_graph_walker) -> dict {
+        # initializes the session and calls the process response ability, then exports the visitor obj
+        visitor = self.init_session(visitor);
+        _visitor = self.process_response(visitor);
+        if _visitor and isinstance(_visitor, interact_graph_walker) {
+            visitor = _visitor;
+        }
+        return visitor.export();
+    }
+
+    # abstract ability meant to contain handling logic for based on the extracted interview data
+    can process_response(visitor: interact_graph_walker) -> interact_graph_walker abs;
+
+    can healthcheck() -> Union[bool, dict] {
+        valid_question_index = True;
+        if isinstance(self.question_index, dict) {
+            for key in self.question_index {
+                question_info = self.question_index[key];
+                if not isinstance(question_info, dict) or "question" not in question_info or "extraction_guidance" not in question_info {
+                    valid_question_index = False;
+                    break;
+                }
+                eg = question_info["extraction_guidance"];
+                if not isinstance(eg, dict) {
+                    valid_question_index = False;
+                    break;
+                }
+                for sub_key in ["description", "type", "required"] {
+                    if sub_key not in eg {
+                        valid_question_index = False;
+                        break;
+                    }
+                    if sub_key in ["description", "type"] and not isinstance(eg[sub_key], str) {
+                        valid_question_index = False;
+                        break;
+                    }
+                    if sub_key == "required" and not isinstance(eg[sub_key], bool) {
+                        valid_question_index = False;
+                        break;
+                    }
+                }
+                if not valid_question_index {
+                    break;
+                }
+            }
+        } else {
+            valid_question_index = False;
+        }
+        if not valid_question_index {
+            return {
+                "status": False,
+                "message": "Malformed question index. Check your configuration and try again",
+                "severity": "error"
+            };
+        }
+        return True;
+    }
+
+    can generate_intents() -> list {
+        # generates a list of formatted intents based on question index and sets them to self.intents
+        self.intents = [];
+        prompt = "";
+
+        # if(model_action := self.get_agent().get_action(action_label=self.model_action)) {
+
+        #     prompt_messages = [
+        #         {"system": prompt}
+        #     ];
+
+        #     if (model_action_result := model_action.call_model(
+        #         prompt_messages = prompt_messages,
+        #         prompt_variables = {},
+        #         kwargs = {
+        #             "model_name": self.model_name,
+        #             "model_temperature": self.model_temperature,
+        #             "model_max_tokens": self.model_max_tokens
+        #         },
+        #         interaction_node = visitor.interaction_node
+        #     )) {
+
+        #         # if(tools := model_action_result.get_result()) {
+        #         #     return tools;
+        #         # }
+        #     }
+        # }
+    }
+
+    can generate_functions() -> list {
+         # converts the question index items to functions in order to perform extraction
+        generator = OpenAIFunctionGenerator(self.question_index);
+        self.question_functions = generator.generate_openai_functions();
+    }
+
+    can create_session(visitor: interact_graph_walker) -> interact_graph_walker {
+        # adds a new interview session to the frame for the current user
+        all_fields = self.get_question_fields();
+        required_fields = [key for key in all_fields if self.question_index[key]["extraction_guidance"].get("required", False)];
+        interview_session = InterviewSession(all_fields=all_fields, required_fields=required_fields);
+        interview_session.get_next_field();
+        visitor.frame_node.variable_set(key=f"{self.get_type()}_session", value=interview_session.export());
+
+        return visitor;
+    }
+
+    can delete_session(visitor: interact_graph_walker) -> interact_graph_walker {
+        # removes the session object from the current user's frame
+        visitor.frame_node.variable_del(key=f"{self.get_type()}_session");
+
+        return visitor;
+    }
+
+    can update_session(session_data:dict, visitor: interact_graph_walker) -> interact_graph_walker {
+        # updates interview session for the current user
+        visitor.frame_node.variable_set(key=f"{self.get_type()}_session", value=session_data);
+
+        return visitor;
+    }
+
+    can get_question_fields() -> dict {
+        # returns the list of question fields (keys)
+        return list(self.question_index.keys());
+    }
+
+    can get_next_question(interview_session: InterviewSession) -> str {
+        # returns the next question based on the state of the session, or None if no more
+        field = interview_session.get_next_field();
+        return self.question_index.get(field, {}).get('question', "");
+    }
+
+    can get_next_question_directive(interview_session: InterviewSession) -> str {
+        # composes the next question directive based on the next question
+        return self.question_directive.format(question=self.get_next_question(interview_session)) if (next_question := self.get_next_question(interview_session)) else "";
+    }
+
+    can get_session(visitor:interact_graph_walker) -> InterviewSession {
+        # retrieves the active session, if any
+        interview_session_data = visitor.frame_node.variable_get(key=f"{self.get_type()}_session");
+        if interview_session_data and isinstance(interview_session_data, dict) {
+
+            # load session state, if any
+            state = interview_session_data.get('state', 'OPEN');
+            session_state = SessionState.OPEN;
+            # interpret and assign SessionState
+            if (state == SessionState.READY.value) {
+                session_state = SessionState.READY;
+            } elif (state == SessionState.COMPLETED.value) {
+                session_state = SessionState.COMPLETED;
+            } elif (state == SessionState.CONFIRMED.value) {
+                session_state = SessionState.CONFIRMED;
+            } elif (state == SessionState.REVISION.value) {
+                session_state = SessionState.REVISION;
+            } elif (state == SessionState.ABORTED.value) {
+                session_state = SessionState.ABORTED;
+            } elif (state == SessionState.CLOSED.value) {
+                session_state = SessionState.CLOSED;
+            } else {
+                session_state = SessionState.OPEN;
+            }
+
+            # return session object
+            return InterviewSession(
+                state=session_state,
+                all_fields=interview_session_data.get('all_fields', []),
+                required_fields=interview_session_data.get('required_fields', []),
+                active_field=interview_session_data.get('active_field', ''),
+                responses=interview_session_data.get('responses', {})
+            );
+        }
+
+        return None;
+    }
+
+    can init_session(visitor: interact_graph_walker) -> interact_graph_walker {
+        # performs extraction and updates the session responses
+        interview_session = self.get_session(visitor);
+
+        # Create new session if none exists
+        if not interview_session {
+            visitor = self.create_session(visitor);
+            interview_session = self.get_session(visitor);
+        }
+
+        # Check for abort response
+        abort_response = self.extract([self.abort_function], visitor);
+        if isinstance(abort_response, dict) {
+            if abort_response.get('extract_abort_choice', False) {
+                interview_session.set_state(SessionState.ABORTED);
+                visitor = self.update_session(interview_session.export(), visitor);
+                return visitor;
+            }
+        }
+
+        # Reset session if previously ABORTED or CLOSED
+        if interview_session.get_state() in {SessionState.ABORTED, SessionState.CLOSED} {
+            visitor = self.create_session(visitor);
+            interview_session = self.get_session(visitor);
+        }
+
+        # Handle confirmation for COMPLETED or READY states
+        if interview_session.get_state() in {SessionState.COMPLETED, SessionState.READY} {
+            confirmation_response = self.extract([self.confirm_function], visitor);
+            if isinstance(confirmation_response, dict) {
+                confirmed = confirmation_response.get('extract_confirmation_choice', None);
+                if confirmed is True {
+                    interview_session.set_state(SessionState.CONFIRMED);
+                    visitor = self.update_session(interview_session.export(), visitor);
+                    return visitor;
+                } elif confirmed is False {
+                    interview_session.set_state(SessionState.REVISION);
+                    visitor = self.update_session(interview_session.export(), visitor);
+                }
+            }
+        }
+
+        # Transition CONFIRMED to CLOSED
+        if interview_session.get_state() == SessionState.CONFIRMED {
+            interview_session.set_state(SessionState.CLOSED);
+            visitor = self.update_session(interview_session.export(), visitor);
+            return visitor;
+        }
+
+        # Process OPEN or REVISION states
+        if interview_session.get_state() in {SessionState.OPEN, SessionState.REVISION} {
+            question_responses = self.extract(self.question_functions, visitor);
+            interview_session = self.update_responses(question_responses, interview_session);
+            visitor = self.update_session(interview_session.export(), visitor);
+
+            # Determine new state after response updates
+            if not interview_session.get_next_field() {
+                # new_state = SessionState.READY if interview_session.has_ignored_responses() else SessionState.COMPLETED;
+                new_state = SessionState.COMPLETED;
+                interview_session.set_state(new_state);
+                visitor = self.update_session(interview_session.export(), visitor);
+                return visitor;
+            }
+        }
+
+        # Final check if all required fields are collected
+        if not interview_session.get_next_field() {
+            # new_state = SessionState.READY if interview_session.has_ignored_responses() else SessionState.COMPLETED;
+            new_state = SessionState.COMPLETED;
+            interview_session.set_state(new_state);
+            visitor = self.update_session(interview_session.export(), visitor);
+        }
+
+        return visitor;
+    }
+
+    can extract(functions:list, visitor: interact_graph_walker) -> dict {
+        # performs function tool calling for extracting question responses based on question
+
+        prompt_messages = [];
+
+        if self.history {
+            statements = visitor.frame_node.get_transcript_statements(interactions=self.history_size, max_statement_length=self.max_statement_length);
+            prompt_messages.extend(statements or []);
+        } else {
+            prompt_messages.append({"human": visitor.utterance});
+        }
+
+        model_action = self.get_agent().get_action(action_label=self.model_action);
+        if model_action {
+            model_action_result = model_action.call_model(
+                prompt_messages=prompt_messages,
+                prompt_variables={},
+                kwargs={
+                    "functions": functions,
+                    "model_name": self.model_name,
+                    "model_temperature": self.model_temperature,
+                    "model_max_tokens": self.model_max_tokens
+                },
+                interaction_node=visitor.interaction_node
+            );
+
+            if model_action_result {
+                tools = model_action_result.get_result();
+
+                self.logger.warning(tools);
+
+                if type(tools) == list {
+                    responses = {};
+                    for item in tools {
+                        name = item.get('name');
+                        args = item.get('args', {});
+                        response = args.get('response');
+                        responses[name] = response;
+                    }
+                    return responses;
+                } else {
+                    return {};
+                }
+            }
+        }
+
+        return {};
+    }
+
+    can update_responses(responses:dict, interview_session:InterviewSession) -> InterviewSession {
+        for (field, response) in responses.items() {
+            if field and response {
+                interview_session.set_response(field, response);
+            }
+        }
+        return interview_session;
+    }
+}
+
+@unique
+enum SessionState {
+    OPEN = 'OPEN', # session is open for extractions -> collect responses
+    READY = 'READY', # all required responses have been collected, there are unrequired, ignored responses left; -> prompt to confirm
+    COMPLETED = 'COMPLETED', # all responses have been collected -> prompt to confirm
+    CONFIRMED = 'CONFIRMED', # user has confirmed all responses -> close the session
+    REVISION = 'REVISION', # user has not confirmed responses -> prompt for review -> set to complete/ready
+    ABORTED = 'ABORTED', # user has chosen to abandon the process -> remove the session
+    CLOSED = 'CLOSED', # the process is complete and closed -> remove the session
+}
+
+obj InterviewSession {
+    has state:SessionState = SessionState.OPEN;
+    has all_fields: list = [];
+    has required_fields: list = [];
+    has active_field: str = "";
+    has responses: dict = {};
+
+    can get_state() -> SessionState {
+        return self.state;
+    }
+
+    can set_state(state:SessionState) {
+        self.state = state;
+    }
+
+    can get_next_field() -> str {
+
+        response_fields = self.responses.keys();
+
+        for item in self.all_fields {
+            if item not in response_fields {
+                self.active_field = item;
+                return item;
+            }
+        }
+
+        return None;
+    }
+
+    can set_response(field: str, response: str) {
+        self.responses[field] = response;
+    }
+
+    can export() -> dict {
+        return {
+            'state': self.state.value,
+            'all_fields': self.all_fields,
+            'required_fields': self.required_fields,
+            'active_field': self.active_field,
+            'responses': self.responses
+        };
+    }
+}

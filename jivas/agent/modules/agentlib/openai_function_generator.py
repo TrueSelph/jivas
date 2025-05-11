@@ -1,0 +1,170 @@
+"""Module for generating OpenAI tool functions from structured question indices.
+
+This module provides the OpenAIFunctionGenerator class which converts structured
+interview questions with metadata into OpenAI-compatible function definitions
+with proper validation and type handling.
+"""
+
+from typing import Any, Dict, List, TypedDict
+
+
+class ExtractionGuidance(TypedDict, total=False):
+    """Type definition for extraction guidance metadata"""
+
+    description: str
+    type: str
+    examples: List[str]
+    validation: Dict[str, Any]
+    required: bool
+    fallback_phrases: List[str]
+    response_rules: str
+
+
+class QuestionData(TypedDict, total=False):
+    """Type definition for question data structure"""
+
+    question: str
+    extraction_guidance: ExtractionGuidance
+
+
+class OpenAIFunctionGenerator:
+    """
+    Generates OpenAI tool functions from a structured question index
+    with enhanced validation and metadata support.
+
+    Attributes:
+        question_index (Dict[str, QuestionData]): Structured interview questions with extraction metadata
+        allowed_types (Dict): Type validation rules and coercion handlers
+    """
+
+    ALLOWED_TYPES: dict = {
+        "string": {
+            "coerce": str,
+            "validation": {"maxLength": 255},
+            "description_add": "Text response",
+        },
+        "integer": {
+            "coerce": int,
+            "validation": {"minimum": 0, "maximum": 150},
+            "description_add": "Numeric value",
+        },
+        "date": {
+            "coerce": "iso8601",
+            "validation": {"pattern": r"^\d{4}-\d{2}-\d{2}$"},
+            "description_add": "ISO 8601 date (YYYY-MM-DD)",
+        },
+    }
+
+    def __init__(self, question_index: Dict[str, QuestionData]) -> None:
+        """Initialize the OpenAIFunctionGenerator with a question index.
+
+        Args:
+            question_index: Dictionary containing structured interview questions
+                          with extraction metadata
+        """
+        self.question_index = question_index
+        self._validate_structure()
+
+    def _validate_structure(self) -> None:
+        """Ensures question index contains required metadata"""
+        for key, data in self.question_index.items():
+            if "extraction_guidance" not in data:
+                raise ValueError(f"Missing extraction_guidance for {key}")
+
+            eg = data["extraction_guidance"]
+            if eg.get("type", "string") not in self.ALLOWED_TYPES:
+                raise ValueError(f"Invalid type {eg['type']} for {key}")
+
+    def _build_description(self, question_data: QuestionData) -> str:
+        """Constructs detailed function description from metadata
+
+        Args:
+            question_data: Dictionary containing question metadata
+
+        Returns:
+            str: Formatted description string for the OpenAI function
+        """
+        q = question_data
+        eg = q["extraction_guidance"]
+
+        description = [
+            f"Extract {eg['description']} from responses to: '{q['question']}'.",
+            f"Handles: {', '.join(eg.get('fallback_phrases', ['direct answers']))}.",
+        ]
+
+        if "examples" in eg:
+            description.append(f"Examples: {'; '.join(eg['examples'])}")
+
+        if "response_rules" in eg:
+            description.append(f"Rules: {eg['response_rules']}")
+
+        return " ".join(description)
+
+    def _build_response_property(self, field_data: QuestionData) -> Dict[str, Any]:
+        """Constructs the response property schema with validation
+
+        Args:
+            field_data: Dictionary containing field metadata
+
+        Returns:
+            Dict: Schema definition for the response property
+        """
+        eg = field_data["extraction_guidance"]
+        prop: Dict[str, Any] = {
+            "type": eg["type"],
+            "description": (
+                f"{eg['description']}. "
+                f"{self.ALLOWED_TYPES[eg['type']]['description_add']}"
+            ),
+        }
+
+        # Add type-specific validation
+        validation = eg.get("validation", {})
+        prop.update(self.ALLOWED_TYPES[eg["type"]]["validation"])
+        prop.update(validation)
+
+        # Add examples if provided
+        if "examples" in eg:
+            prop["examples"] = eg["examples"]
+
+        return prop
+
+    def generate_openai_functions(self) -> List[Dict[str, Any]]:
+        """Generates OpenAI-compatible function definitions
+
+        Returns:
+            List[Dict]: List of OpenAI function definitions
+        """
+        functions: List[Dict[str, Any]] = []
+
+        for field_key, field_data in self.question_index.items():
+            eg = field_data["extraction_guidance"]
+
+            function_def = {
+                "type": "function",
+                "function": {
+                    "name": field_key,
+                    "description": self._build_description(field_data),
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "response": self._build_response_property(field_data),
+                            "confidence": {
+                                "type": "number",
+                                "description": "Extraction confidence score 0-1",
+                                "minimum": 0,
+                                "maximum": 1,
+                            },
+                        },
+                        "required": (
+                            ["response", "confidence"]
+                            if eg.get("required", False)
+                            else ["confidence"]
+                        ),
+                    },
+                },
+            }
+
+            functions.append(function_def)
+
+        return functions

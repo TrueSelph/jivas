@@ -134,7 +134,7 @@ walker interact :interact_graph_walker: {
                     self.execute = False;
                 }
 
-                self.update(result);
+                # self.update(result);
             } else {
                 # execute the deny ability to handle access denial condition
                 here.deny(visitor=self);
