@@ -168,3 +168,39 @@ class OpenAIFunctionGenerator:
             functions.append(function_def)
 
         return functions
+
+
+"""
+
+        # Question index items can be specified as show below:
+
+        {
+            "full_name": {
+                "question": "What is your full name?",
+                "extraction_guidance": {
+                    "description": "User's complete legal name with optional middle name",
+                    "type": "string",
+                    "format": "First Middle Last",
+                    "examples": ["John Michael Doe", "Jane A. Smith"],
+                    "validation": {
+                        "min_words": 2,
+                        "max_words": 4,
+                        "allowed_characters": "a-zA-Z-' ."
+                    },
+                    "required": True,
+                    "fallback_phrases": ["My name is", "I'm called", "People know me as"]
+                }
+            },
+            "age": {
+                "question": "How old are you?",
+                "extraction_guidance": {
+                    "description": "Current age in whole years since birth",
+                    "type": "integer",
+                    "range": {"min": 0, "max": 120},
+                    "response_rules": "Convert verbal approximations ('early 30s') to specific numbers",
+                    "required": True
+                }
+            }
+        }
+
+"""

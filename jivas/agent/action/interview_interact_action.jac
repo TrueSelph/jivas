@@ -20,8 +20,10 @@ node InterviewInteractAction :InteractAction: {
     has max_statement_length: int = 500;
 
     has question_directive:str = "Ask the question: '{question}'.";
+    has insist_response_directive:str = "Insist that a response is required then ask the question: '{question}'.";
+    has insist_format_directive:str = "Insist that a response following this format ({format}) is required then ask the question: '{question}'.";
     has confirmation_directive: str = "Ask the user to confirm that the information captured is correct.";
-    has auto_intents:bool = False;
+    has auto_intents:bool = True;
     has auto_functions:bool = True;
     has question_functions:list = [];
     has confirm_function:dict = {
@@ -58,49 +60,31 @@ node InterviewInteractAction :InteractAction: {
             }
         }
     };
-    has question_index:dict = {
-        #*
-
-        # Question index items can be specified as show below:
-
-        {
-            "full_name": {
-                "question": "What is your full name?",
-                "extraction_guidance": {
-                    "description": "User's complete legal name with optional middle name",
-                    "type": "string",
-                    "format": "First Middle Last",
-                    "examples": ["John Michael Doe", "Jane A. Smith"],
-                    "validation": {
-                        "min_words": 2,
-                        "max_words": 4,
-                        "allowed_characters": "a-zA-Z-' ."
-                    },
-                    "required": True,
-                    "fallback_phrases": ["My name is", "I'm called", "People know me as"]
+    has decline_function:dict = {
+        "type": "function",
+        "function": {
+            "name": "extract_decline_choice",
+            "description": "Detects when a user declines to answer, expresses uncertainty, provides no response, or indicates they have nothing to submit for the current question. Recognizes explicit refusals (e.g., 'I decline to answer', 'no comment', 'I'd rather not say'), uncertainty ('not sure', 'I don't know', 'unsure'), requests to skip ('skip', 'next question', 'can we move on'), statements indicating lack of information ('I have no idea', 'no response', 'nothing to add'), and cases where the user states they have nothing to submit (e.g., 'I don't have any', 'no documents to provide', 'nothing to share for this'). Handles variations in phrasing, capitalization, and punctuation. Returns true for any clear or ambiguous indication that the user cannot, will not, or has nothing to provide in response, including silence or non-committal responses. Returns false for direct answers or attempts to engage with the question.",
+            "parameters": {
+            "type": "object",
+            "properties": {
+                "response": {
+                "type": "boolean",
+                "description": "True if the user clearly or ambiguously declines, skips, cannot answer, or indicates they have nothing to submit for the question. False if the user provides a direct answer or attempts to answer."
                 }
             },
-            "age": {
-                "question": "How old are you?",
-                "extraction_guidance": {
-                    "description": "Current age in whole years since birth",
-                    "type": "integer",
-                    "range": {"min": 0, "max": 120},
-                    "response_rules": "Convert verbal approximations ('early 30s') to specific numbers",
-                    "required": True
-                }
+            "required": ["response"]
             }
         }
-
-        *#
     };
+    has question_index:dict = {};
 
     can setup() {
-        if self.auto_intents {
-            self.generate_intents();
-        }
         if self.auto_functions {
             self.generate_functions();
+        }
+        if self.auto_intents {
+            self.generate_intents();
         }
     }
 
@@ -199,13 +183,20 @@ node InterviewInteractAction :InteractAction: {
         if not isinstance(self.question_index, dict) {
             return [];
         }
-        for (field, info) in self.question_index.items() {
-            question = info.get("question", "");
-            guidance = info.get("extraction_guidance", {});
-            description = guidance.get("description", "");
-            required = guidance.get("required", False);
+
+        # prepare consolidated list of functions
+        functions = [
+            self.confirm_function,
+            self.abort_function,
+            self.decline_function
+        ];
+        functions.extend(self.question_functions);
+
+
+        for function in functions {
+            description = function.get('function', {}).get('description', '');
             # Compose a simple intent statement
-            intent = f"MESSAGE contains {description}";
+            intent = f"MESSAGE {description}";
             intents.append(intent);
         }
         self.anchors = intents;
@@ -333,6 +324,39 @@ node InterviewInteractAction :InteractAction: {
             interview_session.set_state(SessionState.ABORTED);
             visitor = self.update_session(interview_session.export(), visitor);
             return visitor;
+        }
+
+        # Check for decline-to-answer response
+        decline_response = self.extract([self.decline_function], visitor);
+        if decline_response.get('extract_decline_choice', False) {
+
+            # get field status - required or not
+            if interview_session.on_required_field() {
+
+                # insist that user must answer
+                insist_directive = self.insist_response_directive.format(question=self.get_next_question(interview_session));
+                visitor.interaction_node.add_directive(directive=insist_directive);
+                visitor = self.update_session(interview_session.export(), visitor);
+                return visitor;
+
+            } else {
+                # apply 'n/a' to field response
+                field = interview_session.get_next_field();
+                self.logger.error(f'required field {field}');
+                question_response = {field : "declined to answer"};
+                interview_session = self.update_responses(question_response, interview_session);
+                visitor = self.update_session(interview_session.export(), visitor);
+
+                # if no more fields and we have an extraction, set to completed for confirmation
+                if not interview_session.get_next_field() {
+                    # new_state = SessionState.READY if interview_session.has_ignored_responses() else SessionState.COMPLETED;
+                    interview_session.set_state(SessionState.COMPLETED);
+                    visitor = self.update_session(interview_session.export(), visitor);
+                }
+
+                return visitor;
+            }
+
         }
 
         # Handle confirmation for COMPLETED or READY states
@@ -473,6 +497,10 @@ obj InterviewSession {
         }
 
         return None;
+    }
+
+    can on_required_field() -> boolean {
+        return (self.active_field in self.get_required_fields());
     }
 
     can get_answered_fields() -> list {
