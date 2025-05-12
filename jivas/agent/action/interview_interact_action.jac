@@ -1,4 +1,6 @@
+import:py json;
 import from enum { unique }
+import:py from openai { OpenAI }
 import:jac from interact_action { InteractAction }
 import:jac from interact_graph_walker { interact_graph_walker }
 import:py from jivas.agent.modules.agentlib.openai_function_generator { OpenAIFunctionGenerator }
@@ -13,11 +15,11 @@ node InterviewInteractAction :InteractAction: {
     has model_action: str = "LangChainModelAction";
     has model_name: str = "gpt-4o";
     has model_max_tokens:int = 4096;
-    has model_temperature: float = 0.1;
+    has model_temperature: float = 0.0;
 
     has history: bool = True;
-    has history_size: int = 3;
-    has max_statement_length: int = 500;
+    has history_size: int = 1;
+    has max_statement_length: int = 4096;
 
     has question_directive:str = "Ask the question: '{question}'.";
     has insist_response_directive:str = "Insist that a response is required then ask the question: '{question}'.";
@@ -26,57 +28,31 @@ node InterviewInteractAction :InteractAction: {
     has auto_intents:bool = True;
     has auto_functions:bool = True;
     has question_functions:list = [];
-    has confirm_function:dict = {
-        "type": "function",
-        "function": {
-            "name": "extract_confirmation_choice",
-            "description": "Analyzes user responses to determine explicit confirmation. Handles all affirmative (yes/yeah/yep/sure) and negative (no/nope/nah) variations, including those with punctuation or capitalization. Returns false for ambiguous, neutral, or non-committal responses.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "response": {
-                        "type": "boolean",
-                        "description": "True only for explicit affirmations. False for explicit rejections, uncertain responses, or any message not clearly confirming."
-                    }
-                },
-                "required": ["response"]
-            }
-        }
-    };
-    has abort_function:dict = {
-        "type": "function",
-        "function": {
-            "name": "extract_abort_choice",
-            "description": "Identifies explicit user requests to terminate the ongoing interaction. Recognizes direct termination commands ('stop', 'cancel', 'abort'), procedural phrases ('end conversation', 'exit chat'), and common colloquialisms ('nevermind', 'scratch that'). Handles capitalization variations and punctuation. Returns false for ambiguous statements, in-context cancellation requests (e.g., cancel subscription), or continuation attempts.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "response": {
-                        "type": "boolean",
-                        "description": "True only for clear termination attempts targeting the conversation itself. False for indirect statements ('I need to go'), ambiguous phrases ('maybe later'), or cancellation references to external entities."
-                    }
-                },
-                "required": ["response"]
-            }
-        }
-    };
-    has decline_function:dict = {
-        "type": "function",
-        "function": {
-            "name": "extract_decline_choice",
-            "description": "Detects when a user declines to answer, expresses uncertainty, provides no response, or indicates they have nothing to submit for the current question. Recognizes explicit refusals (e.g., 'I decline to answer', 'no comment', 'I'd rather not say'), uncertainty ('not sure', 'I don't know', 'unsure'), requests to skip ('skip', 'next question', 'can we move on'), statements indicating lack of information ('I have no idea', 'no response', 'nothing to add'), and cases where the user states they have nothing to submit (e.g., 'I don't have any', 'no documents to provide', 'nothing to share for this'). Handles variations in phrasing, capitalization, and punctuation. Returns true for any clear or ambiguous indication that the user cannot, will not, or has nothing to provide in response, including silence or non-committal responses. Returns false for direct answers or attempts to engage with the question.",
-            "parameters": {
-            "type": "object",
-            "properties": {
-                "response": {
-                "type": "boolean",
-                "description": "True if the user clearly or ambiguously declines, skips, cannot answer, or indicates they have nothing to submit for the question. False if the user provides a direct answer or attempts to answer."
-                }
-            },
-            "required": ["response"]
-            }
-        }
-    };
+    has branch_choice_prompt:str = """
+        Analyze the conversation history above. Detect ONLY explicit signals for confirmation (yes/affirmative),
+        conversation termination (abort/stop), or decline-to-answer (no answer/can't respond).
+        Follow these rules:
+
+        # Confirmation Detection
+        Set "confirm_response" to true for: "yes", "sure", "confirmed", "yeah", "yep", "absolutely", "okay" + clear context.
+        Set "confirm_response" to false ONLY for explicit negative or revision signals, including:
+            - Direct negatives: "no"
+            - Revision or correction requests: "I'd like to make an adjustment", "need to make a change", "revision", "change my answer", "not correct", "incorrect", "needs update"
+            - Suggestions to edit or change: phrases like "actually, please change...", "no, can you change...", "can you update...", "please edit...", "I'd like to change...", "can you correct...", "let's fix...", "could you modify...", or similar expressions indicating a desire to alter or correct previous information.
+        Do NOT set "confirm_response" to false for ambiguous, neutral, or indirect responses.
+
+        # Abort Detection
+        Set "abort_response" to true for: "stop", "cancel", "exit", "end chat", "nevermind", "abort", "terminate".
+        Do NOT include "abort_response" if not explicitly stated.
+
+        # Decline Detection
+        Set "decline_response" to true for: "no answer", "I don't know", "I have none", "no comment", "can't say", "nothing", "n/a", "decline to answer".
+        Do NOT include "decline_response" for partial answers, topic changes, or ambiguous non-responses.
+
+        Return ONLY a JSON structure with a single detected key (confirm_response, abort_response, or decline_response) set to true,
+        or "confirm_response" set to false if a negative/revision is detected. If nothing is detected, return an empty JSON object.
+        Never include keys with false values except for "confirm_response" as described. No commentary. Never guess - ambiguous cases = empty JSON.
+        """;
     has question_index:dict = {};
 
     can setup() {
@@ -138,6 +114,7 @@ node InterviewInteractAction :InteractAction: {
     }
 
     can healthcheck() -> Union[bool, dict] {
+
         valid_question_index = True;
         if isinstance(self.question_index, dict) {
             for (key, question_info) in self.question_index.items() {
@@ -186,9 +163,7 @@ node InterviewInteractAction :InteractAction: {
 
         # prepare consolidated list of functions
         functions = [
-            self.confirm_function,
-            self.abort_function,
-            self.decline_function
+            self.branch_choice_function
         ];
         functions.extend(self.question_functions);
 
@@ -318,21 +293,23 @@ node InterviewInteractAction :InteractAction: {
             interview_session = self.get_session(visitor);
         }
 
-        # Check for abort response
-        abort_response = self.extract([self.abort_function], visitor);
-        if abort_response.get('extract_abort_choice', False) {
-            interview_session.set_state(SessionState.ABORTED);
-            visitor = self.update_session(interview_session.export(), visitor);
-            return visitor;
+        # load any branch choice results for detection
+        branch_choice_response = self.llm(self.branch_choice_prompt, visitor, json_only=True);
+
+        if interview_session.get_state() in [SessionState.OPEN, SessionState.COMPLETED, SessionState.READY] {
+            # Check for abort response
+            if branch_choice_response.get('abort_response', False) {
+                interview_session.set_state(SessionState.ABORTED);
+                visitor = self.update_session(interview_session.export(), visitor);
+                return visitor;
+            }
         }
 
         # Check for decline-to-answer response
-        decline_response = self.extract([self.decline_function], visitor);
-        if decline_response.get('extract_decline_choice', False) {
+        if branch_choice_response.get('decline_response', False) {
 
             # get field status - required or not
             if interview_session.on_required_field() {
-
                 # insist that user must answer
                 insist_directive = self.insist_response_directive.format(question=self.get_next_question(interview_session));
                 visitor.interaction_node.add_directive(directive=insist_directive);
@@ -356,27 +333,23 @@ node InterviewInteractAction :InteractAction: {
 
                 return visitor;
             }
-
         }
 
         # Handle confirmation for COMPLETED or READY states
-        if interview_session.get_state() in [SessionState.COMPLETED, SessionState.READY] {
-            confirmation_response = self.extract([self.confirm_function], visitor);
-            confirmed = confirmation_response.get('extract_confirmation_choice', None);
+        if interview_session.get_state() in [SessionState.COMPLETED, SessionState.READY, SessionState.REVISION] {
+
+            confirmed = branch_choice_response.get('confirm_response', None);
 
             if confirmed is True {
-
                 interview_session.set_state(SessionState.CONFIRMED);
                 visitor = self.update_session(interview_session.export(), visitor);
+                return visitor;
 
             } elif confirmed is False {
-
                 interview_session.set_state(SessionState.REVISION);
                 visitor = self.update_session(interview_session.export(), visitor);
 
             }
-
-            return visitor;
         }
 
         # Process OPEN or REVISION states
@@ -388,7 +361,7 @@ node InterviewInteractAction :InteractAction: {
             visitor = self.update_session(interview_session.export(), visitor);
 
             # if no more fields and we have an extraction, set to completed for confirmation
-            if not interview_session.get_next_field() {
+            if not interview_session.get_next_field() and question_responses {
                 # new_state = SessionState.READY if interview_session.has_ignored_responses() else SessionState.COMPLETED;
                 interview_session.set_state(SessionState.COMPLETED);
                 visitor = self.update_session(interview_session.export(), visitor);
@@ -399,7 +372,7 @@ node InterviewInteractAction :InteractAction: {
         return visitor;
     }
 
-    can extract(functions:list, visitor: interact_graph_walker) -> dict {
+    can extract(functions:list, visitor: interact_graph_walker, history:Union[bool,None] = None) -> dict {
         # performs function tool calling for extracting question responses based on question
 
         prompt_messages = [];
@@ -408,11 +381,28 @@ node InterviewInteractAction :InteractAction: {
             return {};
         }
 
-        if self.history {
-            statements = visitor.frame_node.get_transcript_statements(interactions=self.history_size, max_statement_length=self.max_statement_length);
-            prompt_messages.extend(statements or []);
+        use_history = self.history;
+        if history is not None {
+            use_history = history;
+        }
+
+        # prepare the final prompt with history.
+        if (use_history) {
+            # grab the history
+            prompt_messages = [];
+
+            statements = visitor.frame_node.get_transcript_statements(interactions = self.history_size, max_statement_length = self.max_statement_length, with_events = True);
+
+            if (statements) {
+                prompt_messages.extend(statements);
+                self.logger.debug(f"history: {json.dumps(statements)}");
+            }
+
         } else {
-            prompt_messages.append({"human": visitor.utterance});
+            # here we cater to whether we have context information or not..
+            prompt_messages = [
+                {"human": visitor.utterance}
+            ];
         }
 
         model_action = self.get_agent().get_action(action_label=self.model_action);
@@ -443,6 +433,67 @@ node InterviewInteractAction :InteractAction: {
                     return responses;
                 } else {
                     return {};
+                }
+            }
+        }
+
+        return {};
+    }
+
+    can llm(prompt:str, visitor: interact_graph_walker, history:Union[bool,None] = None, json_only:bool = False) -> dict {
+        # performs function tool calling for extracting question responses based on question
+
+        prompt_messages = [];
+
+        if not prompt {
+            return {};
+        }
+
+        use_history = self.history;
+        if history is not None {
+            use_history = history;
+        }
+
+        # prepare the final prompt with history.
+        if (use_history) {
+            # grab the history
+            prompt_messages = [];
+
+            statements = visitor.frame_node.get_transcript_statements(interactions = self.history_size, max_statement_length = self.max_statement_length, with_events = True);
+
+            if (statements) {
+                prompt_messages.extend(statements);
+                self.logger.debug(f"history: {json.dumps(statements)}");
+            }
+
+            prompt_messages.extend([{"system": prompt}]);
+
+        } else {
+            # here we cater to whether we have context information or not..
+            prompt_messages = [
+                {"system": prompt},
+                {"human": visitor.utterance}
+            ];
+        }
+
+        model_action = self.get_agent().get_action(action_label=self.model_action);
+        if model_action {
+            model_action_result = model_action.call_model(
+                prompt_messages=prompt_messages,
+                prompt_variables={},
+                kwargs={
+                    "model_name": self.model_name,
+                    "model_temperature": self.model_temperature,
+                    "model_max_tokens": self.model_max_tokens
+                },
+                interaction_node=visitor.interaction_node
+            );
+
+            if model_action_result {
+                if json_only {
+                    return model_action_result.get_json_result();
+                } else {
+                    return model_action_result.get_result();
                 }
             }
         }
@@ -500,7 +551,7 @@ obj InterviewSession {
     }
 
     can on_required_field() -> boolean {
-        return (self.active_field in self.get_required_fields());
+        return (self.get_next_field() in self.get_required_fields());
     }
 
     can get_answered_fields() -> list {

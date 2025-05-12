@@ -18,6 +18,7 @@ class ExtractionGuidance(TypedDict, total=False):
     required: bool
     fallback_phrases: List[str]
     response_rules: str
+    edge_cases: List[Dict[str, str]]
 
 
 class QuestionData(TypedDict, total=False):
@@ -76,29 +77,73 @@ class OpenAIFunctionGenerator:
                 raise ValueError(f"Invalid type {eg['type']} for {key}")
 
     def _build_description(self, question_data: QuestionData) -> str:
-        """Constructs detailed function description from metadata
+        """Constructs a high-quality function description optimized for LLM function calling.
+
+        Follows these principles:
+        1. Starts with a clear action verb and scope
+        2. Explicitly defines trigger conditions
+        3. Includes examples and edge cases
+        4. Uses natural language keywords
+        5. Avoids ambiguity
 
         Args:
-            question_data: Dictionary containing question metadata
+            question_data: Contains question metadata and extraction rules
 
         Returns:
-            str: Formatted description string for the OpenAI function
+            str: Description optimized for OpenAI function calling
         """
         q = question_data
         eg = q["extraction_guidance"]
 
-        description = [
-            f"Extract {eg['description']} from responses to: '{q['question']}'.",
-            f"Handles: {', '.join(eg.get('fallback_phrases', ['direct answers']))}.",
+        # Core description components
+        description_parts = [
+            # Primary action and scope
+            f"Extract {eg['description']} from user responses. ",
+            f"Pay attention to responses to: '{q['question']}'. ",
+            # Input handling
+            f"Processes: {self._format_phrases(eg.get('fallback_phrases', ['explicit answers']))}. ",
+            # Output specification
+            "Returns structured data matching the expected format. ",
         ]
 
+        # Add examples if provided
         if "examples" in eg:
-            description.append(f"Examples: {'; '.join(eg['examples'])}")
+            formatted_examples = self._format_examples(eg["examples"])
+            description_parts.append(f"Example conversions: {formatted_examples}. ")
 
+        # Add rules if provided
         if "response_rules" in eg:
-            description.append(f"Rules: {eg['response_rules']}")
+            description_parts.append(
+                f"Strict rules: {self._format_rules(eg['response_rules'])}. "
+            )
 
-        return " ".join(description)
+        # Add edge case handling
+        if "edge_cases" in eg:
+            description_parts.append(
+                f"Ignores: {self._format_edge_cases(eg['edge_cases'])}. "
+            )
+
+        # Compose final description
+        return "".join(description_parts).strip()
+
+    # Helper functions for clean formatting
+    def _format_phrases(self, phrases: list) -> str:
+        """Formats recognition phrases for natural reading"""
+        if len(phrases) == 1:
+            return phrases[0]
+        return f"{', '.join(phrases[:-1])}, and {phrases[-1]}"
+
+    def _format_examples(self, examples: list) -> str:
+        """Formats examples with clear before/after structure"""
+        return "; ".join(f"'{ex['input']}' → {ex['output']}" for ex in examples)
+
+    def _format_rules(self, rules: str) -> str:
+        """Simplifies complex rules for description"""
+        return rules.replace("\n", "; ").replace("  ", " ")
+
+    def _format_edge_cases(self, cases: list) -> str:
+        """Formats edge cases with explanations"""
+        return ", ".join(f"'{case['example']}' ({case['reason']})" for case in cases)
 
     def _build_response_property(self, field_data: QuestionData) -> Dict[str, Any]:
         """Constructs the response property schema with validation

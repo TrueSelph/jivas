@@ -12,7 +12,7 @@ node ModelAction :Action: {
 
     has api_key:str = "";
     has model_name:str = "gpt-4o";
-    has model_temperature:float = 0.7;
+    has model_temperature:float = 0.3;
     has model_max_tokens:int = 2048;
 
     # abstract invoke ability for the model meant to be overidden with specifics of model call
