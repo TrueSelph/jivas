@@ -19,18 +19,20 @@ node InterviewInteractAction :InteractAction: {
 
     has history: bool = True;
     has history_size: int = 1;
-    has max_statement_length: int = 4096;
+    has max_statement_length: int = 2048;
 
     has question_directive:str = "Ask the question: '{question}'.";
     has insist_response_directive:str = "Insist that a response is required then ask the question: '{question}'.";
     has insist_format_directive:str = "Insist that a response following this format ({format}) is required then ask the question: '{question}'.";
     has confirmation_directive: str = "Ask the user to confirm that the information captured is correct.";
+    has revision_directive: str = "Encourage the user to suggest any changes to the information provided.";
     has auto_intents:bool = True;
     has auto_functions:bool = True;
+    has auto_confirm:bool = False; # set True if you wish to skip the user confirmation step
     has question_functions:list = [];
     has branch_choice_prompt:str = """
         Analyze the conversation history above. Detect ONLY explicit signals for confirmation (yes/affirmative),
-        conversation termination (abort/stop), or decline-to-answer (no answer/can't respond).
+        conversation termination (abort/stop), decline-to-answer (no answer/can't respond), or upload completion.
         Follow these rules:
 
         # Confirmation Detection
@@ -49,7 +51,12 @@ node InterviewInteractAction :InteractAction: {
         Set "decline_response" to true for: "no answer", "I don't know", "I have none", "no comment", "can't say", "nothing", "n/a", "decline to answer".
         Do NOT include "decline_response" for partial answers, topic changes, or ambiguous non-responses.
 
-        Return ONLY a JSON structure with a single detected key (confirm_response, abort_response, or decline_response) set to true,
+        # Upload Complete Detection
+        Set "upload_complete_response" to true for explicit statements indicating the user has finished uploading all intended files, such as:
+            - "I'm done", "upload complete", "done uploading", "finished uploading", "all files uploaded", "that's all the files", "I've uploaded everything", "finished with uploads", "done with uploads", "that's everything", "all done uploading", "uploads finished", "uploads are complete".
+        Do NOT include "upload_complete_response" unless the user clearly indicates all uploads are finished.
+
+        Return ONLY a JSON structure with a single detected key (confirm_response, abort_response, decline_response, or upload_complete_response) set to true,
         or "confirm_response" set to false if a negative/revision is detected. If nothing is detected, return an empty JSON object.
         Never include keys with false values except for "confirm_response" as described. No commentary. Never guess - ambiguous cases = empty JSON.
         """;
@@ -82,35 +89,27 @@ node InterviewInteractAction :InteractAction: {
         return (has_intent and (visitor.utterance or visitor.data));
     }
 
-    can execute(visitor: interact_graph_walker) -> dict {
+    can execute(visitor: interact_graph_walker) {
         # initializes the session and calls the process response ability, then exports the visitor obj
-        visitor = self.init_session(visitor);
+        interview_session = self.init_session(visitor);
         # call process_response which needs to be implemented
-        _visitor = self.process_response(visitor);
-        if _visitor and isinstance(_visitor, interact_graph_walker) {
-            visitor = _visitor;
-        }
+        self.process_response(interview_session, visitor);
         # call exit session for cleanup
-        visitor = self.exit_session(visitor);
-        return visitor.export();
+        self.exit_session(interview_session, visitor);
     }
 
     # abstract ability meant to contain handling logic for based on the extracted interview data
-    can process_response(visitor: interact_graph_walker) -> interact_graph_walker abs;
+    can process_response(visitor: interact_graph_walker) abs;
 
-    can exit_session(visitor: interact_graph_walker) -> interact_graph_walker {
-        # handles removal of completed session data once process_response runs
-        interview_session = self.get_session(visitor);
+    can exit_session(interview_session: InterviewSession, visitor: interact_graph_walker) {
 
-        if not interview_session {
-            return visitor;
-        }
+        # ensure we update the session in frame before export
+        self.update_session(interview_session, visitor);
         # remove session if previously ABORTED or CONFIRMED
         if interview_session.get_state() in [SessionState.ABORTED, SessionState.CONFIRMED] {
-            visitor = self.delete_session(visitor);
+            self.delete_session(visitor);
         }
 
-        return visitor;
     }
 
     can healthcheck() -> Union[bool, dict] {
@@ -161,19 +160,13 @@ node InterviewInteractAction :InteractAction: {
             return [];
         }
 
-        # prepare consolidated list of functions
-        functions = [
-            self.branch_choice_function
-        ];
-        functions.extend(self.question_functions);
-
-
-        for function in functions {
+        for function in self.question_functions {
             description = function.get('function', {}).get('description', '');
             # Compose a simple intent statement
             intent = f"MESSAGE {description}";
             intents.append(intent);
         }
+
         self.anchors = intents;
     }
 
@@ -183,29 +176,28 @@ node InterviewInteractAction :InteractAction: {
         self.question_functions = generator.generate_openai_functions();
     }
 
-    can create_session(visitor: interact_graph_walker) -> interact_graph_walker {
+    can create_session(visitor: interact_graph_walker) -> InterviewSession {
         # adds a new interview session to the frame for the current user
+
         all_fields = self.get_question_fields();
         required_fields = [key for key in all_fields if self.question_index[key]["extraction_guidance"].get("required", False)];
         interview_session = InterviewSession(all_fields=all_fields, required_fields=required_fields);
-        interview_session.get_next_field(); # initialize active field
+        # initialize active field
+        interview_session.get_next_field();
+        # add to the frame node
         visitor.frame_node.variable_set(key=f"{self.get_type()}_session", value=interview_session.export());
 
-        return visitor;
+        return interview_session;
     }
 
-    can delete_session(visitor: interact_graph_walker) -> interact_graph_walker {
+    can delete_session(visitor: interact_graph_walker) {
         # removes the session object from the current user's frame
         visitor.frame_node.variable_del(key=f"{self.get_type()}_session");
-
-        return visitor;
     }
 
-    can update_session(session_data:dict, visitor: interact_graph_walker) -> interact_graph_walker {
+    can update_session(interview_session:InterviewSession, visitor: interact_graph_walker) {
         # updates interview session for the current user
-        visitor.frame_node.variable_set(key=f"{self.get_type()}_session", value=session_data);
-
-        return visitor;
+        visitor.frame_node.variable_set(key=f"{self.get_type()}_session", value=interview_session.export());
     }
 
     can get_question_fields() -> dict {
@@ -283,14 +275,13 @@ node InterviewInteractAction :InteractAction: {
         return None;
     }
 
-    can init_session(visitor: interact_graph_walker) -> interact_graph_walker {
+    can init_session(visitor: interact_graph_walker) -> InterviewSession {
         # performs extraction and updates the session responses
         interview_session = self.get_session(visitor);
 
         # Create new session if none exists
         if not interview_session {
-            visitor = self.create_session(visitor);
-            interview_session = self.get_session(visitor);
+            interview_session = self.create_session(visitor);
         }
 
         # load any branch choice results for detection
@@ -300,8 +291,26 @@ node InterviewInteractAction :InteractAction: {
             # Check for abort response
             if branch_choice_response.get('abort_response', False) {
                 interview_session.set_state(SessionState.ABORTED);
-                visitor = self.update_session(interview_session.export(), visitor);
-                return visitor;
+                return interview_session;
+            }
+        }
+
+        if interview_session.get_state() == SessionState.UPLOADING {
+            # Check for receiving complete response
+            if branch_choice_response.get('upload_complete_response', False) {
+
+                # check if there are any more questions
+                has_fields = (interview_session.get_next_field() is not None);
+
+                if has_fields {
+                    interview_session.set_state(SessionState.OPEN);
+                } elif self.auto_confirm {
+                    interview_session.set_state(SessionState.CONFIRMED);
+                } else {
+                    interview_session.set_state(SessionState.COMPLETED);
+                }
+
+                return interview_session;
             }
         }
 
@@ -313,25 +322,21 @@ node InterviewInteractAction :InteractAction: {
                 # insist that user must answer
                 insist_directive = self.insist_response_directive.format(question=self.get_next_question(interview_session));
                 visitor.interaction_node.add_directive(directive=insist_directive);
-                visitor = self.update_session(interview_session.export(), visitor);
-                return visitor;
+                return interview_session;
 
             } else {
                 # apply 'n/a' to field response
                 field = interview_session.get_next_field();
-                self.logger.error(f'required field {field}');
-                question_response = {field : "declined to answer"};
-                interview_session = self.update_responses(question_response, interview_session);
-                visitor = self.update_session(interview_session.export(), visitor);
+                question_response = {field : "n/a"};
+                self.update_responses(question_response, interview_session);
 
                 # if no more fields and we have an extraction, set to completed for confirmation
                 if not interview_session.get_next_field() {
                     # new_state = SessionState.READY if interview_session.has_ignored_responses() else SessionState.COMPLETED;
                     interview_session.set_state(SessionState.COMPLETED);
-                    visitor = self.update_session(interview_session.export(), visitor);
                 }
 
-                return visitor;
+                return interview_session;
             }
         }
 
@@ -340,15 +345,12 @@ node InterviewInteractAction :InteractAction: {
 
             confirmed = branch_choice_response.get('confirm_response', None);
 
-            if confirmed is True {
+            # handle auto-confirm when it's set
+            if confirmed is True or self.auto_confirm {
                 interview_session.set_state(SessionState.CONFIRMED);
-                visitor = self.update_session(interview_session.export(), visitor);
-                return visitor;
-
+                return interview_session;
             } elif confirmed is False {
                 interview_session.set_state(SessionState.REVISION);
-                visitor = self.update_session(interview_session.export(), visitor);
-
             }
         }
 
@@ -357,19 +359,20 @@ node InterviewInteractAction :InteractAction: {
 
             question_functions = self.filter_question_functions(interview_session);
             question_responses = self.extract(question_functions, visitor);
-            interview_session = self.update_responses(question_responses, interview_session);
-            visitor = self.update_session(interview_session.export(), visitor);
+            self.update_responses(question_responses, interview_session);
 
             # if no more fields and we have an extraction, set to completed for confirmation
-            if not interview_session.get_next_field() and question_responses {
-                # new_state = SessionState.READY if interview_session.has_ignored_responses() else SessionState.COMPLETED;
-                interview_session.set_state(SessionState.COMPLETED);
-                visitor = self.update_session(interview_session.export(), visitor);
-                return visitor;
+            if not interview_session.get_next_field() {
+                # eval auto-confirm or modfications following revision
+                if self.auto_confirm {
+                    interview_session.set_state(SessionState.CONFIRMED);
+                } elif question_responses {
+                    interview_session.set_state(SessionState.COMPLETED);
+                }
             }
         }
 
-        return visitor;
+        return interview_session;
     }
 
     can extract(functions:list, visitor: interact_graph_walker, history:Union[bool,None] = None) -> dict {
@@ -501,19 +504,19 @@ node InterviewInteractAction :InteractAction: {
         return {};
     }
 
-    can update_responses(responses:dict, interview_session:InterviewSession) -> InterviewSession {
+    can update_responses(responses:dict, interview_session:InterviewSession) {
         for (field, response) in responses.items() {
             if field and response {
                 interview_session.set_response(field, response);
             }
         }
-        return interview_session;
     }
 }
 
 @unique
 enum SessionState {
     OPEN = 'OPEN', # session is open for extractions -> collect responses
+    UPLOADING = 'UPLOADING', # in silent mode, accepting uploads over several messages, user must state complete or done to continue
     READY = 'READY', # all required responses have been collected, there are unrequired, ignored responses left; -> prompt to confirm
     COMPLETED = 'COMPLETED', # all responses have been collected -> prompt to confirm
     CONFIRMED = 'CONFIRMED', # user has confirmed all responses -> close the session
@@ -564,6 +567,10 @@ obj InterviewSession {
 
     can get_required_fields() -> list {
         return self.required_fields;
+    }
+
+    can get_response(field: str) -> str {
+        return self.responses.get(field, "");
     }
 
     can set_response(field: str, response: str) {

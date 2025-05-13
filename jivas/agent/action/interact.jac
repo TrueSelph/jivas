@@ -120,16 +120,11 @@ walker interact :interact_graph_walker: {
             if(has_access) {
                 # execute touch
                 self.logger.debug(f"Touching: {here.label}");
-                self.execute = here.touch(visitor=self);
+                self.execute = here.touch(self);
                 if (self.execute) {
-
                     # execute the action
                     self.logger.debug(f"Executing: {here.label}");
-                    if (result := here.execute(visitor=self)) {
-                        # if theres an update to this walker, effect it..
-                        self.update(result);
-                    }
-
+                    here.execute(self);
                     self.interaction_node.trail.append(here.label);
                     self.execute = False;
                 }
@@ -137,7 +132,7 @@ walker interact :interact_graph_walker: {
                 # self.update(result);
             } else {
                 # execute the deny ability to handle access denial condition
-                here.deny(visitor=self);
+                here.deny(self);
             }
 
 
