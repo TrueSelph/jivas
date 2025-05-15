@@ -114,7 +114,7 @@ node InterviewInteractAction :InteractAction: {
 
     can healthcheck() -> Union[bool, dict] {
 
-        valid_question_index = True;
+        invalid_question_message = "";
         if isinstance(self.question_index, dict) {
             for (key, question_info) in self.question_index.items() {
                 if not isinstance(question_info, dict) or "question" not in question_info or "extraction_guidance" not in question_info {
@@ -123,30 +123,29 @@ node InterviewInteractAction :InteractAction: {
                 }
                 eg = question_info["extraction_guidance"];
                 if not isinstance(eg, dict) {
-                    valid_question_index = False;
+                    invalid_question_message = f"extraction_guidance must be a dictionary. Hint: {key}";
                     break;
                 }
                 # description: str, type: str, required: bool
                 if "description" not in eg or not isinstance(eg["description"], str) {
-                    valid_question_index = False;
+                    invalid_question_message = f"description must be a string. Hint: {key}";
                     break;
                 }
                 if "type" not in eg or not isinstance(eg["type"], str) {
-                    valid_question_index = False;
+                    invalid_question_message = f"type must be a string. Hint: {key}";
                     break;
                 }
-                if "required" not in eg or not isinstance(eg["required"], bool) {
-                    valid_question_index = False;
+                if "required" not in question_info or not isinstance(question_info["required"], bool) {
+                    invalid_question_message = f"required must be a boolean. Hint: {key}";
                     break;
                 }
             }
-        } else {
-            valid_question_index = False;
         }
-        if not valid_question_index {
+
+        if invalid_question_message {
             return {
                 "status": False,
-                "message": "Malformed question index. Check your configuration and try again",
+                "message": f"Malformed question index. Check your configuration and try again. Hint: {invalid_question_message}",
                 "severity": "error"
             };
         }
@@ -180,7 +179,11 @@ node InterviewInteractAction :InteractAction: {
         # adds a new interview session to the frame for the current user
 
         all_fields = self.get_question_fields();
-        required_fields = [key for key in all_fields if self.question_index[key]["extraction_guidance"].get("required", False)];
+        required_fields = [
+            key for key in all_fields
+            if "extraction_guidance" in self.question_index.get(key, {})
+            and self.question_index[key]["extraction_guidance"].get("required", False)
+        ];
         interview_session = InterviewSession(all_fields=all_fields, required_fields=required_fields);
         # initialize active field
         interview_session.get_next_field();

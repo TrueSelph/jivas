@@ -70,7 +70,7 @@ class OpenAIFunctionGenerator:
         """Ensures question index contains required metadata"""
         for key, data in self.question_index.items():
             if "extraction_guidance" not in data:
-                raise ValueError(f"Missing extraction_guidance for {key}")
+                continue
 
             eg = data["extraction_guidance"]
             if eg.get("type", "string") not in self.ALLOWED_TYPES:
@@ -183,34 +183,35 @@ class OpenAIFunctionGenerator:
         functions: List[Dict[str, Any]] = []
 
         for field_key, field_data in self.question_index.items():
-            eg = field_data["extraction_guidance"]
+            if("extraction_guidance" in field_data):
+                eg = field_data["extraction_guidance"]
 
-            function_def = {
-                "type": "function",
-                "function": {
-                    "name": field_key,
-                    "description": self._build_description(field_data),
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "response": self._build_response_property(field_data),
-                            "confidence": {
-                                "type": "number",
-                                "description": "Extraction confidence score 0-1",
-                                "minimum": 0,
-                                "maximum": 1,
+                function_def = {
+                    "type": "function",
+                    "function": {
+                        "name": field_key,
+                        "description": self._build_description(field_data),
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "response": self._build_response_property(field_data),
+                                "confidence": {
+                                    "type": "number",
+                                    "description": "Extraction confidence score 0-1",
+                                    "minimum": 0,
+                                    "maximum": 1,
+                                },
                             },
+                            "required": (
+                                ["response", "confidence"]
+                                if eg.get("required", False)
+                                else ["confidence"]
+                            ),
                         },
-                        "required": (
-                            ["response", "confidence"]
-                            if eg.get("required", False)
-                            else ["confidence"]
-                        ),
                     },
-                },
-            }
+                }
 
-            functions.append(function_def)
+                functions.append(function_def)
 
         return functions
 
