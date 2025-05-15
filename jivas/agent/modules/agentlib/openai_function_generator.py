@@ -93,7 +93,10 @@ class OpenAIFunctionGenerator:
             str: Description optimized for OpenAI function calling
         """
         q = question_data
-        eg = q["extraction_guidance"]
+        eg = q.get("extraction_guidance")
+
+        if not eg:
+            return ""
 
         # Core description components
         description_parts = [
@@ -183,35 +186,36 @@ class OpenAIFunctionGenerator:
         functions: List[Dict[str, Any]] = []
 
         for field_key, field_data in self.question_index.items():
-            if("extraction_guidance" in field_data):
-                eg = field_data["extraction_guidance"]
 
-                function_def = {
-                    "type": "function",
-                    "function": {
-                        "name": field_key,
-                        "description": self._build_description(field_data),
-                        "parameters": {
-                            "type": "object",
-                            "properties": {
-                                "response": self._build_response_property(field_data),
-                                "confidence": {
-                                    "type": "number",
-                                    "description": "Extraction confidence score 0-1",
-                                    "minimum": 0,
-                                    "maximum": 1,
-                                },
+            if not field_data.get("extraction_guidance"):
+                continue
+
+            function_def = {
+                "type": "function",
+                "function": {
+                    "name": field_key,
+                    "description": self._build_description(field_data),
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "response": self._build_response_property(field_data),
+                            "confidence": {
+                                "type": "number",
+                                "description": "Extraction confidence score 0-1",
+                                "minimum": 0,
+                                "maximum": 1,
                             },
-                            "required": (
-                                ["response", "confidence"]
-                                if eg.get("required", False)
-                                else ["confidence"]
-                            ),
                         },
+                        "required": (
+                            ["response", "confidence"]
+                            if field_data.get("required", False)
+                            else ["confidence"]
+                        ),
                     },
-                }
+                },
+            }
 
-                functions.append(function_def)
+            functions.append(function_def)
 
         return functions
 
@@ -233,9 +237,9 @@ class OpenAIFunctionGenerator:
                         "max_words": 4,
                         "allowed_characters": "a-zA-Z-' ."
                     },
-                    "required": True,
                     "fallback_phrases": ["My name is", "I'm called", "People know me as"]
-                }
+                },
+                "required": True,
             },
             "age": {
                 "question": "How old are you?",
@@ -244,8 +248,8 @@ class OpenAIFunctionGenerator:
                     "type": "integer",
                     "range": {"min": 0, "max": 120},
                     "response_rules": "Convert verbal approximations ('early 30s') to specific numbers",
-                    "required": True
-                }
+                },
+                "required": True
             }
         }
 
