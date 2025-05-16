@@ -626,7 +626,7 @@ walker interact :interact_graph_walker: {
             # lets return the generated response, if we have one...
             has_response = self.interaction_node.has_response();
             if (has_response) {
-                
+
                 try  {
 
                     # set the message obj
