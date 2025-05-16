@@ -23,7 +23,10 @@ import:jac from jivas.agent.action {
 }
 
 import:jac from jivas.agent.memory {
+    add_frame,
     get_frames,
+    update_frame,
+    delete_frame,
     get_interactions
 }
 
