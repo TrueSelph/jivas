@@ -21,7 +21,7 @@ walker pulse :interact_graph_walker: {
 
     can on_actions with Actions entry {
         # head to pulse action
-        visit [-->](`?Action)(?label==self.action_label);
+        visit [-->](`?Action)(?enabled==True)(?label==self.action_label);
     }
 
     can on_action with Action entry {

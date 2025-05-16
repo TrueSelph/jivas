@@ -85,16 +85,27 @@ walker interact :interact_graph_walker: {
 
         if (resume_action_node := self.frame_node.get_resume_action(last_interaction_node)) {
             # add any resumption directives from the last interaction node of the frame...
-            root_action_node = resume_action_node.get_root_action();
-            self.interaction_node.add_intent(root_action_node.label);
-            visithere.queue_interact_actions(
+
+            queued_interact_actions = here.queue_interact_actions(
                 [-->](`?InteractAction)(?enabled == True)
             );
-            if (self.subqueue_interact_action(
-                resume_action_node,
-                root_action_node
-            )) {
+
+            # in the event our resumed action is a nested action, we'll need its parent/root action
+            root_action = resume_action_node.get_root_action();
+            # places the resume action first and eliminates all actions which precede
+            trimmed_queue = self.trim_interact_actions(
+                index=root_action,
+                interact_actions=queued_interact_actions
+            );
+
+            if(trimmed_queue) {
+                # prepare resumption trail
+                self.interaction_node.add_intent(root_action.label);
                 self.interaction_node.context_data["resumed"] = True;
+                visit trimmed_queue;
+            } else {
+                # we fall back on visiting the original trail if unable to orchestrate resumption
+                visit queued_interact_actions;
             }
         } else {
             queued_actions = here.queue_interact_actions(
@@ -102,7 +113,6 @@ walker interact :interact_graph_walker: {
             );
             visit queued_actions;
         }
-        self.logger.debug(f"Utterance: {self.utterance}");
     }
 
     can on_action with InteractAction entry {
@@ -118,24 +128,18 @@ walker interact :interact_graph_walker: {
             if (has_access) {
                 # execute touch
                 self.logger.debug(f"Touching: {here.label}");
-                self.execute = here.touch(visitor=self);
+                self.execute = here.touch(self);
                 if (self.execute) {
-
                     # execute the action
                     self.logger.debug(f"Executing: {here.label}");
-                    if (result := here.execute(visitor=self)) {
-                        # if theres an update to this walker, effect it..
-                        self.update(result);
-                    }
-
+                    here.execute(self);
                     self.interaction_node.trail.append(here.label);
                     self.execute = False;
                 }
 
-                self.update(result);
             } else {
                 # execute the deny ability to handle access denial condition
-                here.deny(visitor=self);
+                here.deny(self);
             }
 
         }
@@ -376,11 +380,9 @@ walker interact :interact_graph_walker: {
         # inserts the supplied action as the next action in the walk path
         next_action_node = None;
 
-        if (action_label) {
-            next_action_node = self.agent_node.get_actions().get(
-                action_label=action_label
-            );
-        } elif (action_node) {
+        if(action_label) {
+            next_action_node = self.agent_node.get_action(action_label=action_label);
+        } elif(action_node) {
             next_action_node = action_node;
         }
         if (next_action_node) {
@@ -411,11 +413,9 @@ walker interact :interact_graph_walker: {
         # appends the supplied action to the end of the walk path (before exit)
         append_action_node = None;
 
-        if (action_label) {
-            append_action_node = self.agent_node.get_actions().get(
-                action_label=action_label
-            );
-        } elif (action_node) {
+        if(action_label) {
+            append_action_node = self.agent_node.get_action(action_label=action_label);
+        } elif(action_node) {
             append_action_node = action_node;
         }
         if (append_action_node) {
@@ -428,10 +428,9 @@ walker interact :interact_graph_walker: {
 
     can dequeue_action(action_label: str, action_node: Optional[InteractAction]=None) {
         # dequeue the supplied action as the next action in the walk path
-        if (action_label) {
-            action_node = self.agent_node.get_actions().get(
-                action_label=action_label
-            );
+
+        if(action_label) {
+            action_node = self.agent_node.get_action(action_label=action_label);
         }
         if (action_node) {
             self.dequeue_interact_action(action_node);
@@ -442,9 +441,7 @@ walker interact :interact_graph_walker: {
         # adds the interact action to the end of the active walk path (before exit)
 
         # first grab exit action
-        if (exit_action := self.agent_node.get_actions().get(
-            action_label="ExitInteractAction"
-        )) {
+        if (exit_action := self.agent_node.get_action(action_label="ExitInteractAction") ) {
             exit_action_node_ref = None;
 
             # remove and save the exit action
@@ -509,49 +506,19 @@ walker interact :interact_graph_walker: {
         return None;
     }
 
-    can subqueue_interact_action(interact_action: InteractAction, index_interact_action: InteractAction) {
-        # adds the interact action to the head of a subset of the walk path following index interact action
-        if (interact_action and index_interact_action) {
-
-            if ((exit_action := self.agent_node.get_actions().get(
-                action_label="ExitInteractAction"
-            ))
-                and self.in_next_queue(index_interact_action)) {
-                jac_next_copy = self.__jac__.next.copy();
-                jac_trail = enumerate(jac_next_copy, start=0);
-
-                # remove all actions from head up to and including index
-                for (i, node_ref) in jac_trail {
-                    if (f'{node_ref.id}' == f'{index_interact_action.__jac__.id}') {
-                        break;
-                    } elif (f'{node_ref.id}' != f'{exit_action.__jac__.id}') {
-                        self.__jac__.next.pop(0);
-                    }
-                }
+    can trim_interact_actions(index:InteractAction, interact_actions: list) -> list {
+        # Returns a new list with all actions before the indexed_interact_action removed
+        trimmed = [];
+        found = False;
+        for action in interact_actions {
+            if (not found and f'{action.id}' == f'{index.id}') {
+                found = True;
             }
-
-            # then prepend interact action
-            if (self.prepend_interact_action(interact_action)) {
-                return self.__jac__.next;
-            }
-
-        }
-
-        return None;
-
-    }
-
-    can in_next_queue(action_node: InteractAction) -> bool {
-        # checks if the action node is in the next queue
-        if (action_node) {
-            for node_ref in self.__jac__.next {
-                if (f'{node_ref.id}' == f'{action_node.__jac__.id}') {
-                    return True;
-                }
+            if (found) {
+                trimmed.append(action);
             }
         }
-
-        return False;
+        return trimmed;
     }
 
     can has_access(action_node: Action) -> bool {
@@ -561,14 +528,14 @@ walker interact :interact_graph_walker: {
         if (action_node.get_type() in ['AccessControlAction', 'ExitInteractAction']) {
             return True;
         }
-        if (access_control_action_node := (self.agent_node.get_actions().get(
+        if (access_control_action_node := (self.agent_node.get_action(
             action_label='AccessControlAction'
         ))) {
 
             access = access_control_action_node.has_action_access(
                 session_id=self.frame_node.session_id,
                 action_label=action_node.get_type(),
-                channel=self.interaction_node.channel
+                channel=self.interaction_node.channel or "default"
             );
         }
 
@@ -580,7 +547,7 @@ walker interact :interact_graph_walker: {
         if (action_node.get_type() in ['IntentInteractAction', 'FunctionInteractAction', 'ExitInteractAction']) {
             return True;
         }
-        if ((function_interact_action_node := self.agent_node.get_actions().get(
+        if ((function_interact_action_node := self.agent_node.get_action(
             action_label='FunctionInteractAction'
         ))) {
             if (function_interact_action_node.enabled
@@ -601,7 +568,7 @@ walker interact :interact_graph_walker: {
         if (action_node.get_type() in ['IntentInteractAction', 'FunctionInteractAction', 'ExitInteractAction']) {
             return True;
         }
-        if (intent_interact_action_node := self.agent_node.get_actions().get(
+        if (intent_interact_action_node := self.agent_node.get_action(
             action_label='IntentInteractAction'
         )) {
             if (intent_interact_action_node.enabled

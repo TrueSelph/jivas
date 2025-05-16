@@ -1,3 +1,4 @@
+import:py from datetime { datetime }
 import:py logging;
 import:py traceback;
 import:py from logging { Logger }
@@ -19,7 +20,7 @@ node Memory :GraphNode: {
     # set up logger
     static has logger:Logger = logging.getLogger(__name__);
 
-    can get_frame(agent_id:str, session_id:str, force_session:bool=False, lookup:bool=False) -> Frame {
+    can get_frame(agent_id:str, session_id:str, label:Optional[str]=None, user_name:Optional[str]=None, force_session:bool=False, lookup:bool=False) -> Frame {
         # attempt to retrieve an existing session or spawn then traverse to a new one if force is on
         # if lookup is on, it operates in search mode
 
@@ -27,9 +28,9 @@ node Memory :GraphNode: {
 
         if not frame_node and not lookup {
             if(force_session) {
-                frame_node = Frame(agent_id=agent_id, session_id = session_id);
+                frame_node = Frame(agent_id=agent_id, label=label, user_name=user_name, session_id = session_id);
             } else {
-                frame_node = Frame(agent_id=agent_id);
+                frame_node = Frame(agent_id=agent_id, label=label, user_name=user_name);
             }
             # attach new frame to memory graph
             self ++> frame_node;
@@ -45,7 +46,9 @@ node Memory :GraphNode: {
             return [-->](`?Frame)(?session_id == session_id);
         }
 
-        return [-->](`?Frame);
+        frames = [-->](`?Frame);
+        # sort frames by 'created_on' ISO datetime string
+        return sorted(frames, key = with frame:Frame can datetime.fromisoformat(frame.created_on) if hasattr(frame, 'created_on') and frame.created_on else "", reverse=True);
     }
 
     can import_memory(data:dict, overwrite:bool=True) -> bool {
