@@ -113,6 +113,12 @@ node InterviewInteractAction :InteractAction: {
             self.delete_session(visitor);
         }
 
+        # resume on this action as we are in this mode
+        if interview_session.get_state() in [SessionState.OPEN, SessionState.COMPLETED, SessionState.READY, SessionState.REVISION] {
+            visitor.set_resume_action(action_label="", action_node=self);
+            self.logger.warning('setting resume action');
+        }
+
     }
 
     can healthcheck() -> Union[bool, dict] {
