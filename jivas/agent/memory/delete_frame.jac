@@ -14,7 +14,7 @@ walker delete_frame :memory_walker: {
 
     can on_memory with Memory entry {
 
-        if(not self.session_id) {       
+        if(not self.session_id) {
             Jac.get_context().status = 400;
             report f'missing session_id';
             return;
@@ -22,13 +22,13 @@ walker delete_frame :memory_walker: {
 
         deleted_nodes = here.purge(self.session_id);
 
-        if(not frame) {
+        if(not deleted_nodes) {
             Jac.get_context().status = 500;
             report f'unable to delete frame with session_id {self.session_id}';
             return;
         }
-        
-        report deleted_nodes;    
+
+        report deleted_nodes;
     }
 
 }
