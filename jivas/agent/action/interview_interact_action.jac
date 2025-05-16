@@ -3,7 +3,6 @@ import from enum { unique }
 import:py from openai { OpenAI }
 import:jac from interact_action { InteractAction }
 import:jac from interact_graph_walker { interact_graph_walker }
-import:py from jivas.agent.modules.agentlib.openai_function_generator { OpenAIFunctionGenerator }
 
 node InterviewInteractAction :InteractAction: {
     #*
@@ -36,14 +35,14 @@ node InterviewInteractAction :InteractAction: {
     """;
     has revision_directive: str = "Encourage the user to suggest any changes to the information provided.";
     has extraction_prompt:str = """
-        Review the user's message and the conversation history to accurately extract the following entities. 
+        Review the user's message and the conversation history to accurately extract the following entities.
         Be strict on the constraints specified for each entity. Return a JSON object with keys exactly as listed below.
         Include only keys for which you could extract a valid value adhering to all constraints.
 
         Entities to extract:
         {entities}
 
-        Return ONLY the JSON object with the extracted entities, no delimiters. Do not include any other text or explanation. 
+        Return ONLY the JSON object with the extracted entities, no delimiters. Do not include any other text or explanation.
         The JSON must have the following structure (only include keys with valid values):
         {sample_json}
         """;
@@ -174,11 +173,11 @@ node InterviewInteractAction :InteractAction: {
 
         for (field, item) in self.question_index.items() {
             description = item.get('constraints', {}).get('description', '');
-            
+
             if not description {
                 continue;
             }
-            
+
             # Compose a simple intent statement
             intent = f"MESSAGE {description}";
             if intent not in self.anchors {
@@ -370,7 +369,7 @@ node InterviewInteractAction :InteractAction: {
 
             question_functions = self.filter_question_index(interview_session);
             question_responses = self.extract(question_functions, visitor);
-            
+
             self.update_responses(question_responses, interview_session);
 
             # if no more fields and we have an extraction, set to completed for confirmation
@@ -400,7 +399,7 @@ node InterviewInteractAction :InteractAction: {
 
         for (key, details) in question_index.items() {
             constraints = details.get('constraints', {});
-            
+
             if not constraints {
                 continue;
             }

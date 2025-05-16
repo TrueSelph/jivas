@@ -20,17 +20,17 @@ walker add_frame :memory_walker: {
         frame_node = here.get_frame(
             agent_id=self.agent_id,
             user_name=self.user_name,
-            label=self.label, 
-            session_id=self.session_id, 
+            label=self.label,
+            session_id=self.session_id,
             force_session=self.force_session
         );
 
-        if(not frame_node) {       
+        if(not frame_node) {
             Jac.get_context().status = 500;
             report f'unable to add frame node';
             return;
         }
-        
+
         report frame_node.export();
     }
 
