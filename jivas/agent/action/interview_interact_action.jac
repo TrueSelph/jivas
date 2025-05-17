@@ -1,4 +1,5 @@
 import:py json;
+import:py from typing { Union }
 import from enum { unique }
 import:py from openai { OpenAI }
 import:jac from interact_action { InteractAction }
@@ -22,7 +23,6 @@ node InterviewInteractAction :InteractAction: {
     has auto_confirm:bool = False; # set True if you wish to skip the user confirmation step
     has question_directive:str = "Ask the question: '{question}'.";
     has insist_response_directive:str = "Insist that a response is required then ask the question: '{question}'.";
-    has insist_format_directive:str = "Insist that a response following this format ({format}) is required then ask the question: '{question}'.";
     has confirmation_directive: str = """
     Perform the following steps to confirm user submission:
         a. Summarize submission:
@@ -43,6 +43,21 @@ node InterviewInteractAction :InteractAction: {
         {entities}
 
         Return ONLY the JSON object with the extracted entities, no delimiters. Do not include any other text or explanation.
+        The JSON must have the following structure (only include keys with valid values):
+        {sample_json}
+        """;
+    has revision_extraction_prompt:str = """
+        Review the user's message and the recorded responses to accurately extract the following entities and update the relevant recorded responses.
+        Be strict on the constraints specified for each entity. Return a JSON object with keys exactly as listed below.
+        Include only keys for which you could extract a valid revised value adhering to all constraints.
+
+        Entities to extract:
+        {entities}
+
+        Recorded responses:
+        {responses}
+
+        Return ONLY the JSON object with the revised entities, no delimiters. Do not include any other text or explanation.
         The JSON must have the following structure (only include keys with valid values):
         {sample_json}
         """;
@@ -119,12 +134,13 @@ node InterviewInteractAction :InteractAction: {
         }
 
         # load any branch choice results for detection
-        branch_choice_response = self.llm(self.branch_choice_prompt, visitor, json_only=True);
+        branch_choice_response = self.call_llm(self.branch_choice_prompt, visitor, json_only=True);
 
-        if interview_session.get_state() in [SessionState.OPEN, SessionState.COMPLETED] {
+        if interview_session.get_state() in [SessionState.OPEN, SessionState.COMPLETED, SessionState.REVISION] {
             # Check for abort response
             if branch_choice_response.get('abort_response', False) {
                 interview_session.set_state(SessionState.ABORTED);
+                visitor.interaction_node.add_event("User has chosen to abort the process.");
                 return interview_session;
             }
         }
@@ -166,11 +182,12 @@ node InterviewInteractAction :InteractAction: {
             }
         }
 
-        # Handle extraction while in OPEN or REVISION states
-        if interview_session.get_state() in [SessionState.OPEN, SessionState.REVISION] {
+        # Handle extraction while in OPEN state
+        if interview_session.get_state() == SessionState.OPEN {
 
-            question_functions = self.filter_question_index(interview_session);
-            question_responses = self.extract(question_functions, visitor);
+            question_index = self.filter_question_index(interview_session);
+            prompt = self.generate_extraction_prompt(question_index);
+            question_responses = self.extract(prompt, question_index, visitor);
 
             # update any extracted responses
             self.update_responses(question_responses, interview_session);
@@ -181,22 +198,41 @@ node InterviewInteractAction :InteractAction: {
                 if self.auto_confirm {
                     # set to confirmed to trigger auto-confirmation handling
                     interview_session.set_state(SessionState.CONFIRMED);
-                } elif question_responses {
-                    # if the user has suggested changes while indicating a revision was necessary, set to completed
+                } else {
                     interview_session.set_state(SessionState.COMPLETED);
                 }
             }
+        }
+
+        # Handle extraction while in REVISION state
+        if(interview_session.get_state() == SessionState.REVISION) {
+
+            prompt = self.generate_revision_extraction_prompt(interview_session);
+
+            question_responses = self.extract(
+                prompt=prompt, question_index=self.question_index, visitor=visitor, history=False
+            );
+
+            # if we have a revised version, transition to completed and prompt again
+            if question_responses {
+                # update any extracted responses
+                self.update_responses(question_responses, interview_session);
+                # now transition to completed to reconfirm
+                interview_session.set_state(SessionState.COMPLETED);
+            }
+
+        }
+
+        if(interview_session.get_state() == SessionState.COMPLETED) {
+            # if we are in this state, we prepare a summary and prompt the user accordingly for confirmation
+            visitor.interaction_node.add_directive(directive=self.get_confirmation_directive(interview_session));
+            return interview_session;
         }
 
         if(interview_session.get_state() == SessionState.REVISION) {
             # if we are in this state, the user has declined confirmation without suggesting changes
             # prompt the user to make revisions on their report
             visitor.interaction_node.add_directive(directive=self.revision_directive);
-        }
-
-        if(interview_session.get_state() == SessionState.COMPLETED) {
-            # if we are in this state, we prepare a summary and prompt the user accordingly for confirmation
-            visitor.interaction_node.add_directive(directive=self.get_confirmation_directive(interview_session));
         }
 
         return interview_session;
@@ -274,7 +310,7 @@ node InterviewInteractAction :InteractAction: {
             }
 
             # Compose a simple intent statement
-            intent = f"MESSAGE {description}";
+            intent = f"MESSAGE is {description}";
             if intent not in self.anchors {
                 self.anchors.append(intent);
             }
@@ -392,6 +428,11 @@ node InterviewInteractAction :InteractAction: {
     }
 
     can update_responses(responses:dict, interview_session:InterviewSession) {
+
+        if type(responses) is not dict {
+            return;
+        }
+
         for (field, response) in responses.items() {
             if field and response {
                 interview_session.set_response(field, response);
@@ -421,24 +462,68 @@ node InterviewInteractAction :InteractAction: {
         }
 
         entities = "\n".join(entities_list);
-        sample_json = '{{\n' + ',\n'.join(sample_json_lines) + '\n}}';
+        sample_json = '{\n' + ',\n'.join(sample_json_lines) + '\n}';
+        # prepate the prompt
+        prompt = self.extraction_prompt.format(entities=entities, sample_json=sample_json);
+        # escape the conflicting symbols
+        prompt = prompt.replace('{', '{{').replace('}','}}');
 
-        return self.extraction_prompt.format(entities=entities, sample_json=sample_json);
+        return prompt;
     }
 
-    can extract(question_index:list, visitor: interact_graph_walker, history:Union[bool,None] = None) -> dict {
+    can generate_revision_extraction_prompt(interview_session:InterviewSession) -> str {
+        # prepares the revision extraction prompt
+
+        entities_list = [];
+        sample_json_lines = [];
+
+        for (key, details) in self.question_index.items() {
+            constraints = details.get('constraints', {});
+
+            if not constraints {
+                continue;
+            }
+
+            desc = constraints.get('description', '');
+            other_constraints = {k: v for (k, v) in constraints.items() if k != 'description'};
+            constraint_strs = [f"{k}: {v}" for (k, v) in other_constraints.items()];
+            constraint_part = f" ({', '.join(constraint_strs)})" if constraint_strs else "";
+            entities_list.append(f"- {key}: {desc}{constraint_part}");
+            sample_json_lines.append(f"  '{key}': '<extracted value>'");
+        }
+
+        responses = (interview_session.export()).get('responses', {});
+        # Convert the responses dict to a markdown bulleted list
+        if responses and isinstance(responses, dict) and len(responses) > 0 {
+            summary_lines = [];
+            for (field, value) in responses.items() {
+                summary_lines.append(f"- **{field}**: {value}");
+            }
+            responses = "\n".join(summary_lines);
+        }
+
+        entities = "\n".join(entities_list);
+        sample_json = '{\n' + ',\n'.join(sample_json_lines) + '\n}';
+        # prepate the prompt
+        prompt = self.revision_extraction_prompt.format(entities=entities, responses=responses, sample_json=sample_json);
+        # escape the conflicting symbols
+        prompt = prompt.replace('{', '{{').replace('}','}}');
+
+        return prompt;
+    }
+
+    can extract(prompt:str, question_index:list, visitor: interact_graph_walker, history:Union[bool,None] = None) -> Union[dict, None] {
         # performs entity extraction based on question_index items
-        prompt = self.generate_extraction_prompt(question_index);
-        return self.llm(prompt, visitor, history, json_only=True);
+        return self.call_llm(prompt, visitor, history, json_only=True);
     }
 
-    can llm(prompt:str, visitor: interact_graph_walker, history:Union[bool,None] = None, json_only:bool = False) -> dict {
+    can call_llm(prompt:str, visitor: interact_graph_walker, history:Union[bool,None] = None, json_only:bool = False) -> Union[str, dict, None] {
         # performs function tool calling for extracting question responses based on question
 
         prompt_messages = [];
 
         if not prompt {
-            return {};
+            return None;
         }
 
         use_history = self.history;
@@ -490,7 +575,7 @@ node InterviewInteractAction :InteractAction: {
             }
         }
 
-        return {};
+        return None;
     }
 
 }
@@ -510,6 +595,7 @@ obj InterviewSession {
     has required_fields: list = [];
     has active_field: str = "";
     has responses: dict = {};
+    has data: dict = {};
 
     can get_state() -> SessionState {
         return self.state;
@@ -555,6 +641,14 @@ obj InterviewSession {
 
     can set_response(field: str, response: str) {
         self.responses[field] = response;
+    }
+
+    can get_data_item(label:str) -> any {
+        return self.data.get(label, None);
+    }
+
+    can set_data_item(label:str, value:any) {
+        self.data[label] = value;
     }
 
     can export() -> dict {
