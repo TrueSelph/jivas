@@ -6,8 +6,8 @@ walker update_frame :memory_walker: {
     # endpoint to update a frame label or user_name
 
     has session_id:str = "";
-    has label:Optional[str]="";
-    has user_name:Optional[str]="";
+    has label:str="";
+    has user_name:str="";
 
     obj __specs__ {
         # make this walker visible in API

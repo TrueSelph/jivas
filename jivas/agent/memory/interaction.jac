@@ -12,7 +12,7 @@ node Interaction :GraphNode: {
     has channel: str = "";
     has utterance: str = "";
     has tokens: int = 0;
-    has time_stamp: str = str( (datetime.now(timezone.utc)).isoformat());
+    has time_stamp: str = str((datetime.now(timezone.utc)).isoformat());
     has trail: list = [];
     has intents: list = []; # TODO: make this private; this holds the node names of actions which must be executed; capable of multiple intent executions...
     has functions: dict = {}; # holds the intended action as the key and classified tool calls as values
@@ -20,16 +20,15 @@ node Interaction :GraphNode: {
     has context_data: dict = {};
     has events: list = [];
     has response: dict = {};
-    has data:dict = {};
-    has closed:bool = False; # flag to determine whether interaction is complete / closed or not
-
+    has data: dict = {};
+    has closed: bool = False; # flag to determine whether interaction is complete / closed or not
     can postinit {
         super.postinit();
         # add of node attributes which are protected from update operation
         self.protected_attrs += ['agent_id'];
     }
 
-    can attach_interaction(interaction_node:Interaction) {
+    can attach_interaction(interaction_node: Interaction) {
         # attaches a new interaction node to this one
         self +:Advance:+> interaction_node;
         self <+:Retrace:+ interaction_node;
@@ -39,7 +38,11 @@ node Interaction :GraphNode: {
         return self.context_data.get('new_user', False);
     }
 
-    can set_message(message:InteractionMessage) {
+    can set_text_message(message: str) {
+        self.set_message(TextInteractionMessage(content=message));
+    }
+
+    can set_message(message: InteractionMessage) {
         # set the interaction response message object
         # loads an existing interaction response object or returns a fresh one
 
@@ -50,7 +53,7 @@ node Interaction :GraphNode: {
 
     can get_message() -> InteractionMessage {
         # get the interaction response message object
-        if(interaction_response := self.get_response()) {
+        if (interaction_response := self.get_response()) {
             return interaction_response.get_message();
         }
 
@@ -60,8 +63,7 @@ node Interaction :GraphNode: {
     can get_response() -> InteractionResponse {
         # loads an existing interaction response object or returns a fresh one
         interaction_response = None;
-
-        if(self.response) {
+        if (self.response) {
             interaction_response = InteractionResponse();
             interaction_response.load(self.response);
         }
@@ -71,25 +73,25 @@ node Interaction :GraphNode: {
 
     can has_response -> bool {
         # evaluates whether the interaction holds a valid response
-        if(self.get_message()) {
+        if (self.get_message()) {
             return True;
         }
 
         return False;
     }
 
-    can has_intent(intent:str) {
+    can has_intent(intent: str) {
         # checks if intent exists in interaction
         return (intent in self.intents);
     }
 
     can set_data_item(label: str, meta: dict, content: any) {
         # adds or updates a data node on the current interaction
-        if (data_obj := self.get_data_item(label) ) {
-            if(type(meta) == dict) {
+        if (data_obj := self.get_data_item(label)) {
+            if (type(meta) == dict) {
                 data_obj.meta = meta;
             }
-            if(content) {
+            if (content) {
                 data_obj.content = content;
             }
             self.data[label] = data_obj.export();
@@ -101,7 +103,7 @@ node Interaction :GraphNode: {
 
     can get_data_item(label: str) -> Data {
         # retrieves a data item of the current interaction
-        if(data_item := self.data.get(label)) {
+        if (data_item := self.data.get(label)) {
             data_obj = Data();
             data_obj.load(data_item);
             return data_obj;
@@ -115,7 +117,7 @@ node Interaction :GraphNode: {
         return self.data;
     }
 
-    can add_directive(directive:str) {
+    can add_directive(directive: str) {
         self.directives.append(directive);
     }
 
@@ -123,13 +125,13 @@ node Interaction :GraphNode: {
         return self.directives;
     }
 
-    can add_intent(intent:str) {
-        if(intent not in self.intents) {
+    can add_intent(intent: str) {
+        if (intent not in self.intents) {
             self.intents.append(intent);
         }
     }
 
-    can add_event(event:str) {
+    can add_event(event: str) {
         # adds a stated event to interaction
         self.events.append(event);
     }
@@ -138,11 +140,12 @@ node Interaction :GraphNode: {
         return self.events;
     }
 
-    can add_tokens(tokens:int) {
+    can add_tokens(tokens: int) {
         # update token tally
         self.tokens += tokens;
+
         # update token tally in response obj
-        if(response := self.get_response()) {
+        if (response := self.get_response()) {
             response.set_tokens(self.tokens);
             self.response = response.export();
         }
@@ -152,9 +155,9 @@ node Interaction :GraphNode: {
         return self.intents;
     }
 
-    can add_function(action_label:str, function:dict) {
+    can add_function(action_label: str, function: dict) {
 
-        if(self.functions.get(action_label, None)) {
+        if (self.functions.get(action_label, None)) {
             self.functions[action_label].append(function);
         } else {
             self.functions[action_label] = [function];
@@ -163,7 +166,7 @@ node Interaction :GraphNode: {
 
     }
 
-    can get_functions(action_label:str) -> list {
+    can get_functions(action_label: str) -> list {
         return self.functions.get(action_label, []);
     }
 

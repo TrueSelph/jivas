@@ -5,8 +5,8 @@ import:jac from jivas.agent.memory.memory { Memory }
 walker add_frame :memory_walker: {
     # endpoint to add a new frame to memory
 
-    has label:Optional[str]="";
-    has user_name:Optional[str]="";
+    has label:str="";
+    has user_name:str="";
     has session_id:Optional[str] = "";
     has force_session:Optional[bool] = True;
 
