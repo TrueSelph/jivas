@@ -1,5 +1,6 @@
 import:py logging;
 import:py traceback;
+import:py os;
 import:py from logging { Logger }
 import:py from jivas.agent.modules.agentlib.utils { Utils, jvdata_file_interface }
 import:jac from jivas.agent.core { graph_node, purge }
@@ -9,6 +10,8 @@ import:jac from jivas.agent.action.interact_action { InteractAction }
 import:jac from jivas.agent.action.actions { Actions }
 import:jac from jivas.agent.memory.memory { Memory }
 import:py from typing { Union }
+import:py from jvserve.lib.file_interface { file_interface }
+import:py from jac_cloud.core.architype { NodeAnchor }
 
 node Agent :GraphNode: {
     # represents an agent on the graph
@@ -391,6 +394,41 @@ node Agent :GraphNode: {
         return result;
     }
 
+    can get_file(path: str) -> bytes | None {
+    	return file_interface.get_file(f"{self.id}/{path}");
+    }
+
+    can save_file(path: str, content: bytes) -> bool {
+    	return file_interface.save_file(f"{self.id}/{path}", content);
+    }
+
+    can delete_file(path: str) -> bool {
+    	return file_interface.delete_file(f"{self.id}/{path}");
+    }
+
+    can get_file_url(path: str) -> str | None {
+    	return file_interface.get_file_url(f"{self.id}/{path}");
+    }
+
+    can get_short_file_url(path: str, with_filename: bool = False) -> str | None {
+    	collection = NodeAnchor.Collection.get_collection("url_proxies");
+
+     	if (url := file_interface.get_file_url(f"{self.id}/{path}")) {
+        	if (url_proxy := collection.insert_one({ "agent_id": self.id, "path": f"{self.id}/{path}" })) {
+                base_url = f"{os.environ.get('JIVAS_FILES_URL','http://localhost:9000/files').replace('files', 'f')}";
+
+                if (not with_filename) {
+                	return f"{base_url}/{url_proxy.inserted_id}";
+                 }
+
+                path_segments = path.split('/');
+                filename = path_segments[-1];
+                return f"{base_url}/{url_proxy.inserted_id}/{filename}";
+            }
+		}
+
+    	return None;
+    }
 }
 
 walker _healthcheck_actions {
