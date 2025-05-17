@@ -146,7 +146,6 @@ walker interact :interact_graph_walker: {
     }
 
     can on_exit with exit {
-        self.logger.warning("exiting interact action");
         # prepare and return response, then exit
         self.respond();
     }

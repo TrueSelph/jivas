@@ -106,10 +106,104 @@ node InterviewInteractAction :InteractAction: {
         self.exit_session(interview_session, visitor);
     }
 
-    # abstract ability meant to contain handling logic for based on the extracted interview data
+    # abstract ability meant to contain implemented handling logic based on interview state
     can process_response(visitor: interact_graph_walker) abs;
 
+    can init_session(visitor: interact_graph_walker) -> InterviewSession {
+        # performs extraction and updates the session responses
+        interview_session = self.get_session(visitor);
+
+        # Create new session if none exists
+        if not interview_session {
+            interview_session = self.create_session(visitor);
+        }
+
+        # load any branch choice results for detection
+        branch_choice_response = self.llm(self.branch_choice_prompt, visitor, json_only=True);
+
+        if interview_session.get_state() in [SessionState.OPEN, SessionState.COMPLETED] {
+            # Check for abort response
+            if branch_choice_response.get('abort_response', False) {
+                interview_session.set_state(SessionState.ABORTED);
+                return interview_session;
+            }
+        }
+
+        # Check for decline-to-answer response
+        if branch_choice_response.get('decline_response', False) {
+
+            # get field status - required or not
+            if interview_session.on_required_field() {
+                # insist that user must answer
+                insist_directive = self.insist_response_directive.format(question=self.get_next_question(interview_session));
+                visitor.interaction_node.add_directive(directive=insist_directive);
+                return interview_session;
+
+            } else {
+                # apply 'n/a' to field response
+                field = interview_session.get_next_field();
+                question_response = {field : "n/a"};
+                self.update_responses(question_response, interview_session);
+
+                # if no more fields and we have an extraction, set to completed for confirmation
+                if not interview_session.get_next_field() {
+                    interview_session.set_state(SessionState.COMPLETED);
+                }
+            }
+        }
+
+        # Handle confirmation while in COMPLETED state
+        if interview_session.get_state() == SessionState.COMPLETED {
+
+            confirmed = branch_choice_response.get('confirm_response', None);
+
+            # handle auto-confirm when it's set
+            if confirmed is True or self.auto_confirm {
+                interview_session.set_state(SessionState.CONFIRMED);
+                return interview_session;
+            } elif confirmed is False {
+                interview_session.set_state(SessionState.REVISION);
+            }
+        }
+
+        # Handle extraction while in OPEN or REVISION states
+        if interview_session.get_state() in [SessionState.OPEN, SessionState.REVISION] {
+
+            question_functions = self.filter_question_index(interview_session);
+            question_responses = self.extract(question_functions, visitor);
+
+            # update any extracted responses
+            self.update_responses(question_responses, interview_session);
+
+            # if no more fields...
+            if not interview_session.get_next_field() {
+                # eval auto-confirm or modfications following revision
+                if self.auto_confirm {
+                    # set to confirmed to trigger auto-confirmation handling
+                    interview_session.set_state(SessionState.CONFIRMED);
+                } elif question_responses {
+                    # if the user has suggested changes while indicating a revision was necessary, set to completed
+                    interview_session.set_state(SessionState.COMPLETED);
+                }
+            }
+        }
+
+        if(interview_session.get_state() == SessionState.REVISION) {
+            # if we are in this state, the user has declined confirmation without suggesting changes
+            # prompt the user to make revisions on their report
+            visitor.interaction_node.add_directive(directive=self.revision_directive);
+        }
+
+        if(interview_session.get_state() == SessionState.COMPLETED) {
+            # if we are in this state, we prepare a summary and prompt the user accordingly for confirmation
+            visitor.interaction_node.add_directive(directive=self.get_confirmation_directive(interview_session));
+        }
+
+        return interview_session;
+    }
+
     can exit_session(interview_session: InterviewSession, visitor: interact_graph_walker) {
+        # contains all operations to clean up and update once process_response completes
 
         # ensure we update the session in frame before export
         self.update_session(interview_session, visitor);
@@ -117,9 +211,8 @@ node InterviewInteractAction :InteractAction: {
         if interview_session.get_state() in [SessionState.ABORTED, SessionState.CONFIRMED] {
             self.delete_session(visitor);
         }
-
         # resume on this action as we are in this mode
-        if interview_session.get_state() in [SessionState.OPEN, SessionState.COMPLETED, SessionState.READY, SessionState.REVISION] {
+        if interview_session.get_state() in [SessionState.OPEN, SessionState.COMPLETED, SessionState.REVISION] {
             visitor.set_resume_action(action_label="", action_node=self);
         }
 
@@ -164,6 +257,8 @@ node InterviewInteractAction :InteractAction: {
         }
         return True;
     }
+
+    # -- UTILITIES --
 
     can generate_intents() {
         # generates a list of formatted intents based on question index and sets them to self.intents
@@ -271,9 +366,7 @@ node InterviewInteractAction :InteractAction: {
             state = interview_session_data.get('state', 'OPEN');
             session_state = SessionState.OPEN;
             # interpret and assign SessionState
-            if (state == SessionState.READY.value) {
-                session_state = SessionState.READY;
-            } elif (state == SessionState.COMPLETED.value) {
+            if (state == SessionState.COMPLETED.value) {
                 session_state = SessionState.COMPLETED;
             } elif (state == SessionState.CONFIRMED.value) {
                 session_state = SessionState.CONFIRMED;
@@ -304,91 +397,6 @@ node InterviewInteractAction :InteractAction: {
                 interview_session.set_response(field, response);
             }
         }
-    }
-
-    can init_session(visitor: interact_graph_walker) -> InterviewSession {
-        # performs extraction and updates the session responses
-        interview_session = self.get_session(visitor);
-
-        # Create new session if none exists
-        if not interview_session {
-            interview_session = self.create_session(visitor);
-        }
-
-        # load any branch choice results for detection
-        branch_choice_response = self.llm(self.branch_choice_prompt, visitor, json_only=True);
-
-        if interview_session.get_state() in [SessionState.OPEN, SessionState.COMPLETED, SessionState.READY] {
-            # Check for abort response
-            if branch_choice_response.get('abort_response', False) {
-                interview_session.set_state(SessionState.ABORTED);
-                return interview_session;
-            }
-        }
-
-        # Check for decline-to-answer response
-        if branch_choice_response.get('decline_response', False) {
-
-            # get field status - required or not
-            if interview_session.on_required_field() {
-                # insist that user must answer
-                insist_directive = self.insist_response_directive.format(question=self.get_next_question(interview_session));
-                visitor.interaction_node.add_directive(directive=insist_directive);
-                return interview_session;
-
-            } else {
-                # apply 'n/a' to field response
-                field = interview_session.get_next_field();
-                question_response = {field : "n/a"};
-                self.update_responses(question_response, interview_session);
-
-                # if no more fields and we have an extraction, set to completed for confirmation
-                if not interview_session.get_next_field() {
-                    # new_state = SessionState.READY if interview_session.has_ignored_responses() else SessionState.COMPLETED;
-                    interview_session.set_state(SessionState.COMPLETED);
-                }
-            }
-        }
-
-        # Handle confirmation for COMPLETED or READY states
-        if interview_session.get_state() in [SessionState.COMPLETED, SessionState.READY, SessionState.REVISION] {
-
-            confirmed = branch_choice_response.get('confirm_response', None);
-
-            # handle auto-confirm when it's set
-            if confirmed is True or self.auto_confirm {
-                interview_session.set_state(SessionState.CONFIRMED);
-                return interview_session;
-            } elif confirmed is False {
-                interview_session.set_state(SessionState.REVISION);
-            }
-        }
-
-        # Process OPEN or REVISION states
-        if interview_session.get_state() in [SessionState.OPEN, SessionState.REVISION] {
-
-            question_functions = self.filter_question_index(interview_session);
-            question_responses = self.extract(question_functions, visitor);
-
-            self.update_responses(question_responses, interview_session);
-
-            # if no more fields and we have an extraction, set to completed for confirmation
-            if not interview_session.get_next_field() {
-                # eval auto-confirm or modfications following revision
-                if self.auto_confirm {
-                    interview_session.set_state(SessionState.CONFIRMED);
-                } elif question_responses {
-                    interview_session.set_state(SessionState.COMPLETED);
-                }
-            }
-        }
-
-        if(interview_session.get_state() == SessionState.COMPLETED) {
-            # if confirmation is active, we prepare a summary and prompt the user accordingly for confirmation
-            visitor.interaction_node.add_directive(directive=self.get_confirmation_directive(interview_session));
-        }
-
-        return interview_session;
     }
 
     can generate_extraction_prompt(question_index: dict) -> str {
@@ -490,7 +498,6 @@ node InterviewInteractAction :InteractAction: {
 @unique
 enum SessionState {
     OPEN = 'OPEN', # session is open for extractions -> collect responses
-    READY = 'READY', # all required responses have been collected, there are unrequired, ignored responses left; -> prompt to confirm
     COMPLETED = 'COMPLETED', # all responses have been collected -> prompt to confirm
     CONFIRMED = 'CONFIRMED', # user has confirmed all responses -> close the session
     REVISION = 'REVISION', # user has not confirmed responses -> prompt for review -> set to complete/ready

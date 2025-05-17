@@ -14,14 +14,26 @@ node ModelAction :Action: {
     has model_name: str = "gpt-4o";
     has model_temperature: float = 0.7;
     has model_max_tokens: int = 2048;
+
     # abstract invoke ability for the model meant to be overidden with specifics of model call
     can invoke(prompt_messages: list, prompt_variables: dict, kwargs: dict={}) -> ModelActionResult abs;
-    can call_model(prompt_messages: list, prompt_variables: dict, kwargs: dict={}, interaction_node: Optional[Interaction]=None, logging: bool=False, streaming: bool=False) -> Optional[ModelActionResult] {
+
+    can call_model(
+        prompt_messages: list,
+        prompt_variables: dict,
+        interaction_node: Optional[Interaction]=None,
+        logging: bool=False,
+        streaming: bool=False,
+        kwargs: dict={}
+    ) -> Optional[ModelActionResult] {
+
+        # add streaming flag in kwargs
+        kwargs.update({"streaming":streaming});
+
         if (model_action_result := self.invoke(
             prompt_messages,
             prompt_variables,
-            kwargs,
-            streaming
+            kwargs
         )) {
             if (interaction_node) {
                 # add exported model action result to context data
@@ -36,7 +48,6 @@ node ModelAction :Action: {
                 interaction_node.add_tokens(
                     model_action_result.get_tokens()
                 );
-
             }
             if (logging) {
                 self.logger.warning(model_action_result.get_result());
