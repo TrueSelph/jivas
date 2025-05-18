@@ -52,7 +52,7 @@ setup(
         "langchain-openai>=0.3.9",
         "setuptools>=75.8.1",
         "transformers>=4.49.0",
-        "spacy>=3.8.4",
+        "spacy>=3.8.3",
         "ftfy>=6.2.3",
     ],
     extras_require={
