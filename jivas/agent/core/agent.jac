@@ -2,7 +2,7 @@ import:py logging;
 import:py traceback;
 import:py os;
 import:py from logging { Logger }
-import:py from jivas.agent.modules.agentlib.utils { Utils, jvdata_file_interface }
+import:py from jivas.agent.modules.agentlib.utils { Utils }
 import:jac from jivas.agent.core { graph_node, purge }
 import:jac from graph_node { GraphNode }
 import:jac from jivas.agent.action.action { Action }
@@ -240,7 +240,7 @@ node Agent :GraphNode: {
         agent_data = self.get_descriptor(clean=False);
         # Save agent state to file in .jvdata
         if (yaml_output := Utils.yaml_dumps(agent_data)) {
-            jvdata_file_interface.save_file(self.descriptor, yaml_output.encode("utf-8"));
+            self.save_file(".jvdata/" + self.descriptor, yaml_output.encode("utf-8"));
         } else {
             self.logger.error("Unable to dump agent descriptor to file");
         }

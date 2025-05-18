@@ -7,7 +7,6 @@ import:py from logging { Logger }
 import:jac from agents { Agents }
 import:jac from agent_graph_walker { agent_graph_walker }
 import:jac from import_agent {import_agent}
-import:py from jivas.agent.modules.agentlib.utils { Utils, jvdata_file_interface }
 
 walker init_agents :agent_graph_walker: {
     # initializes agents on the graph using the existing file-based descriptor
@@ -33,7 +32,7 @@ walker init_agents :agent_graph_walker: {
 
                 try {
                     self.logger.info(f'initializing agent {agent_node.name}');
-                    file_bytes = jvdata_file_interface.get_file(agent_node.descriptor);
+                    file_bytes = agent_node.get_file(agent_node.descriptor);
 
                     if (not file_bytes) {
                         self.logger.error(f"agent descriptor not found: {agent_node.descriptor}");

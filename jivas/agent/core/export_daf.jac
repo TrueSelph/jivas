@@ -4,7 +4,7 @@ import:jac from agent_graph_walker { agent_graph_walker }
 import:jac from jivas.agent.core.agent { Agent }
 import:jac from jivas.agent.action.action { Action }
 import:jac from jivas.agent.action.actions { Actions }
-import:py from jivas.agent.modules.agentlib.utils { Utils, public_file_interface }
+import:py from jivas.agent.modules.agentlib.utils { Utils }
 
 
 walker export_daf :agent_graph_walker: {
@@ -79,10 +79,10 @@ walker export_daf :agent_graph_walker: {
         }
         daf_bytes = buffer.getvalue();
         daf_output_filename = f"dafs/{daf_name.replace('/','_')}.daf.zip";
-        if( public_file_interface.save_file(daf_output_filename, daf_bytes) ) {
+        if( here.save_file(daf_output_filename, daf_bytes) ) {
             Jac.get_context().status = 200;
             # return the fileserved URL
-            report public_file_interface.get_file_url(daf_output_filename);
+            report here.get_file_url(daf_output_filename);
         } else {
             Jac.get_context().status = 503;
             error_message = "There was a problem generating the DAF";

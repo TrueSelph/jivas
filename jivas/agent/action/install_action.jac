@@ -3,7 +3,6 @@ import:py yaml;
 import:py logging;
 import:py traceback;
 import:py from logging { Logger }
-import:py from jivas.agent.modules.agentlib.utils { Utils, jvdata_file_interface }
 import:jac from jivas.agent.core.agent { Agent }
 import:jac from jivas.agent.core.agent_graph_walker {agent_graph_walker}
 
