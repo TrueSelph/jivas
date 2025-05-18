@@ -6,7 +6,6 @@ import:py traceback;
 import:py from typing { Union }
 import:py from logging { Logger }
 import:jac from action { Action }
-import:py from jvserve.lib.file_interface { file_interface }
 
 node TTSAction :Action: {
     # The Text-to-speech base action for all TTS actions.
@@ -53,11 +52,11 @@ node TTSAction :Action: {
             output_file_path = f"{os.environ.get('JIVAS_FILES_ROOT_PATH','.files')}/tts/{output_file_name}";
 
             # output the file
-            file_interface.save_file("tts/" + output_file_name, audio);
+            self.get_agent().save_file("tts/" + output_file_name, audio);
 
             if(as_url) {
                 # return f"{os.environ.get('JIVAS_FILES_URL','http://localhost:9000/files')}/tts/{output_file_name}";
-                return file_interface.get_file_url("tts/" + output_file_name);
+                return self.get_agent().get_file_url("tts/" + output_file_name);
             }
 
             return os.path.abspath(output_file_path);

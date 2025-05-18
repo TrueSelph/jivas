@@ -33,8 +33,6 @@ logger = logging.getLogger(__name__)
 jvdata_file_interface = (
     get_file_interface("") if FILE_INTERFACE == "local" else file_interface
 )
-# for serving publically accessible files
-public_file_interface = file_interface
 
 
 class LongStringDumper(yaml.SafeDumper):

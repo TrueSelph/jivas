@@ -40,7 +40,7 @@ setup(
     python_requires=">=3.12.0",
     install_requires=[
         "jvcli>=2.0.26",
-        "jvserve>=2.0.10",
+        "jvserve>=2.0.11",
         "pytz>=2024.2",
         "types-pytz>=2024.2.0.20241003",
         "schedule>=1.2.2",
@@ -52,7 +52,6 @@ setup(
         "langchain-openai>=0.3.9",
         "setuptools>=75.8.1",
         "transformers>=4.49.0",
-        "spacy>=3.8.3",
         "ftfy>=6.2.3",
     ],
     extras_require={

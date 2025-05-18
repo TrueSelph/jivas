@@ -33,7 +33,8 @@ walker init_agents :agent_graph_walker: {
 
                 try {
                     self.logger.info(f'initializing agent {agent_node.name}');
-                    file_bytes = jvdata_file_interface.get_file(agent_node.descriptor);
+                    # TODO: remove the legacy jvdata_file_interface once all instances are updated
+                    file_bytes = agent_node.get_file(agent_node.descriptor) or jvdata_file_interface.get_file(agent_node.descriptor);
 
                     if (not file_bytes) {
                         self.logger.error(f"agent descriptor not found: {agent_node.descriptor}");
