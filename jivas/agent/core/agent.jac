@@ -240,7 +240,7 @@ node Agent :GraphNode: {
         agent_data = self.get_descriptor(clean=False);
         # Save agent state to file in .jvdata
         if (yaml_output := Utils.yaml_dumps(agent_data)) {
-            self.save_file(".jvdata/" + self.descriptor, yaml_output.encode("utf-8"));
+            self.save_file(self.descriptor, yaml_output.encode("utf-8"));
         } else {
             self.logger.error("Unable to dump agent descriptor to file");
         }
