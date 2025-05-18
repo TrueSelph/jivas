@@ -1,3 +1,4 @@
+import:py from datetime { datetime, timezone }
 import:py from typing { Any, Optional }
 import:py from uuid { uuid4 }
 import:py from jivas.agent.modules.agentlib.utils { Utils }
@@ -13,7 +14,10 @@ node Frame :GraphNode: {
     # represents the root node of a collection of interactions beloning to a single user (session)
     has agent_id: str = "";
     has session_id: str = str(uuid4());
+    has label: str = "";
     has user_name: str = "";
+    has created_on:str = str((datetime.now(timezone.utc)).isoformat());
+    has last_interacted_on:str = str((datetime.now(timezone.utc)).isoformat());
     has variables: dict = {};
 
     can postinit {
@@ -81,6 +85,10 @@ node Frame :GraphNode: {
         return action_node;
     }
 
+    can set_label(label:str) {
+        self.label = label;
+    }
+
     can add_interaction(utterance:str, channel:str='default') -> Interaction {
         # adds new prompted interaction to the end of the frame and sets the channel
 
@@ -145,6 +153,9 @@ node Frame :GraphNode: {
                 last_interaction_node.attach_interaction(interaction_node);
             }
         }
+
+        # set last updated on timestamp
+        self.last_interacted_on = str((datetime.now(timezone.utc)).isoformat());
 
         return interaction_node;
     }

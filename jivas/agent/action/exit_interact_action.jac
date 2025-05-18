@@ -10,6 +10,11 @@ node ExitInteractAction :InteractAction: {
     has weight:int = 10000; # should always be last
 
     can touch(visitor: interact_graph_walker) -> bool {
-        return True; # authorize the interact to run
+        return True; # authorize the interact to run for tracking in trail
+    }
+
+    can execute(visitor: interact_graph_walker) -> dict {
+        # null implementation for execution
+        return {};
     }
 }

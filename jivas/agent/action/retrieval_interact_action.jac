@@ -106,7 +106,7 @@ Ensure that the final output is either the refined query or the original message
         }
     }
 
-    can execute(visitor: interact_graph_walker) -> dict {
+    can execute(visitor: interact_graph_walker) {
         # implementation of execute for retrieval interact
 
         # we safe check the references configuration; if references is true, then metadata is also true
@@ -163,7 +163,6 @@ Ensure that the final output is either the refined query or the original message
             }
         }
 
-        return visitor.export();
     }
 
     can prepare_query(visitor: interact_graph_walker) -> str {

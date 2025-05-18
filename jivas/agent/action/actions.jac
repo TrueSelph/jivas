@@ -106,7 +106,7 @@ node Actions :GraphNode: {
                     # load the action info content
                     _info = yaml.safe_load(file);
                     # grab info package version
-                    package_version = _info.get('package', {}).get('version', '>=0.0.1');
+                    package_version = _info.get('package', {}).get('version', '~0.0.1');
 
                     # validate the version
                     if is_version_compatible(package_version, version) { # failing on 0.0.5 == ^0.0.1
@@ -339,7 +339,7 @@ node Actions :GraphNode: {
 
             namespace_package_name = action_data.get('action', None);
             is_not_indexed = (namespace_package_name not in action_index.keys());
-            package_version = action_data.get('context', {}).get('version', '>=0.0.1');
+            package_version = action_data.get('context', {}).get('version', '~0.0.1');
 
             if ( is_not_indexed and namespace_package_name) {
 
@@ -534,7 +534,7 @@ node Actions :GraphNode: {
         # returns empty dict if loading goes wrong, otherwise returns loaded, refreshed action data
 
         namespace_package_name = indexed_action_data.get('context', {}).get('_package', {}).get('name');
-        package_version = indexed_action_data.get('context', {}).get('version', '>=0.0.1');
+        package_version = indexed_action_data.get('context', {}).get('version', '~0.0.1');
         required_jivas_version = indexed_action_data.get('context', {}).get('_package', {}).get('dependencies', {}).get('jivas', None);
         package_path = indexed_action_data.get('context', {}).get('_package', {}).get('config', {}).get('path', None);
         jivas_version = Utils.get_jivas_version();
