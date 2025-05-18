@@ -1,5 +1,6 @@
 import:py logging;
 import:py traceback;
+import:py from typing { Optional }
 import:py from logging { Logger }
 import:jac from jivas.agent.action.action { Action }
 import:py from jivas.agent.modules.agentlib.utils { Utils }
@@ -16,7 +17,7 @@ node ModelAction :Action: {
     has model_max_tokens: int = 2048;
 
     # abstract invoke ability for the model meant to be overidden with specifics of model call
-    can invoke(prompt_messages: list, prompt_variables: dict, kwargs: dict={}) -> ModelActionResult abs;
+    can invoke(prompt_messages: list, prompt_variables: dict, kwargs: dict={}) -> Optional[ModelActionResult] abs;
 
     can call_model(
         prompt_messages: list,
@@ -40,7 +41,6 @@ node ModelAction :Action: {
                 if ('ModelActionResult' not in interaction_node.context_data) {
                     interaction_node.context_data['ModelActionResult'] = [];
                 }
-
                 interaction_node.context_data['ModelActionResult'].append(
                     model_action_result.export()
                 );
@@ -156,6 +156,10 @@ obj ModelActionResult {
 
     can get_meta() {
         return self.meta;
+    }
+
+    can get_generator() {
+        return self.generator;
     }
 
     can export(ignore_keys: list=['__jac__']) {

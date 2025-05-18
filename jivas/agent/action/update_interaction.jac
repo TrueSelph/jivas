@@ -20,10 +20,9 @@ walker update_interaction :graph_walker: {
     }
 
     can on_interaction with Interaction entry {
-    	self.logger.error(f'update interaction', self.interaction_data);
-    	self.logger.warning(self.interaction_data);
         if (not self.interaction_data) {
     		self.logger.error("no interaction data");
+            return;
         }
         here.update(data = self.interaction_data);
         here.close();
