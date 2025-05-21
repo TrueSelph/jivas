@@ -52,6 +52,11 @@ fi
 if [ "$JIVAS_ENVIRONMENT" == "development" ] && [ "$JIVAS_FILEINTERFACE" == "local" ]; then
     echo "Starting file server..."
     jac jvfileserve $JIVAS_FILES_ROOT_PATH &
+elif [ "$JIVAS_ENVIRONMENT" == "production" ] && [ "$JIVAS_FILEINTERFACE" == "s3" ]; then
+    echo "Starting proxy server..."
+    jac jvproxyserve &
+else
+    echo "File server not started. JIVAS_ENVIRONMENT: $JIVAS_ENVIRONMENT, JIVAS_FILEINTERFACE: $JIVAS_FILEINTERFACE"
 fi
 
 # Rest of script remains unchanged
