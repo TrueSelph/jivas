@@ -367,6 +367,10 @@ walker _prune_interactions {
         # if we're here, we'need to connect the advance edge to the new top of the interaction chain
         self.frame_node = here;
 
+        if (self.frame_size <= 0)  {
+        	disengage;
+        }
+
         if (self.interaction_head) {
             here +:Advance:+> self.interaction_head;
         } else {
