@@ -49,14 +49,14 @@ if [ ! -d "$JIVAS_FILES_ROOT_PATH" ]; then
 fi
 
 # Launch file server if in development mode and JIVAS_FILEINTERFACE is set to local
-if [ "$JIVAS_ENVIRONMENT" == "development" ] && [ "$JIVAS_FILEINTERFACE" == "local" ]; then
+if [ "$JIVAS_ENVIRONMENT" == "development" ] && [ "$JIVAS_FILE_INTERFACE" == "local" ]; then
     echo "Starting file server..."
     jac jvfileserve $JIVAS_FILES_ROOT_PATH &
-elif [ "$JIVAS_ENVIRONMENT" == "production" ] && [ "$JIVAS_FILEINTERFACE" == "s3" ]; then
+elif [ "$JIVAS_ENVIRONMENT" == "production" ] && [ "$JIVAS_FILE_INTERFACE" == "s3" ]; then
     echo "Starting proxy server..."
     jac jvproxyserve &
 else
-    echo "File server not started. JIVAS_ENVIRONMENT: $JIVAS_ENVIRONMENT, JIVAS_FILEINTERFACE: $JIVAS_FILEINTERFACE"
+    echo "File server not started. JIVAS_ENVIRONMENT: $JIVAS_ENVIRONMENT, JIVAS_FILE_INTERFACE: $JIVAS_FILE_INTERFACE"
 fi
 
 # Rest of script remains unchanged
