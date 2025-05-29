@@ -1,8 +1,8 @@
 import:py from typing { Optional }
-import:jac from jivas.agent.memory.memory_walker { memory_walker }
+import:jac from jivas.agent.memory.memory_frame_walker { memory_frame_walker }
 import:jac from jivas.agent.memory.memory { Memory }
 
-walker update_frame :memory_walker: {
+walker update_frame :memory_frame_walker: {
     # endpoint to update a frame label or user_name
 
     has session_id:str = "";

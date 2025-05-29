@@ -158,7 +158,7 @@ node Actions :GraphNode: {
         module_root = action_data.get('context', {}).get('_package', {}).get('config', {}).get('module_root', None);
 
         if(module_root) {
-            jac_import(f"{module_root}.lib", base_path="./");
+            jac_import(f"{module_root}.lib", base_path="./", reload_module = True);
             return True;
         }
 

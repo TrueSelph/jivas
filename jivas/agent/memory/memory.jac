@@ -5,6 +5,7 @@ import:py from logging { Logger }
 import:py from jivas.agent.modules.agentlib.utils { Utils }
 import:jac from jivas.agent.core.graph_node { GraphNode }
 import:jac from frame { Frame }
+import:jac from collection { Collection }
 import:jac from retrace { Retrace }
 import:jac from tail { Tail }
 import:jac from interaction { Interaction }
@@ -49,6 +50,20 @@ node Memory :GraphNode: {
         frames = [-->](`?Frame);
         # sort frames by 'created_on' ISO datetime string
         return sorted(frames, key = with frame:Frame can datetime.fromisoformat(frame.created_on) if hasattr(frame, 'created_on') and frame.created_on else "", reverse=True);
+    }
+
+    can get_collection(collection_name:str) -> Collection {
+        # attempt to retrieve an existing collection or spawn then traverse to a new one if it doesnt exist
+
+        collection_node = Utils.node_obj( [-->](`?Collection)(?name == collection_name) );
+
+        if not collection_node {
+            collection_node = Collection(name=collection_name);
+            # attach new collection to memory graph
+            self ++> collection_node;
+        }
+
+        return collection_node;
     }
 
     can import_memory(data:dict, overwrite:bool=True) -> bool {
@@ -136,8 +151,18 @@ node Memory :GraphNode: {
     }
 
     can purge(session_id:str=None) {
+        # backwards compat for older actions
+        return self.purge_frame_memory(session_id);
+    }
+
+    can purge_frame_memory(session_id:str=None) {
         # removes all frames and interactions (or by session_id)
-        return (self spawn _purge(session_id)).removed;
+        return (self spawn _purge_frames(session_id=session_id)).removed;
+    }
+
+    can purge_collection_memory(collection_name:str=None) {
+        # removes all collections and related child nodes (or by collection_name)
+        return (self spawn _purge_collections(collection_name=collection_name)).removed;
     }
 
     can refresh(session_id:str) {
@@ -155,7 +180,7 @@ node Memory :GraphNode: {
     }
 }
 
-walker _purge {
+walker _purge_frames {
     # walker which carries out the traversal and purging of frames and related interactions
 
     has session_id:str = "";
@@ -183,6 +208,39 @@ walker _purge {
 
     can on_interaction with Interaction entry {
         visit [-:Retrace:->];
+        self.removed.append(here);
+        Jac.destroy(here);
+    }
+}
+
+walker _purge_collections {
+    # walker which carries out the traversal and purging of collections and any related child nodes
+
+    has collection_name:str = "";
+    has removed:list = [];
+
+    obj __specs__ {
+        # make this a private walker
+        static has private: bool = True;
+    }
+
+    can on_memory with Memory entry {
+        if(self.collection_name) {
+            visit [-->](`?Collection)(?name == self.collection_name);
+        } else {
+            visit [-->](`?Collection);
+        }
+    }
+
+    can on_collection with Collection entry {
+        visit [-->] else {
+            self.removed.append(here);
+            Jac.destroy(here);
+        }
+    }
+
+    can on_collection_node with Node entry {
+        visit [-->];
         self.removed.append(here);
         Jac.destroy(here);
     }
