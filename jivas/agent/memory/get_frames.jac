@@ -1,7 +1,7 @@
-import:jac from jivas.agent.memory.memory_walker { memory_walker }
+import:jac from jivas.agent.memory.memory_frame_walker { memory_frame_walker }
 import:jac from jivas.agent.memory.memory { Memory }
 
-walker get_frames :memory_walker: {
+walker get_frames :memory_frame_walker: {
     # endpoint to retrieve a list of frames with optional session_id filter
 
     has session_id:str = "";

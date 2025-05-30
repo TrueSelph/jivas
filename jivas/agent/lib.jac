@@ -20,7 +20,6 @@ import:jac from jivas.agent.action {
     update_action,
     install_action,
     uninstall_action,
-    update_interaction,
     invoke_stt_action
 }
 
@@ -29,7 +28,8 @@ import:jac from jivas.agent.memory {
     get_frames,
     update_frame,
     delete_frame,
-    get_interactions
+    get_interactions,
+    update_interaction
 }
 
 import:jac from jivas.agent.analytics {

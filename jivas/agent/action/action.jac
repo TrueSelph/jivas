@@ -2,16 +2,17 @@ import:py logging;
 import:py traceback;
 import:py from logging { Logger }
 import:jac from jivas.agent.core.graph_node { GraphNode }
+import:jac from jivas.agent.memory.collection { Collection }
 
 node Action :GraphNode: {
     # represents an execution on the agent action graph
 
+    has agent_id:str = "";
     has version: str = "";
     has label: str = "";
     has description: str = "basic agent action";
     has enabled: bool = True;
     has _package: dict = {};
-    has agent_id:str = "";
     # set up logger
     static has logger:Logger = logging.getLogger(__name__);
     # [Bug] Do not do `can init` this without setting the has vars
@@ -126,5 +127,15 @@ node Action :GraphNode: {
 
     can get_namespace_package_name() {
         return self._package.get('name', None);
+    }
+
+    can get_collection() -> Collection {
+        # returns a collection node reference to be used as the action's graph-based data store
+        return self.get_agent().get_memory().get_collection(self.label);
+    }
+
+    can remove_collection() -> list {
+        # removes a collection node and its contents used as the action's graph-based data store
+        return self.get_agent().get_memory().purge_collection_memory(self.label);
     }
 }

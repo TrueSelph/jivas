@@ -125,8 +125,18 @@ node Agent :GraphNode: {
         agent_node = super.update(data=data);
 
         # now handle actions if present and with_actions flag is set...
-        if (with_actions
-            and (len(data.get('actions', [])) > 0)) {
+        if (with_actions) {
+
+            actions = data.get('actions');
+
+            # ensure we validate actions before proceeding
+            if not isinstance(actions, list) {
+                return agent_node;
+            }
+
+            if (len(actions) == 0) {
+                return agent_node;
+            }
 
             # use supplied jpr_api_key if provided, fall back on agent's jpr key
             if(not jpr_api_key) {

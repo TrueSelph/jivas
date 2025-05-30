@@ -62,7 +62,7 @@ node InterviewInteractAction :InteractAction: {
         {sample_json}
         """;
     has branch_choice_prompt:str = """
-        Analyze the conversation history above. Detect ONLY explicit signals for confirmation (yes/affirmative),
+        Analyze **ONLY the latest user message** the conversation history above. Detect ONLY explicit signals for confirmation (yes/affirmative),
         conversation termination (abort/stop), decline-to-answer (no answer/can't respond).
         Follow these rules:
 
@@ -641,6 +641,10 @@ obj InterviewSession {
 
     can set_response(field: str, response: str) {
         self.responses[field] = response;
+    }
+
+    can del_response(field: str) {
+        del self.responses[field];
     }
 
     can get_data_item(label:str) -> any {
