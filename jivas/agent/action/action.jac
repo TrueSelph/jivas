@@ -138,4 +138,29 @@ node Action :GraphNode: {
         # removes a collection node and its contents used as the action's graph-based data store
         return self.get_agent().get_memory().purge_collection_memory(self.label);
     }
+
+    can get_file(path: str) -> bytes | None {
+        # retrieves a file associated with this action by path
+        return self.get_agent().get_file(f"{self.get_type()}/{path}");
+    }
+
+    can save_file(path: str, content: bytes) -> bool {
+        # saves a file associated with this action at the given path
+        return self.get_agent().save_file(f"{self.get_type()}/{path}", content);
+    }
+
+    can delete_file(path: str) -> bool {
+        # deletes a file associated with this action by path
+        return self.get_agent().delete_file(f"{self.get_type()}/{path}");
+    }
+
+    can get_file_url(path: str) -> str | None {
+        # retrieves a URL to access a file associated with this action
+        return self.get_agent().get_file_url(f"{self.get_type()}/{path}");
+    }
+
+    can get_short_file_url(path: str, with_filename: bool = False) -> str | None {
+        # retrieves a shortened URL to access a file, optionally including the filename
+        return self.get_agent().get_short_file_url(f"{self.get_type()}/{path}", with_filename);
+    }
 }
