@@ -11,6 +11,7 @@ import subprocess
 import unicodedata
 from collections import defaultdict, deque
 from datetime import datetime
+from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
@@ -348,36 +349,62 @@ class Utils:
 
     @staticmethod
     def export_to_dict(data: object | dict, ignore_keys: list | None = None) -> dict:
-        """Export an object to a dictionary, ignoring specified keys."""
+        """Export an object to a dictionary, ignoring specified keys and handling cycles.
+
+        Args:
+            data: The object or dictionary to serialize.
+            ignore_keys: Keys to exclude from serialization (default: ["__jac__"]).
+
+        Returns:
+            A dictionary representation of the input.
+        """
         if ignore_keys is None:
             ignore_keys = ["__jac__"]
 
-        def stringify_value(value: object) -> object:
-            # Recursive handling of dictionaries and lists
-            if isinstance(value, dict):
-                return {
-                    k: stringify_value(v)
-                    for k, v in value.items()
-                    if k not in ignore_keys
-                }
-            elif isinstance(value, list):
-                return [stringify_value(item) for item in value]
-            elif isinstance(value, (str, int, float, bool, type(None))):
-                return value
-            else:
-                # Stringify any other complex objects
-                return str(value)
+        memo = set()  # Track object IDs for cycle detection
 
-        # Convert top-level object to dictionary if possible
-        if hasattr(data, "__dict__"):
-            data = data.__dict__
+        def _convert(obj: object) -> object:
+            # Handle cycles
+            obj_id = id(obj)
+            if obj_id in memo:
+                return "<cycle detected>"
+            memo.add(obj_id)
+            try:
+                # 1. Basic immutable types
+                if obj is None or isinstance(obj, (bool, int, float, str)):
+                    return obj
 
-        if isinstance(data, dict):
-            return {
-                k: stringify_value(v) for k, v in data.items() if k not in ignore_keys
-            }
-        else:
-            return {}
+                # 2. Handle enums by their value
+                if Enum is not None and isinstance(obj, Enum):
+                    return _convert(obj.value)  # Serialize enum value
+
+                # 3. Handle namedtuples
+                if hasattr(obj, "_asdict") and callable(obj._asdict):
+                    return _convert(obj._asdict())
+
+                # 4. Dictionaries: apply ignore_keys and recurse
+                if isinstance(obj, dict):
+                    return {
+                        k: _convert(v) for k, v in obj.items() if k not in ignore_keys
+                    }
+
+                # 5. Lists, tuples, sets: convert to list and recurse
+                if isinstance(obj, (list, tuple, set, frozenset)):
+                    return [_convert(item) for item in obj]
+
+                # 6. Generic objects with __dict__
+                if hasattr(obj, "__dict__"):
+                    return _convert(obj.__dict__)
+
+                # 7. Fallback: string representation
+                return str(obj)
+
+            finally:
+                memo.discard(obj_id)  # Clean up after processing
+
+        result = _convert(data)
+        # Ensure top-level output is a dictionary
+        return result if isinstance(result, dict) else {"value": result}
 
     @staticmethod
     def safe_json_dump(data: dict) -> str | None:
