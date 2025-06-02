@@ -204,7 +204,7 @@ node Agent :GraphNode: {
             # get action data
             agent_actions = (self spawn _export_actions(action_ignore_keys, clean)).action_nodes;
             # add agent actions to agent data
-            agent_data = {**agent_data, **{"actions": agent_actions}};
+            agent_data = {**agent_data, **{"actions": agent_actions or []}};
 
             # return as YAML
             if (as_yaml) {
