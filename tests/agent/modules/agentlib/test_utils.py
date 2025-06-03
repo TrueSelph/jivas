@@ -603,7 +603,7 @@ class TestUtils:
         result = Utils.export_to_dict(non_dict_input)
 
         # Assert
-        assert result == {}
+        assert result == {"value": non_dict_input}
 
     def test_simple_types_conversion(self) -> None:
         """Test that dictionary with simple types is converted to JSON string correctly."""
