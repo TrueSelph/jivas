@@ -504,7 +504,7 @@ class Utils:
     def order_interact_actions(
         actions_data: List[Dict[str, Any]],
     ) -> Optional[List[Dict[str, Any]]]:
-        """Order interact actions based on dependencies, weights, and original order."""
+        """Order interact actions based on dependencies, weights, and original order, respecting pre-existing weight values in context."""
         if not actions_data:
             return None
 
@@ -512,6 +512,7 @@ class Utils:
         original_order: Dict[str, int] = {}
         interact_actions = []
         other_actions = []
+        fixed_action_names = set()  # Track names of actions with fixed weights
 
         # Separate interact actions and record original positions
         for idx, action in enumerate(actions_data):
@@ -525,6 +526,9 @@ class Utils:
                 name = action["context"]["_package"]["name"]
                 original_order[name] = idx
                 interact_actions.append(action)
+                # Check if weight exists in context
+                if "weight" in action.get("context", {}):
+                    fixed_action_names.add(name)
             else:
                 other_actions.append(action)
 
@@ -594,6 +598,26 @@ class Utils:
                     graph[other].append(name)
                     in_degree[name] += 1
 
+        # Add ordering constraints for fixed-weight actions
+        fixed_actions = [
+            action
+            for action in interact_actions
+            if action["context"]["_package"]["name"] in fixed_action_names
+        ]
+        # Sort by existing weight and original order
+        fixed_actions.sort(
+            key=lambda a: (
+                a["context"]["weight"],
+                original_order[a["context"]["_package"]["name"]],
+            )
+        )
+        # Add dependency edges between consecutive fixed actions
+        for i in range(len(fixed_actions) - 1):
+            a1_name = fixed_actions[i]["context"]["_package"]["name"]
+            a2_name = fixed_actions[i + 1]["context"]["_package"]["name"]
+            graph[a1_name].append(a2_name)
+            in_degree[a2_name] += 1
+
         # Kahn's algorithm with adjusted sorting key
         queue = deque(
             sorted(
@@ -631,10 +655,12 @@ class Utils:
         # Rebuild final ordered list
         ordered = [action_lookup[n] for n in sorted_names] + other_actions
 
-        # Update weight values based on final order
+        # Update weight values only for non-fixed actions
         for idx, action in enumerate(ordered):
             if action["context"]["_package"]["meta"]["type"] == "interact_action":
-                action["context"]["weight"] = idx
+                name = action["context"]["_package"]["name"]
+                if name not in fixed_action_names:
+                    action["context"]["weight"] = idx
 
         return ordered
 
