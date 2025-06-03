@@ -1,10 +1,10 @@
-import:jac from jivas.agent.memory.memory_walker { memory_walker }
+import:jac from jivas.agent.memory.memory_frame_walker { memory_frame_walker }
 import:jac from jivas.agent.memory.interaction { Interaction }
 import:jac from jivas.agent.memory.advance { Advance }
 import:jac from jivas.agent.memory.memory { Memory }
 import:jac from jivas.agent.memory.frame { Frame }
 
-walker get_interactions :memory_walker: {
+walker get_interactions :memory_frame_walker: {
     # endpoint to retrieve a list of interactions with optional session_id filter
 
     has session_id:str = "";

@@ -26,18 +26,15 @@ walker get_action :interact_graph_walker: {
     }
 
     can on_actions with Actions entry {
-
-        for action_node in here.get_all() {
-            if (self.action_id == action_node.id) {
-                visit action_node;
-            }
-        }
-
+       visit [-->](`?Action);
     }
 
     can on_action with Action entry {
-        # load the action data
-        report here.export();
+        if here.id == self.action_id {
+            # if the action is found, we can export its data
+            report here.export();
+            disengage;
+        }
     }
 
 }

@@ -586,11 +586,17 @@ walker interact :interact_graph_walker: {
     can respond() {
 
         if (self.agent_node and self.interaction_node) {
+
+            # close the interaction
+            self.interaction_node.close();
+
+
             # init var
             interaction_data = {};
 
             # lets return the generated response, if we have one...
             has_response = self.interaction_node.has_response();
+
             if (has_response) {
 
                 try  {
@@ -629,13 +635,9 @@ walker interact :interact_graph_walker: {
             }
 
             # activate pruning protocol to shed old interactions beyond frame_size limit from this interaction frame
-
             self.frame_node.prune_interactions(
                 frame_size=self.agent_node.frame_size
             );
-
-            # close the interaction
-            self.interaction_node.close();
 
         } else {
             self.message = SilentInteractionMessage();

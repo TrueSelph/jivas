@@ -125,8 +125,18 @@ node Agent :GraphNode: {
         agent_node = super.update(data=data);
 
         # now handle actions if present and with_actions flag is set...
-        if (with_actions
-            and (len(data.get('actions', [])) > 0)) {
+        if (with_actions) {
+
+            actions = data.get('actions');
+
+            # ensure we validate actions before proceeding
+            if not isinstance(actions, list) {
+                return agent_node;
+            }
+
+            if (len(actions) == 0) {
+                return agent_node;
+            }
 
             # use supplied jpr_api_key if provided, fall back on agent's jpr key
             if(not jpr_api_key) {
@@ -194,7 +204,7 @@ node Agent :GraphNode: {
             # get action data
             agent_actions = (self spawn _export_actions(action_ignore_keys, clean)).action_nodes;
             # add agent actions to agent data
-            agent_data = {**agent_data, **{"actions": agent_actions}};
+            agent_data = {**agent_data, **{"actions": agent_actions or []}};
 
             # return as YAML
             if (as_yaml) {
@@ -395,39 +405,44 @@ node Agent :GraphNode: {
     }
 
     can get_file(path: str) -> bytes | None {
-    	return file_interface.get_file(f"{self.id}/{path}");
+        # Retrieves a file for this agent by path.
+        return file_interface.get_file(f"{self.id}/{path}");
     }
 
     can save_file(path: str, content: bytes) -> bool {
-    	return file_interface.save_file(f"{self.id}/{path}", content);
+        # Saves a file for this agent at the given path.
+        return file_interface.save_file(f"{self.id}/{path}", content);
     }
 
     can delete_file(path: str) -> bool {
-    	return file_interface.delete_file(f"{self.id}/{path}");
+        # Deletes a file for this agent at the given path.
+        return file_interface.delete_file(f"{self.id}/{path}");
     }
 
     can get_file_url(path: str) -> str | None {
-    	return file_interface.get_file_url(f"{self.id}/{path}");
+        # Gets the direct URL for a file belonging to this agent.
+        return file_interface.get_file_url(f"{self.id}/{path}");
     }
 
     can get_short_file_url(path: str, with_filename: bool = False) -> str | None {
-    	collection = NodeAnchor.Collection.get_collection("url_proxies");
+        # Gets a short/proxied URL for a file, optionally including the filename.
+        collection = NodeAnchor.Collection.get_collection("url_proxies");
 
-     	if (url := file_interface.get_file_url(f"{self.id}/{path}")) {
-        	if (url_proxy := collection.insert_one({ "agent_id": self.id, "path": f"{self.id}/{path}" })) {
+        if (url := file_interface.get_file_url(f"{self.id}/{path}")) {
+            if (url_proxy := collection.insert_one({ "agent_id": self.id, "path": f"{self.id}/{path}" })) {
                 base_url = f"{os.environ.get('JIVAS_FILES_URL','http://localhost:9000')}/f";
 
                 if (not with_filename) {
-                	return f"{base_url}/{url_proxy.inserted_id}";
-                 }
+                    return f"{base_url}/{url_proxy.inserted_id}";
+                }
 
                 path_segments = path.split('/');
                 filename = path_segments[-1];
                 return f"{base_url}/{url_proxy.inserted_id}/{filename}";
             }
-		}
+        }
 
-    	return None;
+        return None;
     }
 }
 

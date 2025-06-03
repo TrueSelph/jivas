@@ -158,7 +158,7 @@ node Actions :GraphNode: {
         module_root = action_data.get('context', {}).get('_package', {}).get('config', {}).get('module_root', None);
 
         if(module_root) {
-            jac_import(f"{module_root}.lib", base_path="./");
+            jac_import(f"{module_root}.lib", base_path="./", reload_module = True);
             return True;
         }
 
@@ -200,17 +200,27 @@ node Actions :GraphNode: {
                 return None;
             }
 
-            # register action
-            # TODO: add a check here before node register in cases where this is an init
-            # and the node architype props changed compared to saved descriptor
+            # spawn the action node without any prop values, then do a update - it's safer this way
             action_node = AgentInterface.spawn_node(
                 node_name=architype,
-                attributes=action_data.get('context', {}),
+                attributes={},
                 module_name=module
             );
 
             # at this point all architypes related to this action are registered, let's map
             if (action_node) {
+
+                # update the action node with the action data
+                attributes = action_data.get('context', {});
+                for attr in attributes.keys() {
+                    if (hasattr(action_node, attr)) {
+                        setattr(action_node, attr, attributes[attr]);
+                    } else {
+                        # we place all non attributes in _context for integration later
+                        action_node._context[attr] = attributes[attr];
+                    }
+                }
+
                 # get action parent node
                 if (not parent) {
                     action_parent_node = self;
