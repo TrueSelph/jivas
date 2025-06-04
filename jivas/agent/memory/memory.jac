@@ -160,7 +160,7 @@ node Memory :GraphNode: {
         return (self spawn _purge_frames(session_id=session_id)).removed;
     }
 
-    can purge_collection_memory(collection_name:str=None) {
+    can purge_collection_memory(collection_name:str=None) -> list {
         # removes all collections and related child nodes (or by collection_name)
         return (self spawn _purge_collections(collection_name=collection_name)).removed;
     }
@@ -226,24 +226,18 @@ walker _purge_collections {
 
     can on_memory with Memory entry {
         if(self.collection_name) {
-            visit [-->](`?Collection)(?name == self.collection_name);
+            visit [-->](`?Collection)(?name == self.collection_name) else {
+                disengage;
+            }
         } else {
             visit [-->](`?Collection);
         }
     }
 
     can on_collection with Collection entry {
-        visit [-->] else {
-            self.removed.append(here);
-            Jac.destroy(here);
-        }
+        self.removed = here.delete();
     }
 
-    can on_collection_node with Node entry {
-        visit [-->];
-        self.removed.append(here);
-        Jac.destroy(here);
-    }
 }
 
 walker _export_memory {
