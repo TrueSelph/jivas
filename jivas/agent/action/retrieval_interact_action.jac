@@ -43,12 +43,13 @@ node RetrievalInteractAction :InteractAction: {
         - Maintain original intent while improving clarity
 
     3. **Output Format**:
-        - For queries: Return only the refined, clear question
-        - For non-queries: Return the original message unchanged
-        - Exclude any additional commentary or answers
+        Return a JSON object (no delimiters!) with the following keys:
+         - "query": "the refined query or original message",
+         - "is_query": true/false (true if message requires context search, false otherwise)
 
     Note: Focus solely on query clarification and refinement.
-    Output must be only the refined query or original message.
+    The 'query' field should contain only the refined query or original message without commentary.
+    The 'is_query' field should be true for information-seeking questions and false for casual conversation.
 
     """;
 
@@ -88,18 +89,27 @@ node RetrievalInteractAction :InteractAction: {
 
         # first prepare the query with context completion
         # prepare query using conversation history or fallback to original utterance
-        query = self.prepare_query(visitor) or visitor.utterance;
-        visitor.utterance = query;
+        query = self.process_query(visitor);
+
+        if(not query) {
+            # if no query is generated, return early
+            return;
+        }
+
+        if not query.get("is_query", False) {
+            # if the query is not a query, return early
+            return;
+        }
 
         # update interaction node with query and context data
         interaction_context = visitor.interaction_node.context_data.get(self.get_type(), {});
         if not interaction_context {
             visitor.interaction_node.context_data[self.get_type()] = interaction_context;
         }
-        interaction_context['query'] = query;
+        interaction_context['query'] = query.get("query", visitor);
 
         # handle context, if any and queue directive
-        if(context_data := self.retrieve_context(query)) {
+        if(context_data := self.retrieve_context(interaction_context['query'])) {
 
             context_directive = None;
             # add raw context to the interaction node
@@ -116,12 +126,11 @@ node RetrievalInteractAction :InteractAction: {
                 visitor.interaction_node.add_directive(directive = self.null_directive);
             }
         }
-
     }
 
-    can prepare_query(visitor: interact_graph_walker) -> str {
+    can process_query(visitor: interact_graph_walker) -> dict {
 
-        query = None;
+        query = {};
 
         # grab the history, if any
         if (statements := visitor.frame_node.get_transcript_statements(interactions = self.history_size, max_statement_length = self.max_statement_length)) {
@@ -145,7 +154,7 @@ node RetrievalInteractAction :InteractAction: {
                     interaction_node = visitor.interaction_node
                 )) {
                     # add the resulting intent, if any to the interaction to trigger the relevant action(s)
-                    query = model_action_result.get_result();
+                    query = model_action_result.get_json_result();
                 }
             }
         }
