@@ -57,7 +57,7 @@ node VectorStoreAction :Action: {
                 **kwargs: Additional search parameters.
             Returns: List of Document objects with similarity scores.
 
-        list_documents(page: int = 1, per_page: int = 10) -> dict:
+        list_documents(page: int = 1, per_page: int = 10, with_embeddings:bool=False) -> dict:
             Lists documents with pagination support.
             Args:
                 page (int): Current page number (default: 1).
@@ -103,7 +103,7 @@ node VectorStoreAction :Action: {
     can get_collection(collection_name:str) abs;
     can get_vectorstore() abs;
     can metadata_search(metadata:dict, k:int=10, **kwargs:dict) -> List[Document] abs;
-    can list_documents(page:int=1, per_page:int=10) -> dict abs;
+    can list_documents(page:int=1, per_page:int=10, with_embeddings:bool=False) -> dict abs;
     can get_document(id:str) -> Union[dict, None] abs;
     can update_document(id:str, data:dict) -> Union[dict, None] abs;
     can delete_document(id:str) -> Union[dict, None] abs;
@@ -131,7 +131,8 @@ node VectorStoreAction :Action: {
         }
     }
 
-    can import_knodes(data: Union[list, str]) -> bool {
+    can import_knodes(data: Union[list, str], with_embeddings: bool = False) -> bool {
+        # Import knodes (knowledge nodes) into the vector store.
         knodes = [];
         if isinstance(data, str) {
             try {
@@ -154,12 +155,22 @@ node VectorStoreAction :Action: {
                 metadata = knode.get('metadata', {});
                 text = str(knode['text']);
                 doc_id = knode.get('id');
+                embedding = knode.get('vec');
 
-                ids = self.add_texts(
-                    texts=[text],
-                    metadatas=[metadata],
-                    ids=[doc_id] if doc_id else None
-                );
+                if with_embeddings and embedding {
+                    ids = self.add_texts_with_embeddings(
+                        texts=[text],
+                        embeddings=[embedding],
+                        metadatas=[metadata],
+                        ids=[doc_id] if doc_id else None
+                    );
+                } else {
+                    ids = self.add_texts(
+                        texts=[text],
+                        metadatas=[metadata],
+                        ids=[doc_id] if doc_id else None
+                    );
+                }
 
                 if not ids {
                     failed.append(knode);
@@ -175,14 +186,17 @@ node VectorStoreAction :Action: {
         }
     }
 
-    can export_knodes(as_json: bool = False, embeddings: bool = False, with_ids: bool = False) -> str {
-        # Generic implementation using LangChain abstractions
+    can export_knodes(as_json: bool = False, with_embeddings: bool = False, with_ids: bool = False) -> str {
+        # Export knodes from the vector store in a standardized format.
 
         try {
             all_documents = [];
 
             # Collect all documents using standardized generator
-            for batch in self.list_documents_generator(page_size=self.export_page_size) {
+            for batch in self.list_documents_generator(
+                page_size=self.export_page_size,
+                with_embeddings=with_embeddings
+            ) {
                 all_documents.extend(batch);
             }
 
@@ -195,6 +209,9 @@ node VectorStoreAction :Action: {
                 };
                 if with_ids and 'id' in doc {
                     knode['id'] = doc['id'];
+                }
+                if with_embeddings and 'vec' in doc {
+                    knode['vec'] = doc['vec'];
                 }
                 knodes.append(knode);
             }
@@ -211,14 +228,14 @@ node VectorStoreAction :Action: {
         }
     }
 
-    can list_documents_generator(page_size: int = 250) -> Iterator[List[Dict]] {
+    can list_documents_generator(page_size: int = 250, with_embeddings:bool = False) -> Iterator[List[Dict]] {
         #*
         Generator that yields batches of documents in a standardized format
         {id: str, text: str, metadata: dict}
         *#
         page = 1;
         while True {
-            result = self.list_documents(page=page, per_page=page_size);
+            result = self.list_documents(page=page, per_page=page_size, with_embeddings=with_embeddings);
             if not result or 'documents' not in result or not result['documents'] {
                 break;
             }
@@ -231,6 +248,9 @@ node VectorStoreAction :Action: {
                 };
                 if 'id' in doc {
                     standardized['id'] = doc['id'];
+                }
+                if with_embeddings and 'vec' in doc {
+                    standardized['vec'] = doc['vec'];
                 }
                 standardized_batch.append(standardized);
             }
