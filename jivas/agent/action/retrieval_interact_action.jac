@@ -15,57 +15,43 @@ node RetrievalInteractAction :InteractAction: {
 
     # the directive template for RAG
     has directive:str = """
-Use CONTEXT as your knowledge base, intelligently assess the user question, review CONTEXT for context and finally produce an informative and accurate response.
-Do not include any information outside of the CONTEXT. If relevant content is not available in CONTEXT, advise the user that you do not have the relevant information at this time.
+    Use CONTEXT as your knowledge base, intelligently assess the user question, review CONTEXT for context and finally produce an informative and accurate response.
+    Do not include any information outside of the CONTEXT. If relevant content is not available in CONTEXT, advise the user that you do not have the relevant information at this time.
 
-CONTEXT:
-{context}
+    CONTEXT:
+    {context}
 
-
-""";
-
-    # the directive which is used to generate the response containing references from the matched context
-    has ref_directive:str = """
-Use CONTEXT as your knowledge base, intelligently assess the user question and perform the following tasks:
-a. Review 'content' in CONTEXT for the appropriate context to produce an accurate answer. Do not include any information outside of the CONTEXT.
-b. For each applicable item in CONTEXT, include a formatted list of unique content references taken from REF_FIELDS under 'metadata' in CONTEXT based on REF_FORMAT.
-c. If relevant content is not available in CONTEXT, advise the user that you do not have the relevant information at this time.
-
-REF_FIELDS:
-{ref_fields}
-
-REF_FORMAT:
-{ref_format}
-
-CONTEXT:
-{context}
-
-""";
+    """;
 
     # the null directive template for RAG
     has null_directive:str = "No context information was retrieved based on user utterance. If the user utterance is a question which relates to your knowledge, advise them that you do not have the relevant information at this time to answer their question.\n";
 
     # context_rewriting_prompt
     has query_completion_prompt:str = """
-Based on the conversation history, perform the following tasks:
+    Based on the conversation history, perform the following tasks:
 
-1. **Understand the User's Intent**:
-    - Analyze the user's message to determine their intent.
-    - If the message is a **query** (a question or request for information), proceed to step 2.
-    - If the message is **small talk**, a **greeting**, or a **statement** that does not seek additional information, proceed to step 3.
-2. **Refine the User's Query**:
-    - Rephrase and enhance the user's query by incorporating relevant details from the conversation history.
-    - Make the query more explicit and detailed to clearly convey the user's request.
-    - Focus solely on refining the query, without providing an answer or additional information.
-3. **Provide the Final Message**:
-    - Output **only** the refined query from step 2 or the original user message if no refinement was necessary.
-    - Do not include any answers, explanations, or additional commentary.
+    1. **Analyze Context and Intent**:
+        - Review the conversation history to establish context
+        - Determine if the user's message is a query requiring information
+        - Skip refinement for small talk, greetings, or acknowledgments
 
-**Note:**
-Your task is to **craft a refined query** when applicable, not to answer the query.
-Ensure that the final output is either the refined query or the original message, with no extra content.
+    2. **Query Refinement** (if applicable):
+        - Enhance the query by incorporating key context from conversation history
+        - Make implicit references explicit using historical context
+        - Ensure the query is specific, clear, and self-contained
+        - Remove ambiguous pronouns or references
+        - Maintain original intent while improving clarity
 
-""";
+    3. **Output Format**:
+        Return a JSON object (no delimiters!) with the following keys:
+         - "query": "the refined query or original message",
+         - "is_query": true/false (true if message requires context search, false otherwise)
+
+    Note: Focus solely on query clarification and refinement.
+    The 'query' field should contain only the refined query or original message without commentary.
+    The 'is_query' field should be true for information-seeking questions and false for casual conversation.
+
+    """;
 
     # the number of results
     has k:int = 3;
@@ -75,15 +61,8 @@ Ensure that the final output is either the refined query or the original message
     has mmr:bool = False;
     # whether to return metadata with context or not
     has metadata:bool = False;
-    # whether we wish to process context references or not
-    has references:bool = False;
-    # the field or fields (comma separated) in the metadata to use for crafting the references
-    has metadata_ref_fields:str = "source, filename, page";
-    # an example format used for formatting the references based on the metadata_ref_fields
-    has metadata_ref_format:str = "( [filename](source), pp. <page>; [filename](source), pp. <page>; ... )";
     # the vector store action name bound to this retrieval action
     has vector_store_action:str = "";
-
     has history_size:int = 3;
     has max_statement_length:int = 400;
     has model_action:str = "LangChainModelAction";
@@ -107,54 +86,39 @@ Ensure that the final output is either the refined query or the original message
     }
 
     can execute(visitor: interact_graph_walker) {
-        # implementation of execute for retrieval interact
-
-        # we safe check the references configuration; if references is true, then metadata is also true
-        if(self.references) {
-
-            if (not self.metadata_ref_fields) {
-                self.logger.warning("References are enabled, but metadata_ref_fields is not set. Turning 'references' off.");
-                self.references = False;
-            } elif (not self.metadata) {
-                self.logger.warning("References are enabled, but metadata is not. Setting metadata to True.");
-                self.metadata = True;
-            }
-
-        }
 
         # first prepare the query with context completion
-        if(not (query := self.prepare_query(visitor)) ) {
-            query = visitor.utterance;
+        # prepare query using conversation history or fallback to original utterance
+        query = self.process_query(visitor);
+
+        if(not query) {
+            # if no query is generated, return early
+            return;
         }
 
-        visitor.interaction_node.context_data['RetrievalInteractAction_query'] = query;
-        # update the rewritten utterance
-        visitor.utterance = query;
+        if not query.get("is_query", False) {
+            # if the query is not a query, return early
+            return;
+        }
+
+        # update interaction node with query and context data
+        interaction_context = visitor.interaction_node.context_data.get(self.get_type(), {});
+        if not interaction_context {
+            visitor.interaction_node.context_data[self.get_type()] = interaction_context;
+        }
+        interaction_context['query'] = query.get("query", visitor);
 
         # handle context, if any and queue directive
-        if(context_data := self.retrieve_context(query)) {
+        if(context_data := self.retrieve_context(interaction_context['query'])) {
 
             context_directive = None;
-
             # add raw context to the interaction node
-            visitor.interaction_node.context_data['RetrievalInteractAction_context'] = context_data;
+            interaction_context['context'] = context_data;
             # convert context data to JSON for composing the directive
             context_json = json.dumps(context_data);
-
-            # determine if references are in effect
-            if(self.references and self.metadata_ref_fields and self.metadata) {
-                # if references are in effect, we need to format the context
-                # and add the fields, format and context in the reference directive
-                context_directive = self.ref_directive.format(
-                    context=context_json,
-                    ref_fields=self.metadata_ref_fields,
-                    ref_format=self.metadata_ref_format
-                );
-            } else {
-                # otherwise, we just add the context as is
-                context_directive = self.directive.format(context=context_json);
-            }
-
+            # prepare context directive
+            context_directive = self.directive.format(context=context_json);
+            # add the context directive to the interaction node
             visitor.interaction_node.add_directive(directive = context_directive);
         } else {
             directives = visitor.interaction_node.get_directives();
@@ -162,12 +126,11 @@ Ensure that the final output is either the refined query or the original message
                 visitor.interaction_node.add_directive(directive = self.null_directive);
             }
         }
-
     }
 
-    can prepare_query(visitor: interact_graph_walker) -> str {
+    can process_query(visitor: interact_graph_walker) -> dict {
 
-        query = None;
+        query = {};
 
         # grab the history, if any
         if (statements := visitor.frame_node.get_transcript_statements(interactions = self.history_size, max_statement_length = self.max_statement_length)) {
@@ -191,7 +154,7 @@ Ensure that the final output is either the refined query or the original message
                     interaction_node = visitor.interaction_node
                 )) {
                     # add the resulting intent, if any to the interaction to trigger the relevant action(s)
-                    query = model_action_result.get_result();
+                    query = model_action_result.get_json_result();
                 }
             }
         }
