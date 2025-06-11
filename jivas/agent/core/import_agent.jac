@@ -73,6 +73,18 @@ walker import_agent {
         }
     }
 
+    can get_daf_root() -> str {
+        # Get the root path for DAF.
+
+        daf_root_path = os.environ.get("JIVAS_DAF_ROOT_PATH", "daf");
+
+        if not os.path.exists(daf_root_path) {
+            os.makedirs(daf_root_path);
+        }
+
+        return daf_root_path;
+    }
+
     can import_from_descriptor(agents_node:Agents, descriptor:Union[str, dict]) -> Agent {
         # imports an agent from an agent descriptor supplied as YAML, JSON or dict
 
@@ -166,7 +178,7 @@ walker import_agent {
         safe_to_import = False;
         daf_info = {};
         # daf packages root folder
-        package_root = Utils.get_daf_root();
+        package_root = self.get_daf_root();
         # extract the namespace, package name
         (namespace, package_name) = daf_name.split('/');
 
