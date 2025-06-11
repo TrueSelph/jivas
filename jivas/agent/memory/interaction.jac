@@ -4,7 +4,7 @@ import:jac from data { Data }
 import:jac from advance { Advance }
 import:jac from retrace { Retrace }
 import:jac from jivas.agent.core.graph_node { GraphNode }
-import:jac from interaction_response { InteractionResponse, TextInteractionMessage }
+import:jac from interaction_response { InteractionMessage, InteractionResponse, TextInteractionMessage }
 
 node Interaction :GraphNode: {
 

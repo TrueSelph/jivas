@@ -27,7 +27,7 @@ node Actions :GraphNode: {
     # set up logger
     static has logger: Logger = logging.getLogger(__name__);
     # action packages root folder
-    static has package_root: str = Utils.get_actions_root();
+    # static has package_root: str = self.get_actions_root();
 
     can get(action_label: str="", action_type: str="", only_enabled:bool=True) -> Union[Action, list, None] {
         # returns an action by label or by type, enabled actions by default
@@ -96,7 +96,7 @@ node Actions :GraphNode: {
         (namespace, package_name) = namespace_package_name.split('/');
 
         # attempt to find the package locally, first...
-        if (package_path := Utils.find_package_folder(self.package_root, namespace_package_name) ) {
+        if (package_path := Utils.find_package_folder(self.get_actions_root(), namespace_package_name) ) {
 
             info_yaml_path = os.path.join(package_path, 'info.yaml');
 
@@ -570,7 +570,7 @@ node Actions :GraphNode: {
             try {
                 package_file = requests.get(package_data["file"]);
                 # Save and extract the package
-                target_dir = os.path.join(self.package_root, namespace_package_name);
+                target_dir = os.path.join(self.get_actions_root(), namespace_package_name);
                 os.makedirs(target_dir, exist_ok=True);
                 # Assuming the package_data is a ZIP file
                 with tarfile.open(
@@ -708,6 +708,23 @@ node Actions :GraphNode: {
             self.logger.error('A dependency conflict was detected among configured actions. Unordered actions will be loaded but functionality may be impaired.');
             return loaded_action_list;
         }
+    }
+
+    can get_actions_root() -> str {
+        # Get the root path for actions, tagged by this agent.
+
+        actions_root_path = os.environ.get('JIVAS_ACTIONS_ROOT_PATH', 'actions');
+        agent_node = Utils.node_obj([<--]);
+
+        if(agent_node) {
+            actions_root_path = f"{os.environ.get('JIVAS_ACTIONS_ROOT_PATH', 'actions')}/{agent_node.id}";
+        }
+
+        if not os.path.exists(actions_root_path) {
+            os.makedirs(actions_root_path);
+        }
+
+        return actions_root_path;
     }
 
 }
