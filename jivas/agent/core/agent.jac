@@ -34,6 +34,7 @@ node Agent :GraphNode: {
     has tts_action: str = "ElevenLabsTTSAction";
     has stt_action: str = "DeepgramSTTAction";
     has vector_store_action: str = "TypesenseVectorStoreAction";
+    has channels: list = ['default', 'whatsapp', 'facebook', 'slack', 'sms', 'email']; # labeled communication channels for this agent
     has healthcheck_status: int = 501;
     has meta: dict = {};
 
@@ -115,6 +116,61 @@ node Agent :GraphNode: {
         return None;
     }
 
+    can add_channel(channel: str) -> bool {
+        # adds a new channel if it doesn't exist
+        if isinstance(channel, str) and channel.strip() {
+            channel = channel.strip().lower();
+            if channel not in self.channels {
+                self.channels.append(channel);
+                return True;
+            }
+        }
+        return False;
+    }
+
+    can get_channels() -> list {
+        # returns list of channels
+        return self.channels;
+    }
+
+    can remove_channel(channel: str) -> bool {
+        # removes a channel if it exists
+        if isinstance(channel, str) and channel.strip() {
+            channel = channel.strip().lower();
+            if channel in self.channels {
+                self.channels.remove(channel);
+                return True;
+            }
+        }
+        return False;
+    }
+
+    can has_channel(channel: str) -> bool {
+        # checks if a channel exists
+        if isinstance(channel, str) and channel.strip() {
+            return channel.strip().lower() in self.channels;
+        }
+        return False;
+    }
+
+    can validate_channels() -> list {
+        # validates and cleans channel list
+        valid_channels = [];
+        for channel in self.channels {
+            if isinstance(channel, str) and channel.strip() {
+                valid_channels.append(channel.strip().lower());
+            }
+        }
+
+        # ensure 'default' channel is always present
+        if 'default' not in valid_channels {
+            valid_channels.append('default');
+        }
+
+        self.channels = valid_channels;
+        return self.channels;
+    }
+
     can update(data: dict={}, with_actions: bool=False, jpr_api_key: str = "", with_healthcheck:bool=False) -> Agent {
         # performs a shallow update (no action updates),
         # or deep update (re-registers all actions),
@@ -165,6 +221,9 @@ node Agent :GraphNode: {
                 }
             }
         }
+
+        # validate the list of channels for this agent
+        self.validate_channels();
 
         # if the agent node is valid, we can update the descriptor
         if agent_node {

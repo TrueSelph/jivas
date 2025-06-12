@@ -714,11 +714,6 @@ node Actions :GraphNode: {
         # Get the root path for actions, tagged by this agent.
 
         actions_root_path = os.environ.get('JIVAS_ACTIONS_ROOT_PATH', 'actions');
-        agent_node = Utils.node_obj([<--]);
-
-        if(agent_node) {
-            actions_root_path = f"{os.environ.get('JIVAS_ACTIONS_ROOT_PATH', 'actions')}/{agent_node.id}";
-        }
 
         if not os.path.exists(actions_root_path) {
             os.makedirs(actions_root_path);
