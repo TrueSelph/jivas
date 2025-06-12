@@ -1,4 +1,4 @@
-import:jac from agent_graph_walker { agent_graph_walker }
+import:jac from jivas.agent.core.agent_graph_walker { agent_graph_walker }
 import:jac from jivas.agent.core.agent { Agent }
 import:jac from jivas.agent.action.action { Action }
 import:jac from jivas.agent.action.actions { Actions }

@@ -8,8 +8,8 @@ import:py from logging { Logger }
 import:py from jivas.agent.modules.agentlib.utils { Utils }
 import:py from datetime { datetime, timezone, timedelta }
 import:jac from jivas.agent.action.actions { Actions }
-import:jac from interact_action { InteractAction }
-import:jac from exit_interact_action { ExitInteractAction }
+import:jac from jivas.agent.action.interact_action { InteractAction }
+import:jac from jivas.agent.action.exit_interact_action { ExitInteractAction }
 import:jac from jivas.agent.memory.memory { Memory }
 import:jac from jivas.agent.memory.frame { Frame }
 import:jac from jivas.agent.memory.interaction { Interaction }
@@ -29,7 +29,7 @@ walker interact :interact_graph_walker: {
     has agent_id: str = "";
     has session_id: str = "";
     has utterance: str = "";
-    has channel: str = "default"; # other channels: 'kiosk', 'whatsapp', 'fbm', 'slack', etc.
+    has channel: str = "default"; # other channels: 'kiosk', 'whatsapp', 'facebook', 'slack', etc.
     has data: list[dict] = []; # expects [{'label': str, 'meta': dict, 'content': str}]
     has verbose: bool = False; # verbose payload or not
     has tts: bool = False; # activate text-to-speech response
@@ -59,7 +59,6 @@ walker interact :interact_graph_walker: {
     }
     can on_root with `root entry {
         # validate interaction or disengage
-
         if (self.init_interaction()) {
             # head to agent node if valid
             visit self.agent_node;
@@ -163,8 +162,13 @@ walker interact :interact_graph_walker: {
             return False;
         }
 
-        # load or spawn a frame for this interaction
+        # validate channel specifier
+        if not self.agent_node.has_channel(self.channel) {
+            # use default channel if invalid
+            self.channel = 'default';
+        }
 
+        # load or spawn a frame for this interaction
         self.frame_node = self.agent_node.get_memory().get_frame(
             agent_id=self.agent_node.id,
             session_id=self.session_id

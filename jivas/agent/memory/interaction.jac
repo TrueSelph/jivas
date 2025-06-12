@@ -1,10 +1,10 @@
 import:py from datetime { datetime, timezone }
 import:py from jivas.agent.modules.agentlib.utils { Utils }
-import:jac from data { Data }
-import:jac from advance { Advance }
-import:jac from retrace { Retrace }
+import:jac from jivas.agent.memory.data { Data }
+import:jac from jivas.agent.memory.advance { Advance }
+import:jac from jivas.agent.memory.retrace { Retrace }
 import:jac from jivas.agent.core.graph_node { GraphNode }
-import:jac from interaction_response { InteractionResponse, TextInteractionMessage }
+import:jac from jivas.agent.memory.interaction_response { InteractionMessage, InteractionResponse, TextInteractionMessage }
 
 node Interaction :GraphNode: {
 

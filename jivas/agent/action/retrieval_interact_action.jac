@@ -3,9 +3,9 @@ import:py logging;
 import:py traceback;
 import:py from typing { Optional, Union }
 import:py from logging { Logger }
-import:jac from interact_action { InteractAction }
-import:jac from interact_graph_walker { InteractGraphWalker }
-import:jac from model_action { ModelAction, ModelActionResult }
+import:jac from jivas.agent.action.interact_action { InteractAction }
+import:jac from jivas.agent.action.interact_graph_walker { InteractGraphWalker }
+import:jac from jivas.agent.action.model_action { ModelAction, ModelActionResult }
 
 node RetrievalInteractAction :InteractAction: {
     # Integrates with vector database for retrieval augmented generation tasks

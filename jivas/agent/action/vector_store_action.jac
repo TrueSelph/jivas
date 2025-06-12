@@ -5,9 +5,9 @@ import:py logging;
 import:py traceback;
 import:py from typing { Any, Optional, Tuple, List, Dict, Union, Iterator }
 import:py from logging { Logger }
-import:jac from action { Action }
+import:jac from jivas.agent.action.action { Action }
 import:py from jivas.agent.modules.agentlib.utils { Utils }
-import:jac from interact_graph_walker {interact_graph_walker}
+import:jac from jivas.agent.action.interact_graph_walker {interact_graph_walker}
 import:py from langchain_community.document_loaders { TextLoader }
 import:py from langchain_text_splitters { CharacterTextSplitter }
 import:py from langchain_core.vectorstores.base { VectorStore }

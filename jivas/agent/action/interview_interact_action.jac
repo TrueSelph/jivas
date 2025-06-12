@@ -2,8 +2,8 @@ import:py json;
 import:py from typing { Union }
 import from enum { unique }
 import:py from openai { OpenAI }
-import:jac from interact_action { InteractAction }
-import:jac from interact_graph_walker { interact_graph_walker }
+import:jac from jivas.agent.action.interact_action { InteractAction }
+import:jac from jivas.agent.action.interact_graph_walker { interact_graph_walker }
 
 node InterviewInteractAction :InteractAction: {
     #*
@@ -420,7 +420,8 @@ node InterviewInteractAction :InteractAction: {
                 all_fields=interview_session_data.get('all_fields', []),
                 required_fields=interview_session_data.get('required_fields', []),
                 active_field=interview_session_data.get('active_field', ''),
-                responses=interview_session_data.get('responses', {})
+                responses=interview_session_data.get('responses', {}),
+                data=interview_session_data.get('data', {}),
             );
         }
 
@@ -661,7 +662,8 @@ obj InterviewSession {
             'all_fields': self.all_fields,
             'required_fields': self.required_fields,
             'active_field': self.active_field,
-            'responses': self.responses
+            'responses': self.responses,
+            'data': self.data
         };
     }
 }

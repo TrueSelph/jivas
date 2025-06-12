@@ -1,6 +1,6 @@
-import:jac from agent_graph_walker { agent_graph_walker }
-import:jac from app { App }
-import:jac from agents { Agents }
+import:jac from jivas.agent.core.agent_graph_walker { agent_graph_walker }
+import:jac from jivas.agent.core.app { App }
+import:jac from jivas.agent.core.agents { Agents }
 
 walker list_agents :agent_graph_walker: {
     # lists all agents in the graph

@@ -2,7 +2,7 @@ import:py logging;
 import:py traceback;
 import:py from logging { Logger }
 import:py from jivas.agent.modules.agentlib.utils { Utils }
-import:jac from app { App }
+import:jac from jivas.agent.core.app { App }
 
 walker graph_walker {
     # base walker designed to traverse along app graph;

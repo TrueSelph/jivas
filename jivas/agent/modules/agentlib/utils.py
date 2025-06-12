@@ -116,28 +116,6 @@ class Utils:
         return descriptor_path
 
     @staticmethod
-    def get_actions_root() -> str:
-        """Get the root path for actions."""
-
-        actions_root_path = os.environ.get("JIVAS_ACTIONS_ROOT_PATH", "actions")
-
-        if not os.path.exists(actions_root_path):
-            os.makedirs(actions_root_path)
-
-        return actions_root_path
-
-    @staticmethod
-    def get_daf_root() -> str:
-        """Get the root path for DAF."""
-
-        daf_root_path = os.environ.get("JIVAS_DAF_ROOT_PATH", "daf")
-
-        if not os.path.exists(daf_root_path):
-            os.makedirs(daf_root_path)
-
-        return daf_root_path
-
-    @staticmethod
     def make_serializable(obj: Any) -> Any:
         """Recursively convert non-serializable objects in a dict/list to strings."""
         if isinstance(obj, dict):

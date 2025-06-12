@@ -1,19 +1,19 @@
+import:py dotenv;
+import:py os;
+import:py json;
+import:py uuid;
+import:py yaml;
 import:py from datetime { datetime }
 import:py logging;
 import:py traceback;
 import:py from logging { Logger }
 import:py from jivas.agent.modules.agentlib.utils { Utils }
 import:jac from jivas.agent.core.graph_node { GraphNode }
-import:jac from frame { Frame }
-import:jac from collection { Collection }
-import:jac from retrace { Retrace }
-import:jac from tail { Tail }
-import:jac from interaction { Interaction }
-import:py dotenv;
-import:py os;
-import:py json;
-import:py uuid;
-import:py yaml;
+import:jac from jivas.agent.memory.frame { Frame }
+import:jac from jivas.agent.memory.collection { Collection }
+import:jac from jivas.agent.memory.retrace { Retrace }
+import:jac from jivas.agent.memory.tail { Tail }
+import:jac from jivas.agent.memory.interaction { Interaction }
 
 node Memory :GraphNode: {
     # represents the root memory node for an agent
