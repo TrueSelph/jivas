@@ -40,7 +40,7 @@ walker get_action_app :interact_graph_walker: {
         # load the action data
         action_path = f"{here._package.get('config', {}).get('path', '')}/app/app.py";
 
-        # read file contents of action_path and return text source 
+        # read file contents of action_path and return text source
         try {
             if os.path.exists(action_path) {
                 with open(action_path, 'r') as file {
