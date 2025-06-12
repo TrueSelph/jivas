@@ -16,10 +16,10 @@ import:py from jivas.agent.modules.agentlib.utils { Utils }
 import:py from jvcli.api { RegistryAPI }
 import:py from jvcli.utils { is_version_compatible }
 import:py from jvserve.lib.agent_interface { AgentInterface }
-import:jac from action { Action }
-import:jac from interact_action { InteractAction }
+import:jac from jivas.agent.action.action { Action }
+import:jac from jivas.agent.action.interact_action { InteractAction }
 import:jac from jivas.agent.core.graph_node { GraphNode }
-import:jac from exit_interact_action { ExitInteractAction }
+import:jac from jivas.agent.action.exit_interact_action { ExitInteractAction }
 import:jac from jivas.agent.core.purge { purge }
 
 node Actions :GraphNode: {

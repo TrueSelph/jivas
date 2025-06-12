@@ -2,8 +2,8 @@ import:py json;
 import:py from typing { Union }
 import from enum { unique }
 import:py from openai { OpenAI }
-import:jac from interact_action { InteractAction }
-import:jac from interact_graph_walker { interact_graph_walker }
+import:jac from jivas.agent.action.interact_action { InteractAction }
+import:jac from jivas.agent.action.interact_graph_walker { interact_graph_walker }
 
 node InterviewInteractAction :InteractAction: {
     #*

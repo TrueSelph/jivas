@@ -2,8 +2,8 @@ import:py logging;
 import:py traceback;
 import:py from logging { Logger }
 import:py from jivas.agent.modules.agentlib.utils { Utils }
-import:jac from graph_node { GraphNode }
-import:jac from purge { purge }
+import:jac from jivas.agent.core.graph_node { GraphNode }
+import:jac from jivas.agent.core.purge { purge }
 
 node Agents :GraphNode: {
     # branch node for all agent nodes

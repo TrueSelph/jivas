@@ -20,7 +20,8 @@ import:jac from jivas.agent.action {
     update_action,
     install_action,
     uninstall_action,
-    invoke_stt_action
+    invoke_stt_action,
+    get_action_app
 }
 
 import:jac from jivas.agent.memory {

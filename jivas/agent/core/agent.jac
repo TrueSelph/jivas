@@ -4,7 +4,7 @@ import:py os;
 import:py from logging { Logger }
 import:py from jivas.agent.modules.agentlib.utils { Utils }
 import:jac from jivas.agent.core { graph_node, purge }
-import:jac from graph_node { GraphNode }
+import:jac from jivas.agent.core.graph_node { GraphNode }
 import:jac from jivas.agent.action.action { Action }
 import:jac from jivas.agent.action.interact_action { InteractAction }
 import:jac from jivas.agent.action.actions { Actions }

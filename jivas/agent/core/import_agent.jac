@@ -11,9 +11,9 @@ import:py from logging { Logger }
 import:py from jivas.agent.modules.agentlib.utils { Utils }
 import:py from jvcli.api { RegistryAPI }
 import:py from jvcli.utils { is_version_compatible }
-import:jac from app { App }
+import:jac from jivas.agent.core.app { App }
 import:jac from jivas.agent.core.agent { Agent }
-import:jac from agents { Agents }
+import:jac from jivas.agent.core.agents { Agents }
 import:jac from jivas.agent.memory.memory { Memory }
 import:jac from jivas.agent.action.action { Action }
 import:jac from jivas.agent.action.actions { Actions }

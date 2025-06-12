@@ -4,7 +4,7 @@ import:py logging;
 import:py traceback;
 import:py from logging { Logger }
 import:jac from jivas.agent.core.agent {Agent}
-import:jac from action {Action}
+import:jac from jivas.agent.action.action {Action}
 import:jac from jivas.agent.action.actions {Actions}
 import:jac from interact_graph_walker {interact_graph_walker}
 

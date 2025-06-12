@@ -2,7 +2,7 @@ import:py logging;
 import:py traceback;
 import:py from typing { Union }
 import:py from logging { Logger }
-import:jac from action { Action }
+import:jac from jivas.agent.action.action { Action }
 
 node STTAction :Action: {
     # The Speech-to-text base action for all STT actions.

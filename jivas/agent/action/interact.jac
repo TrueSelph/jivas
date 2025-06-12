@@ -8,8 +8,8 @@ import:py from logging { Logger }
 import:py from jivas.agent.modules.agentlib.utils { Utils }
 import:py from datetime { datetime, timezone, timedelta }
 import:jac from jivas.agent.action.actions { Actions }
-import:jac from interact_action { InteractAction }
-import:jac from exit_interact_action { ExitInteractAction }
+import:jac from jivas.agent.action.interact_action { InteractAction }
+import:jac from jivas.agent.action.exit_interact_action { ExitInteractAction }
 import:jac from jivas.agent.memory.memory { Memory }
 import:jac from jivas.agent.memory.frame { Frame }
 import:jac from jivas.agent.memory.interaction { Interaction }

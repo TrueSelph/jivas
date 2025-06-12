@@ -4,10 +4,10 @@ import:py io;
 import:py logging;
 import:py traceback;
 import:py from logging { Logger }
-import:jac from agent { Agent }
-import:jac from agents { Agents }
-import:jac from agent_graph_walker { agent_graph_walker }
-import:jac from import_agent {import_agent}
+import:jac from jivas.agent.core.agent { Agent }
+import:jac from jivas.agent.core.agents { Agents }
+import:jac from jivas.agent.core.agent_graph_walker { agent_graph_walker }
+import:jac from jivas.agent.core.import_agent {import_agent}
 import:py from jivas.agent.modules.agentlib.utils { Utils, jvdata_file_interface }
 
 walker init_agents :agent_graph_walker: {

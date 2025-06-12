@@ -2,13 +2,13 @@ import:py from datetime { datetime, timezone }
 import:py from typing { Any, Optional }
 import:py from uuid { uuid4 }
 import:py from jivas.agent.modules.agentlib.utils { Utils }
-import:jac from interaction { Interaction }
-import:jac from interaction_response { InteractionResponse, TextInteractionMessage }
+import:jac from jivas.agent.memory.interaction { Interaction }
+import:jac from jivas.agent.memory.interaction_response { InteractionResponse, TextInteractionMessage }
 import:jac from jivas.agent.core.graph_node { GraphNode }
 import:jac from jivas.agent.action.interact_action { InteractAction }
-import:jac from tail { Tail }
-import:jac from advance { Advance }
-import:jac from retrace { Retrace }
+import:jac from jivas.agent.memory.tail { Tail }
+import:jac from jivas.agent.memory.advance { Advance }
+import:jac from jivas.agent.memory.retrace { Retrace }
 
 node Frame :GraphNode: {
     # represents the root node of a collection of interactions beloning to a single user (session)

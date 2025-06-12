@@ -1,5 +1,5 @@
-import:jac from action { Action }
-import:jac from interact_graph_walker { interact_graph_walker }
+import:jac from jivas.agent.action.action { Action }
+import:jac from jivas.agent.action.interact_graph_walker { interact_graph_walker }
 
 node InteractAction :Action: {
     # represents an interactive execution on the agent action graph
