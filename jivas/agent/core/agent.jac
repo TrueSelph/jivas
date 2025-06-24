@@ -539,6 +539,7 @@ walker _export_actions {
     has action_nodes: list = [];
     has node_index: dict = {};
     has clean: bool = False;
+    has Ignore:list  = [];
 
     obj __specs__ {
         # make this a private walker
@@ -550,7 +551,7 @@ walker _export_actions {
     }
 
     can on_actions with Actions entry {
-        visit [-->](`?Action);
+        visit [i for i in [-->(`?Action)] if i not in self.Ignore];
     }
 
     can on_action with Action entry {
@@ -577,11 +578,11 @@ walker _export_actions {
             });
 
             # we're done here, don't revisit
-            ignore here;
+            self.Ignore.append(here);
         }
 
         # attempt to visit any child actions
-        visit [-->](`?Action);
+        visit [i for i in [-->(`?Action)] if i not in self.Ignore];
     }
 
     can on_exit with exit {
