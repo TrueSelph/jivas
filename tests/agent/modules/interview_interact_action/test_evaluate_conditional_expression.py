@@ -1,9 +1,15 @@
+"""Tests for conditional expression evaluation functionality."""
+
+from typing import Any, Dict, List, Union
+
 import pytest
+
 from jivas.agent.modules.interview_interact_action.utils import (
-    parse_condition_string,
-    evaluate_single_condition,
     evaluate_conditional_expression,
+    evaluate_single_condition,
+    parse_condition_string,
 )
+
 
 @pytest.mark.parametrize(
     "input_str,expected",
@@ -30,8 +36,12 @@ from jivas.agent.modules.interview_interact_action.utils import (
         ("value : [ -10.5 .. 0.5 ]", ["value", "[..]", ["-10.5", "0.5"]]),
     ],
 )
-def test_parse_condition_string_valid(input_str, expected):
+def test_parse_condition_string_valid(
+    input_str: str, expected: List[Union[str, List[str]]]
+) -> None:
+    """Test that valid condition strings are parsed correctly."""
     assert parse_condition_string(input_str) == expected
+
 
 @pytest.mark.parametrize(
     "input_str",
@@ -40,11 +50,14 @@ def test_parse_condition_string_valid(input_str, expected):
         "field <> value",
     ],
 )
-def test_parse_condition_string_invalid(input_str):
+def test_parse_condition_string_invalid(input_str: str) -> None:
+    """Test that invalid condition strings return None."""
     assert parse_condition_string(input_str) is None
 
+
 @pytest.fixture
-def responses():
+def responses() -> Dict[str, Any]:
+    """Fixture providing sample response data for testing."""
     return {
         "country": "USA",
         "age": "30",
@@ -58,6 +71,7 @@ def responses():
         "description": "This is an urgent item",
     }
 
+
 @pytest.mark.parametrize(
     "condition,expected",
     [
@@ -69,8 +83,12 @@ def responses():
         (["is_flagged", "=", False], True),
     ],
 )
-def test_evaluate_single_condition_equal(condition, expected, responses):
+def test_evaluate_single_condition_equal(
+    condition: List[Union[str, List[str]]], expected: bool, responses: Dict[str, Any]
+) -> None:
+    """Test evaluation of equality conditions."""
     assert evaluate_single_condition(condition, responses) == expected
+
 
 @pytest.mark.parametrize(
     "condition,expected",
@@ -79,8 +97,12 @@ def test_evaluate_single_condition_equal(condition, expected, responses):
         (["status", ":=", "Active"], False),
     ],
 )
-def test_evaluate_single_condition_exact_equal(condition, expected, responses):
+def test_evaluate_single_condition_exact_equal(
+    condition: List[Union[str, List[str]]], expected: bool, responses: Dict[str, Any]
+) -> None:
+    """Test evaluation of exact equality conditions."""
     assert evaluate_single_condition(condition, responses) == expected
+
 
 @pytest.mark.parametrize(
     "condition,expected",
@@ -90,8 +112,12 @@ def test_evaluate_single_condition_exact_equal(condition, expected, responses):
         (["description", ":", "missing"], False),
     ],
 )
-def test_evaluate_single_condition_partial_equal(condition, expected, responses):
+def test_evaluate_single_condition_partial_equal(
+    condition: List[Union[str, List[str]]], expected: bool, responses: Dict[str, Any]
+) -> None:
+    """Test evaluation of partial string match conditions."""
     assert evaluate_single_condition(condition, responses) == expected
+
 
 @pytest.mark.parametrize(
     "condition,expected",
@@ -102,8 +128,12 @@ def test_evaluate_single_condition_partial_equal(condition, expected, responses)
         (["is_member", "!=", False], True),
     ],
 )
-def test_evaluate_single_condition_not_equal(condition, expected, responses):
+def test_evaluate_single_condition_not_equal(
+    condition: List[Union[str, List[str]]], expected: bool, responses: Dict[str, Any]
+) -> None:
+    """Test evaluation of inequality conditions."""
     assert evaluate_single_condition(condition, responses) == expected
+
 
 @pytest.mark.parametrize(
     "condition,expected",
@@ -115,8 +145,12 @@ def test_evaluate_single_condition_not_equal(condition, expected, responses):
         (["score", ">", "90"], False),
     ],
 )
-def test_evaluate_single_condition_numeric_ops(condition, expected, responses):
+def test_evaluate_single_condition_numeric_ops(
+    condition: List[Union[str, List[str]]], expected: bool, responses: Dict[str, Any]
+) -> None:
+    """Test evaluation of numeric comparison conditions."""
     assert evaluate_single_condition(condition, responses) == expected
+
 
 @pytest.mark.parametrize(
     "condition,expected",
@@ -127,8 +161,12 @@ def test_evaluate_single_condition_numeric_ops(condition, expected, responses):
         (["age", "[]", ["29", "30", "31"]], True),
     ],
 )
-def test_evaluate_single_condition_in_list(condition, expected, responses):
+def test_evaluate_single_condition_in_list(
+    condition: List[Union[str, List[str]]], expected: bool, responses: Dict[str, Any]
+) -> None:
+    """Test evaluation of list membership conditions."""
     assert evaluate_single_condition(condition, responses) == expected
+
 
 @pytest.mark.parametrize(
     "condition,expected",
@@ -138,8 +176,12 @@ def test_evaluate_single_condition_in_list(condition, expected, responses):
         (["tags", "![]", ["gamma", "delta"]], True),
     ],
 )
-def test_evaluate_single_condition_not_in_list(condition, expected, responses):
+def test_evaluate_single_condition_not_in_list(
+    condition: List[Union[str, List[str]]], expected: bool, responses: Dict[str, Any]
+) -> None:
+    """Test evaluation of list non-membership conditions."""
     assert evaluate_single_condition(condition, responses) == expected
+
 
 @pytest.mark.parametrize(
     "condition,expected",
@@ -149,8 +191,12 @@ def test_evaluate_single_condition_not_in_list(condition, expected, responses):
         (["age", "[..]", ["25", "35"]], True),
     ],
 )
-def test_evaluate_single_condition_range(condition, expected, responses):
+def test_evaluate_single_condition_range(
+    condition: List[Union[str, List[str]]], expected: bool, responses: Dict[str, Any]
+) -> None:
+    """Test evaluation of range conditions."""
     assert evaluate_single_condition(condition, responses) == expected
+
 
 @pytest.mark.parametrize(
     "condition,expected",
@@ -161,17 +207,23 @@ def test_evaluate_single_condition_range(condition, expected, responses):
         (["non_existent_field", "[]", ["A", "B"]], False),
     ],
 )
-def test_evaluate_single_condition_missing_field(condition, expected, responses):
+def test_evaluate_single_condition_missing_field(
+    condition: List[Union[str, List[str]]], expected: bool, responses: Dict[str, Any]
+) -> None:
+    """Test evaluation of conditions with missing fields."""
     assert evaluate_single_condition(condition, responses) == expected
 
+
 @pytest.fixture
-def complex_responses():
+def complex_responses() -> Dict[str, Any]:
+    """Fixture providing more complex response data for testing."""
     return {
         "country": "USA",
         "age": "30",
         "status": "active",
         "plan": "premium",
     }
+
 
 @pytest.mark.parametrize(
     "expr,expected",
@@ -194,5 +246,8 @@ def complex_responses():
         ("age<25", False),
     ],
 )
-def test_evaluate_conditional_expression(expr, expected, complex_responses):
+def test_evaluate_conditional_expression(
+    expr: str, expected: bool, complex_responses: Dict[str, Any]
+) -> None:
+    """Test evaluation of complex conditional expressions."""
     assert evaluate_conditional_expression(expr, complex_responses) == expected

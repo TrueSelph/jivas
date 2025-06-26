@@ -358,7 +358,8 @@ node InterviewInteractAction :InteractAction: {
                 return field_data.get('question', "");
             }
 
-            if self.evaluate_conditional_expression(conditional, interview_session.responses) {
+            responses = (interview_session.export()).get('responses', {});
+            if evaluate_conditional_expression(conditional, responses) {
                 return field_data.get('question', "");
             }
 
