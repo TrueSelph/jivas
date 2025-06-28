@@ -319,9 +319,6 @@ node Actions(GraphNode) {
 
         # remove all nodes under Actions except Actions itself
         self spawn purge(purge_spawn_node=False);
-
-        # jac clean actions folder
-        Utils.jac_clean_actions();
     }
 
     # UTILS

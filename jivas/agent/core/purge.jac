@@ -1,12 +1,12 @@
 import logging;
 import traceback;
-import from logging {Logger}
+import from logging { Logger }
 
 walker purge {
     # removes all nodes extending from the node on which it is spawned and the spawn node too
 
     has purge_spawn_node: bool = True;
-    has spawn_node:Node = None;
+    has spawn_node:list = [];
     # set up logger
     static has logger:Logger = logging.getLogger(__name__);
 
@@ -15,13 +15,13 @@ walker purge {
         static has private: bool = True;
     }
 
-    can delete with Node entry {
+    can on_delete with entry {
 
         visit [-->]; # queue up next node(s), if any
         here del --> [-->]; # take care of the current edge(s) to any nodes
 
         if not self.spawn_node {
-            self.spawn_node = here;
+            self.spawn_node.append(here);
 
             if(self.purge_spawn_node) {
                 self.logger.info(f"deleting node: { type(here).__name__ }");

@@ -66,15 +66,6 @@ class Utils:
         return jivas.__version__
 
     @staticmethod
-    def jac_clean_actions() -> None:
-        """Performs jac clean on actions root folder."""
-
-        actions_root_path = os.environ.get("JIVAS_ACTIONS_ROOT_PATH", "actions")
-        if os.path.isdir(actions_root_path):
-            logger.info("Running jac clean on actions directory")
-            subprocess.run(["jac", "clean"], cwd=actions_root_path, check=True)
-
-    @staticmethod
     def clean_action(namespace_package_name: str) -> bool:
         """Completely removes a specific action folder.
 
