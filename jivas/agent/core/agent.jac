@@ -1,19 +1,19 @@
-import:py logging;
-import:py traceback;
-import:py os;
-import:py from logging { Logger }
-import:py from jivas.agent.modules.agentlib.utils { Utils }
-import:jac from jivas.agent.core { graph_node, purge }
-import:jac from jivas.agent.core.graph_node { GraphNode }
-import:jac from jivas.agent.action.action { Action }
-import:jac from jivas.agent.action.interact_action { InteractAction }
-import:jac from jivas.agent.action.actions { Actions }
-import:jac from jivas.agent.memory.memory { Memory }
-import:py from typing { Union }
-import:py from jvserve.lib.file_interface { file_interface }
-import:py from jac_cloud.core.architype { NodeAnchor }
+import logging;
+import traceback;
+import os;
+import from logging { Logger }
+import from jivas.agent.modules.agentlib.utils { Utils }
+import from jivas.agent.core { graph_node, purge }
+import from jivas.agent.core.graph_node { GraphNode }
+import from jivas.agent.action.action { Action }
+import from jivas.agent.action.interact_action { InteractAction }
+import from jivas.agent.action.actions { Actions }
+import from jivas.agent.memory.memory { Memory }
+import from typing { Union }
+import from jvserve.lib.file_interface { file_interface }
+import from jac_cloud.core.archetype { NodeAnchor }
 
-node Agent :GraphNode: {
+node Agent(GraphNode) {
     # represents an agent on the graph
 
     # set up logger
@@ -38,13 +38,13 @@ node Agent :GraphNode: {
     has healthcheck_status: int = 501;
     has meta: dict = {};
 
-    can postinit {
+    def postinit {
         super.postinit();
         # node attributes which are protected from update operation
         self.protected_attrs += ["id", "actions", "descriptor", "healthcheck_status"];
     }
 
-    can get_memory() -> Memory {
+    def get_memory() -> Memory {
         # returns a reference to the agent's memory node
 
         memory_node = Utils.node_obj([-->](`?Memory));
@@ -58,7 +58,7 @@ node Agent :GraphNode: {
         return memory_node;
     }
 
-    can get_actions() -> Actions {
+    def get_actions() -> Actions {
         # returns a reference to the agent's actions node
 
         actions_node = Utils.node_obj([-->](`?Actions));
@@ -72,7 +72,7 @@ node Agent :GraphNode: {
         return actions_node;
     }
 
-    can get_action(action_label: str="", action_type:str="", only_enabled: bool=True) -> Union[Action, None, list] {
+    def get_action(action_label: str="", action_type:str="", only_enabled: bool=True) -> Union[Action, None, list] {
         # fetch action node if enabled and configured
         # by action type or label
 
@@ -86,7 +86,7 @@ node Agent :GraphNode: {
         return None;
     }
 
-    can get_tts_action() -> Union[Action, None] {
+    def get_tts_action() -> Union[Action, None] {
         # fetch text to speech action node if enabled and configured
 
         if(tts_action_node := self.get_action(action_label=self.tts_action)) {
@@ -96,7 +96,7 @@ node Agent :GraphNode: {
         return None;
     }
 
-    can get_stt_action() -> Union[Action, None] {
+    def get_stt_action() -> Union[Action, None] {
         # fetch speech to text action node if enabled and configured
 
         if(stt_action_node := self.get_action(action_label=self.stt_action)) {
@@ -106,7 +106,7 @@ node Agent :GraphNode: {
         return None;
     }
 
-    can get_vector_store_action() -> Union[Action, None] {
+    def get_vector_store_action() -> Union[Action, None] {
         # fetch vector store action node if enabled and configured
 
         if(vector_store_action_node := self.get_action(action_label=self.vector_store_action)) {
@@ -116,7 +116,7 @@ node Agent :GraphNode: {
         return None;
     }
 
-    can add_channel(channel: str) -> bool {
+    def add_channel(channel: str) -> bool {
         # adds a new channel if it doesn't exist
         if isinstance(channel, str) and channel.strip() {
             channel = channel.strip().lower();
@@ -128,12 +128,12 @@ node Agent :GraphNode: {
         return False;
     }
 
-    can get_channels() -> list {
+    def get_channels() -> list {
         # returns list of channels
         return self.channels;
     }
 
-    can remove_channel(channel: str) -> bool {
+    def remove_channel(channel: str) -> bool {
         # removes a channel if it exists
         if isinstance(channel, str) and channel.strip() {
             channel = channel.strip().lower();
@@ -145,7 +145,7 @@ node Agent :GraphNode: {
         return False;
     }
 
-    can has_channel(channel: str) -> bool {
+    def has_channel(channel: str) -> bool {
         # checks if a channel exists
         if isinstance(channel, str) and channel.strip() {
             return channel.strip().lower() in self.channels;
@@ -153,7 +153,7 @@ node Agent :GraphNode: {
         return False;
     }
 
-    can validate_channels() -> list {
+    def validate_channels() -> list {
         # validates and cleans channel list
         valid_channels = [];
         for channel in self.channels {
@@ -171,7 +171,7 @@ node Agent :GraphNode: {
         return self.channels;
     }
 
-    can update(data: dict={}, with_actions: bool=False, jpr_api_key: str = "", with_healthcheck:bool=False) -> Agent {
+    def update(data: dict={}, with_actions: bool=False, jpr_api_key: str = "", with_healthcheck:bool=False) -> Agent {
         # performs a shallow update (no action updates),
         # or deep update (re-registers all actions),
         # with or without a healtcheck report
@@ -225,7 +225,7 @@ node Agent :GraphNode: {
         # validate the list of channels for this agent
         self.validate_channels();
 
-        # if the agent node is valid, we can update the descriptor
+        # if the agent node is valid, we def update the descriptor
         if agent_node {
             self.dump_descriptor();
         }
@@ -233,15 +233,15 @@ node Agent :GraphNode: {
         return agent_node;
     }
 
-    can is_logging() -> bool {
+    def is_logging() -> bool {
         return self.agent_logging;
     }
 
-    can set_logging(agent_logging: bool) {
+    def set_logging(agent_logging: bool) {
         self.agent_logging = agent_logging;
     }
 
-    can get_descriptor(as_yaml:bool=False, clean:bool=False) -> Union[str, dict] {
+    def get_descriptor(as_yaml:bool=False, clean:bool=False) -> Union[str, dict] {
         # converts an agent to a descriptor and returns it as yaml, json or dict (default)
         # if 'clean' is set to True, descriptor data will be without snapshot state containing keys and configs (good for dafs)
         try  {
@@ -281,7 +281,7 @@ node Agent :GraphNode: {
         return {};
     }
 
-    can get_daf_info() -> dict {
+    def get_daf_info() -> dict {
         # prepares daf info struct based on agent descriptor
         daf_info = {
             "package": {
@@ -302,7 +302,7 @@ node Agent :GraphNode: {
         return daf_info;
     }
 
-    can dump_descriptor() {
+    def dump_descriptor() {
         # exports agent and writes descriptor to .jvdata
 
         # get agent descriptor data
@@ -315,7 +315,7 @@ node Agent :GraphNode: {
         }
     }
 
-    can healthcheck() -> Union[bool, dict] {
+    def healthcheck() -> Union[bool, dict] {
         # performs agent core healthcheck and return trace result
         trace = {};
 
@@ -403,7 +403,7 @@ node Agent :GraphNode: {
         return trace;
     }
 
-    can get_healthcheck_report() -> dict {
+    def get_healthcheck_report() -> dict {
         # performs agent healthcheck and actions healthcheck; returns full status report
 
         result = {
@@ -463,27 +463,27 @@ node Agent :GraphNode: {
         return result;
     }
 
-    can get_file(path: str) -> bytes | None {
+    def get_file(path: str) -> bytes | None {
         # Retrieves a file for this agent by path.
         return file_interface.get_file(f"{self.id}/{path}");
     }
 
-    can save_file(path: str, content: bytes) -> bool {
+    def save_file(path: str, content: bytes) -> bool {
         # Saves a file for this agent at the given path.
         return file_interface.save_file(f"{self.id}/{path}", content);
     }
 
-    can delete_file(path: str) -> bool {
+    def delete_file(path: str) -> bool {
         # Deletes a file for this agent at the given path.
         return file_interface.delete_file(f"{self.id}/{path}");
     }
 
-    can get_file_url(path: str) -> str | None {
+    def get_file_url(path: str) -> str | None {
         # Gets the direct URL for a file belonging to this agent.
         return file_interface.get_file_url(f"{self.id}/{path}");
     }
 
-    can get_short_file_url(path: str, with_filename: bool = False) -> str | None {
+    def get_short_file_url(path: str, with_filename: bool = False) -> str | None {
         # Gets a short/proxied URL for a file, optionally including the filename.
         collection = NodeAnchor.Collection.get_collection("url_proxies");
 
@@ -539,6 +539,7 @@ walker _export_actions {
     has action_nodes: list = [];
     has node_index: dict = {};
     has clean: bool = False;
+    has ignored:list = [];
 
     obj __specs__ {
         # make this a private walker
@@ -550,7 +551,7 @@ walker _export_actions {
     }
 
     can on_actions with Actions entry {
-        visit [-->](`?Action);
+        visit [action for action in [-->(`?Action)] if action not in self.ignored];
     }
 
     can on_action with Action entry {
@@ -577,7 +578,7 @@ walker _export_actions {
             });
 
             # we're done here, don't revisit
-            ignore here;
+            self.ignored.append(here);
         }
 
         # attempt to visit any child actions

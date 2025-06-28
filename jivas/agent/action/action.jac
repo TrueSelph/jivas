@@ -1,10 +1,10 @@
-import:py logging;
-import:py traceback;
-import:py from logging { Logger }
-import:jac from jivas.agent.core.graph_node { GraphNode }
-import:jac from jivas.agent.memory.collection { Collection }
+import logging;
+import traceback;
+import from logging { Logger }
+import from jivas.agent.core.graph_node { GraphNode }
+import from jivas.agent.memory.collection { Collection }
 
-node Action :GraphNode: {
+node Action(GraphNode) {
     # represents an execution on the agent action graph
 
     has agent_id:str = "";
@@ -15,11 +15,11 @@ node Action :GraphNode: {
     has _package: dict = {};
     # set up logger
     static has logger:Logger = logging.getLogger(__name__);
-    # [Bug] Do not do `can init` this without setting the has vars
-    # can init {
+    # [Bug] Do not do `def init` this without setting the has vars
+    # def init {
     #     # override to initialize the action
     # }
-    can postinit {
+    def postinit {
         super.postinit();
         # add of node attributes which are protected from update operation
         self.protected_attrs += ['_package', 'label', 'version', 'agent_id'];
@@ -27,41 +27,41 @@ node Action :GraphNode: {
         self.transient_attrs += ['agent_id'];
     }
 
-    can on_register {
+    def on_register {
         # override to execute operations upon registration of action
     }
 
-    can post_register {
+    def post_register {
         # override to execute any setup code when all actions are in place
     }
 
-    can on_enable {
+    def on_enable {
         # override to execute operations upon enabling of action
     }
 
-    can on_disable {
+    def on_disable {
         # override to execute operations upon disabling of action
     }
 
-    can on_deregister {
+    def on_deregister {
         # override to execute operations upon deregistration of action
     }
 
-    can pulse() {
+    def pulse() {
         # override to implement pulse operation
     }
 
-    can analytics() {
+    def analytics() {
         # override to furnish analytics data for the action
     }
 
-    can healthcheck() -> Union[bool, dict] {
+    def healthcheck() -> Union[bool, dict] {
         # override to implement healthcheck operation
         # optionally returns a dict of (status:bool, severity:str [error|warning], message:str) if more information is needed
         return True;
     }
 
-    can update(data: dict = {}) -> GraphNode {
+    def update(data: dict = {}) -> GraphNode {
         # updates an action node; expects a dict of attribute names mapped to values for updating
         # overridden to respond to enable / disable updates
         if (data) {
@@ -96,70 +96,70 @@ node Action :GraphNode: {
         return self;
     }
 
-    can get_agent() {
+    def get_agent() {
         # returns the agent node to which this action is attached
         return &self.agent_id;
     }
 
-    can get_namespace() {
+    def get_namespace() {
         return self._package.get('config', {}).get('namespace', None);
     }
 
-    can get_module() {
+    def get_module() {
         return self._package.get('config', {}).get('module', None);
     }
 
-    can get_module_root() {
+    def get_module_root() {
         return self._package.get('config', {}).get('module_root', None);
     }
 
-    can get_package_path() {
+    def get_package_path() {
         return self._package.get('config', {}).get('path', None);
     }
 
-    can get_version() {
+    def get_version() {
         return self.version;
     }
 
-    can get_package_name() {
+    def get_package_name() {
         return self._package.get('config', {}).get('package_name', None);
     }
 
-    can get_namespace_package_name() {
+    def get_namespace_package_name() {
         return self._package.get('name', None);
     }
 
-    can get_collection() -> Collection {
+    def get_collection() -> Collection {
         # returns a collection node reference to be used as the action's graph-based data store
         return self.get_agent().get_memory().get_collection(self.label);
     }
 
-    can remove_collection() -> list {
+    def remove_collection() -> list {
         # removes a collection node and its contents used as the action's graph-based data store
         return self.get_agent().get_memory().purge_collection_memory(self.label);
     }
 
-    can get_file(path: str) -> bytes | None {
+    def get_file(path: str) -> bytes | None {
         # retrieves a file associated with this action by path
         return self.get_agent().get_file(f"{self.get_type()}/{path}");
     }
 
-    can save_file(path: str, content: bytes) -> bool {
+    def save_file(path: str, content: bytes) -> bool {
         # saves a file associated with this action at the given path
         return self.get_agent().save_file(f"{self.get_type()}/{path}", content);
     }
 
-    can delete_file(path: str) -> bool {
+    def delete_file(path: str) -> bool {
         # deletes a file associated with this action by path
         return self.get_agent().delete_file(f"{self.get_type()}/{path}");
     }
 
-    can get_file_url(path: str) -> str | None {
+    def get_file_url(path: str) -> str | None {
         # retrieves a URL to access a file associated with this action
         return self.get_agent().get_file_url(f"{self.get_type()}/{path}");
     }
 
-    can get_short_file_url(path: str, with_filename: bool = False) -> str | None {
+    def get_short_file_url(path: str, with_filename: bool = False) -> str | None {
         # retrieves a shortened URL to access a file, optionally including the filename
         return self.get_agent().get_short_file_url(f"{self.get_type()}/{path}", with_filename);
     }

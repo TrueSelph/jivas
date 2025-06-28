@@ -1,6 +1,6 @@
 # import exposed walkers for FastAPI access
 
-import:jac from jivas.agent.core {
+import from jivas.agent.core {
     init_agents,
     import_agent,
     export_descriptor,
@@ -12,7 +12,7 @@ import:jac from jivas.agent.core {
     healthcheck
 }
 
-import:jac from jivas.agent.action {
+import from jivas.agent.action {
     interact,
     pulse,
     list_actions,
@@ -24,7 +24,7 @@ import:jac from jivas.agent.action {
     get_action_app
 }
 
-import:jac from jivas.agent.memory {
+import from jivas.agent.memory {
     add_frame,
     get_frames,
     update_frame,
@@ -33,7 +33,7 @@ import:jac from jivas.agent.memory {
     update_interaction
 }
 
-import:jac from jivas.agent.analytics {
+import from jivas.agent.analytics {
     get_channels_by_date,
     get_users_by_date,
     get_interactions_by_date,

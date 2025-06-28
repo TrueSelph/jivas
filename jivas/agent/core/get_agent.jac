@@ -1,7 +1,7 @@
-import:jac from jivas.agent.core.agent_graph_walker { agent_graph_walker }
-import:jac from jivas.agent.core.agent { Agent }
+import from jivas.agent.core.agent_graph_walker { agent_graph_walker }
+import from jivas.agent.core.agent { Agent }
 
-walker get_agent :agent_graph_walker: {
+walker get_agent(agent_graph_walker) {
 
     obj __specs__ {
         # make this walker visible in API

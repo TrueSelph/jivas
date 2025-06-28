@@ -1,6 +1,6 @@
-import:py logging;
-import:py traceback;
-import:py from logging {Logger}
+import logging;
+import traceback;
+import from logging {Logger}
 
 walker purge {
     # removes all nodes extending from the node on which it is spawned and the spawn node too

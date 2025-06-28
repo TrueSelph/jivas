@@ -1,11 +1,11 @@
-import:py logging;
-import:py traceback;
-import:py from typing { Optional }
-import:py from logging { Logger }
-import:jac from jivas.agent.action.action { Action }
-import:py from jivas.agent.modules.agentlib.utils { Utils }
+import logging;
+import traceback;
+import from typing { Optional }
+import from logging { Logger }
+import from jivas.agent.action.action { Action }
+import from jivas.agent.modules.agentlib.utils { Utils }
 
-node ModelAction :Action: {
+node ModelAction(Action) {
     # Generic model action node architype for abstracted, standardized LLM interfacing
 
     # set up logger
@@ -17,9 +17,9 @@ node ModelAction :Action: {
     has model_max_tokens: int = 2048;
 
     # abstract invoke ability for the model meant to be overidden with specifics of model call
-    can invoke(prompt_messages: list, prompt_variables: dict, kwargs: dict={}) -> Optional[ModelActionResult] abs;
+    def invoke(prompt_messages: list, prompt_variables: dict, kwargs: dict={}) -> Optional[ModelActionResult] abs;
 
-    can call_model(
+    def call_model(
         prompt_messages: list,
         prompt_variables: dict,
         interaction_node: Optional[Interaction]=None,
@@ -59,7 +59,7 @@ node ModelAction :Action: {
         return None;
     }
 
-    can healthcheck() -> Union[bool, dict] {
+    def healthcheck() -> Union[bool, dict] {
         if (self.model_name == "" or self.api_key == "") {
             return False;
         }
@@ -111,15 +111,15 @@ obj ModelActionResult {
     has max_tokens: int = 0;
     has meta: dict = {};
 
-    can get_prompt() {
+    def get_prompt() {
         return self.prompt;
     }
 
-    can get_functions() {
+    def get_functions() {
         return self.functions;
     }
 
-    can get_result() {
+    def get_result() {
 
         if (self.result) {
             return self.result;
@@ -129,7 +129,7 @@ obj ModelActionResult {
 
     }
 
-    can get_json_result() {
+    def get_json_result() {
         #  convert result to json and return it
         if (json_result := Utils.convert_str_to_json(self.result)) {
             return json_result;
@@ -138,31 +138,31 @@ obj ModelActionResult {
         }
     }
 
-    can get_tokens() {
+    def get_tokens() {
         return self.tokens;
     }
 
-    can get_max_tokens() {
+    def get_max_tokens() {
         return self.max_tokens;
     }
 
-    can get_temperature() {
+    def get_temperature() {
         return self.temperature;
     }
 
-    can get_model_name() {
+    def get_model_name() {
         return self.model_name;
     }
 
-    can get_meta() {
+    def get_meta() {
         return self.meta;
     }
 
-    can get_generator() {
+    def get_generator() {
         return self.generator;
     }
 
-    can export(ignore_keys: list=['__jac__']) {
+    def export(ignore_keys: list=['__jac__']) {
         # convert the object to dictionary
         node_export = Utils.export_to_dict(self, ignore_keys);
         return node_export;

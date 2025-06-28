@@ -1,35 +1,34 @@
-import:py io;
-import:py os;
-import:py re;
-import:py subprocess;
-import:py pkg_resources;
-import:py sys;
-import:py yaml;
-import:py logging;
-import:py traceback;
-import:py tarfile;
-import:py requests;
-import:py from typing { Union }
-import:py from logging { Logger }
-import:py from jaclang { jac_import }
-import:py from jivas.agent.modules.agentlib.utils { Utils }
-import:py from jvcli.api { RegistryAPI }
-import:py from jvcli.utils { is_version_compatible }
-import:py from jvserve.lib.agent_interface { AgentInterface }
-import:jac from jivas.agent.action.action { Action }
-import:jac from jivas.agent.action.interact_action { InteractAction }
-import:jac from jivas.agent.core.graph_node { GraphNode }
-import:jac from jivas.agent.action.exit_interact_action { ExitInteractAction }
-import:jac from jivas.agent.core.purge { purge }
+import io;
+import os;
+import re;
+import subprocess;
+import pkg_resources;
+import sys;
+import yaml;
+import logging;
+import traceback;
+import tarfile;
+import requests;
+import from typing { Union }
+import from logging { Logger }
+import from jivas.agent.modules.agentlib.utils { Utils }
+import from jvcli.api { RegistryAPI }
+import from jvcli.utils { is_version_compatible }
+import from jvserve.lib.agent_interface { AgentInterface }
+import from jivas.agent.action.action { Action }
+import from jivas.agent.action.interact_action { InteractAction }
+import from jivas.agent.core.graph_node { GraphNode }
+import from jivas.agent.action.exit_interact_action { ExitInteractAction }
+import from jivas.agent.core.purge { purge }
 
-node Actions :GraphNode: {
+node Actions(GraphNode) {
 
     # set up logger
     static has logger: Logger = logging.getLogger(__name__);
     # action packages root folder
     # static has package_root: str = self.get_actions_root();
 
-    can get(action_label: str="", action_type: str="", only_enabled:bool=True) -> Union[Action, list, None] {
+    def get(action_label: str="", action_type: str="", only_enabled:bool=True) -> Union[Action, list, None] {
         # returns an action by label or by type, enabled actions by default
         result = None;
 
@@ -44,7 +43,7 @@ node Actions :GraphNode: {
         return result;
     }
 
-    can get_by_label(action_label: str, only_enabled:bool=True) -> Action {
+    def get_by_label(action_label: str, only_enabled:bool=True) -> Action {
         # returns an action by label
         actions = self.get_all(only_enabled=only_enabled);
         for action_node in actions {
@@ -56,7 +55,7 @@ node Actions :GraphNode: {
         return None;
     }
 
-    can get_by_type(action_type: str, only_enabled:bool=True) -> list {
+    def get_by_type(action_type: str, only_enabled:bool=True) -> list {
         # returns an action by type; there may be multiple instances of the same action so a list is returned
         result = [];
         actions = self.get_all(only_enabled=only_enabled);
@@ -70,7 +69,7 @@ node Actions :GraphNode: {
         return result;
     }
 
-    can get_all(only_interact_actions:bool=False, only_enabled:bool=False) -> list {
+    def get_all(only_interact_actions:bool=False, only_enabled:bool=False) -> list {
         # returns a list of all actions, even nested ones
         if (only_interact_actions) {
             return ((self spawn _get_interact_actions(filter_enabled=only_enabled)).action_nodes);
@@ -78,16 +77,15 @@ node Actions :GraphNode: {
         return ((self spawn _get_actions(filter_enabled=only_enabled)).action_nodes);
     }
 
-    can queue_interact_actions(actions:list) -> list {
+    def queue_interact_actions(actions:list) -> list {
         # accepts a list of interact actions and organizes them in an execution queue
         # based on weights and precedence specified in _package.config.order
 
         # this is the Jaclang equivalent of a lamda function
-        # return sorted(objects, key=lambda InteractAction:obj.weight)
-        return sorted(actions, key = with action:InteractAction can action.weight );
+        return sorted(actions, key = lambda action: InteractAction:action.weight );
     }
 
-    can get_action_info(namespace_package_name:str, version:str=None, jpr_api_key:str=None) -> dict {
+    def get_action_info(namespace_package_name:str, version:str=None, jpr_api_key:str=None) -> dict {
         # retrieves the info.yaml data for a named action by version either locally first or on package manager
 
         action_info = {};
@@ -153,19 +151,20 @@ node Actions :GraphNode: {
         return action_info;
     }
 
-    can import_action(action_data:dict) -> bool {
+    def import_action(action_data:dict) -> bool {
         # prepares the module path to lib.jac and imports the module
         module_root = action_data.get('context', {}).get('_package', {}).get('config', {}).get('module_root', None);
 
         if(module_root) {
-            jac_import(f"{module_root}.lib", base_path="./", reload_module = True);
+            AgentInterface.load_module(module_root);
+            #jac_import(f"{module_root}.lib", base_path="./", reload_module = True);
             return True;
         }
 
         return False;
     }
 
-    can register_action(action_data: dict, parent: str="") -> Action {
+    def register_action(action_data: dict, parent: str="") -> Action {
         # registers an agent action
         # expects an action descriptor object with optional architype source embeddings;
         action_node = None;
@@ -256,7 +255,7 @@ node Actions :GraphNode: {
 
     }
 
-    can install_actions(agent_id:str, action_list: list, jpr_api_key:str=None) -> bool {
+    def install_actions(agent_id:str, action_list: list, jpr_api_key:str=None) -> bool {
         # accepts the list of action data and related configurations and coordinates the importation and registration of action packages
         loaded_actions_data = None;
 
@@ -289,7 +288,7 @@ node Actions :GraphNode: {
         return True;
     }
 
-    can deregister_action(action_type: str="", action_label: str="") {
+    def deregister_action(action_type: str="", action_label: str="") {
         # gracefully disposes of an action, calling the on_deregister on each action node before destruction
         # can perform deregistration by type or by label
 
@@ -310,7 +309,7 @@ node Actions :GraphNode: {
 
     }
 
-    can deregister_actions() {
+    def deregister_actions() {
         # gracefully disposes of each action, calling the on_deregister on each action node before destruction
 
         # call deregister on all legit actions
@@ -328,7 +327,7 @@ node Actions :GraphNode: {
 
     # UTILS
 
-    can search_action_list(namespace_package_name:str, action_list:list) -> dict {
+    def search_action_list(namespace_package_name:str, action_list:list) -> dict {
         # searches an action list for the entry based on the namespace_package_name
 
         for action_data in action_list {
@@ -340,7 +339,7 @@ node Actions :GraphNode: {
         return {};
     }
 
-    can index_action_packages(agent_id:str, action_list:list, action_index:dict={}, jpr_api_key:str="") -> dict {
+    def index_action_packages(agent_id:str, action_list:list, action_index:dict={}, jpr_api_key:str="") -> dict {
         # recursive operation which flattens the action list, loads all actions, their children and their dependencies,
         # builds list ensuring dependencies precede dependent actions
         # returns a loaded list of valid actions as a dictionary, indexed by namespace_package name
@@ -421,7 +420,7 @@ node Actions :GraphNode: {
         return action_index;
     }
 
-    can index_pip_packages(action_data_index:dict) -> dict {
+    def index_pip_packages(action_data_index:dict) -> dict {
         # returns a flat dictionary of pip packages where the key is the package name and value is the package version
         pip_packages_index = {};
 
@@ -434,7 +433,7 @@ node Actions :GraphNode: {
         return pip_packages_index;
     }
 
-    can batch_pip_package_install(packages:dict) {
+    def batch_pip_package_install(packages:dict) {
         # """
         # Installs multiple pip packages quietly, non-interactively,
         # and auto-resolving conflicts. If no operator is provided in
@@ -477,7 +476,7 @@ node Actions :GraphNode: {
         }
     }
 
-    can has_pip_package(package_name:str, version:str=None) -> bool {
+    def has_pip_package(package_name:str, version:str=None) -> bool {
         # """
         # Checks if a pip package is installed and optionally verifies the version with optional comparator operators.
 
@@ -507,7 +506,7 @@ node Actions :GraphNode: {
         }
     }
 
-    can has_pip_packages(packages:dict) -> bool {
+    def has_pip_packages(packages:dict) -> bool {
         # """
         # Checks if multiple pip packages are installed.
 
@@ -528,7 +527,7 @@ node Actions :GraphNode: {
         return True;
     }
 
-    can has_action_dependencies(action_data_index:dict, action_dependencies:dict) -> bool {
+    def has_action_dependencies(action_data_index:dict, action_dependencies:dict) -> bool {
         # determines whether all dependencies have been loaded
         ::py::
         if not all(key in action_data_index.keys() for key in action_dependencies.keys()):
@@ -538,7 +537,7 @@ node Actions :GraphNode: {
         return True;
     }
 
-    can load_action_package(indexed_action_data:dict, jpr_api_key:str="") -> dict {
+    def load_action_package(indexed_action_data:dict, jpr_api_key:str="") -> dict {
         # loads a single action package based on indexed action package information
         # loading entails downloading the package or ensuring the package exists in the actions root
         # returns empty dict if loading goes wrong, otherwise returns loaded, refreshed action data
@@ -601,7 +600,7 @@ node Actions :GraphNode: {
         return indexed_action_data;
     }
 
-    can load_actions(agent_id:str, action_list:list, jpr_api_key:str=None) -> list {
+    def load_actions(agent_id:str, action_list:list, jpr_api_key:str=None) -> list {
         # accepts an agent descriptor listing of actions, prepares a loading manifest of ordered deps,
         # loads them and returns ordered, loaded action data
 
@@ -710,7 +709,7 @@ node Actions :GraphNode: {
         }
     }
 
-    can get_actions_root() -> str {
+    def get_actions_root() -> str {
         # Get the root path for actions, tagged by this agent.
 
         actions_root_path = os.environ.get('JIVAS_ACTIONS_ROOT_PATH', 'actions');

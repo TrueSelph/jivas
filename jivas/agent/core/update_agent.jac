@@ -1,11 +1,11 @@
-import:py logging;
-import:py traceback;
-import:py from logging { Logger }
-import:py from jivas.agent.modules.agentlib.utils { Utils }
-import:jac from jivas.agent.core.agent_graph_walker { agent_graph_walker }
-import:jac from jivas.agent.core.agent { Agent }
+import logging;
+import traceback;
+import from logging { Logger }
+import from jivas.agent.modules.agentlib.utils { Utils }
+import from jivas.agent.core.agent_graph_walker { agent_graph_walker }
+import from jivas.agent.core.agent { Agent }
 
-walker update_agent :agent_graph_walker: {
+walker update_agent(agent_graph_walker) {
 
     has agent_data: dict = {};
     has with_actions: bool = False; # set True if you'd like actions to be re-registered with this update

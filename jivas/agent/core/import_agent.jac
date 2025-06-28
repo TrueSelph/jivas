@@ -1,22 +1,22 @@
-import:py io;
-import:py os;
-import:py json;
-import:py yaml;
-import:py requests;
-import:py tarfile;
-import:py logging;
-import:py traceback;
-import:py from typing { Union }
-import:py from logging { Logger }
-import:py from jivas.agent.modules.agentlib.utils { Utils }
-import:py from jvcli.api { RegistryAPI }
-import:py from jvcli.utils { is_version_compatible }
-import:jac from jivas.agent.core.app { App }
-import:jac from jivas.agent.core.agent { Agent }
-import:jac from jivas.agent.core.agents { Agents }
-import:jac from jivas.agent.memory.memory { Memory }
-import:jac from jivas.agent.action.action { Action }
-import:jac from jivas.agent.action.actions { Actions }
+import io;
+import os;
+import json;
+import yaml;
+import requests;
+import tarfile;
+import logging;
+import traceback;
+import from typing { Union }
+import from logging { Logger }
+import from jivas.agent.modules.agentlib.utils { Utils }
+import from jvcli.api { RegistryAPI }
+import from jvcli.utils { is_version_compatible }
+import from jivas.agent.core.app { App }
+import from jivas.agent.core.agent { Agent }
+import from jivas.agent.core.agents { Agents }
+import from jivas.agent.memory.memory { Memory }
+import from jivas.agent.action.action { Action }
+import from jivas.agent.action.actions { Actions }
 
 walker import_agent {
     # creates or refreshes an agent via json data or yaml source
@@ -73,7 +73,7 @@ walker import_agent {
         }
     }
 
-    can get_daf_root() -> str {
+    def get_daf_root() -> str {
         # Get the root path for DAF.
 
         daf_root_path = os.environ.get("JIVAS_DAF_ROOT_PATH", "daf");
@@ -85,7 +85,7 @@ walker import_agent {
         return daf_root_path;
     }
 
-    can import_from_descriptor(agents_node:Agents, descriptor:Union[str, dict]) -> Agent {
+    def import_from_descriptor(agents_node:Agents, descriptor:Union[str, dict]) -> Agent {
         # imports an agent from an agent descriptor supplied as YAML, JSON or dict
 
         agent_data = {};
@@ -172,7 +172,7 @@ walker import_agent {
         return None;
     }
 
-    can import_from_daf(agents_node:Agents, daf_name:str, version:Optional[str]="", jpr_api_key:Optional[str]="") -> Agent {
+    def import_from_daf(agents_node:Agents, daf_name:str, version:Optional[str]="", jpr_api_key:Optional[str]="") -> Agent {
         # imports the agent as a digital agent freight package
         agent_node = None;
         safe_to_import = False;

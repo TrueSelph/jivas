@@ -1,7 +1,7 @@
-import:jac from jivas.agent.action.action { Action }
-import:jac from jivas.agent.action.interact_graph_walker { interact_graph_walker }
+import from jivas.agent.action.action { Action }
+import from jivas.agent.action.interact_graph_walker { interact_graph_walker }
 
-node InteractAction :Action: {
+node InteractAction(Action) {
     # represents an interactive execution on the agent action graph
 
     # an interact action may specify descriptive texts to influence intent classification
@@ -11,21 +11,21 @@ node InteractAction :Action: {
     has weight:int = 0;
 
     # implement to authorize, redirect or deny the interact walker from running execute
-    can touch(visitor: interact_graph_walker) -> bool abs;
+    def touch(visitor: interact_graph_walker) -> bool abs;
 
     # implement action execution
-    can execute(visitor: interact_graph_walker) -> dict abs;
+    def execute(visitor: interact_graph_walker) -> dict abs;
 
-    can deny(visitor: interact_graph_walker) -> dict {
+    def deny(visitor: interact_graph_walker) -> dict {
         # override to implement action access denial
     }
 
-    can get_children() {
+    def get_children() {
         # returns immediate child actions of this action
         return [-->](`?Action);
     }
 
-    can get_root_action() {
+    def get_root_action() {
         # returns the interact action which is the top-level ancestor of this interact action
         return (self spawn _get_root_action()).root_action;
     }

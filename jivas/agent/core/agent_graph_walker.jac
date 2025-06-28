@@ -1,11 +1,11 @@
-import:py logging;
-import:py traceback;
-import:py from logging { Logger }
-import:jac from jivas.agent.core.app { App }
-import:jac from jivas.agent.core.agents { Agents }
-import:jac from jivas.agent.core.graph_walker { graph_walker }
+import logging;
+import traceback;
+import from logging { Logger }
+import from jivas.agent.core.app { App }
+import from jivas.agent.core.agents { Agents }
+import from jivas.agent.core.graph_walker { graph_walker }
 
-walker agent_graph_walker :graph_walker: {
+walker agent_graph_walker(graph_walker) {
     # base walker designed to traverse graph specific to agent_id;
 
     has agent_id: str = "";

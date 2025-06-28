@@ -1,13 +1,13 @@
-import:py json;
-import:py logging;
-import:py traceback;
-import:py from typing { Optional, Union }
-import:py from logging { Logger }
-import:jac from jivas.agent.action.interact_action { InteractAction }
-import:jac from jivas.agent.action.interact_graph_walker { InteractGraphWalker }
-import:jac from jivas.agent.action.model_action { ModelAction, ModelActionResult }
+import json;
+import logging;
+import traceback;
+import from typing { Optional, Union }
+import from logging { Logger }
+import from jivas.agent.action.interact_action { InteractAction }
+import from jivas.agent.action.interact_graph_walker { InteractGraphWalker }
+import from jivas.agent.action.model_action { ModelAction, ModelActionResult }
 
-node RetrievalInteractAction :InteractAction: {
+node RetrievalInteractAction(InteractAction) {
     # Integrates with vector database for retrieval augmented generation tasks
 
     # set up logger
@@ -70,7 +70,7 @@ node RetrievalInteractAction :InteractAction: {
     has model_temperature:float = 0.2;
     has model_max_tokens:int = 10000;
 
-    can on_register() {
+    def on_register() {
 
         # load the agent's default vector store action if none is specified
         if not self.vector_store_action {
@@ -78,14 +78,14 @@ node RetrievalInteractAction :InteractAction: {
         }
     }
 
-    can touch(visitor: interact_graph_walker) -> bool {
+    def touch(visitor: interact_graph_walker) -> bool {
         # implementation of touch for retrieval interact
         if(visitor.utterance) {
             return True;
         }
     }
 
-    can execute(visitor: interact_graph_walker) {
+    def execute(visitor: interact_graph_walker) {
 
         # first prepare the query with context completion
         # prepare query using conversation history or fallback to original utterance
@@ -128,7 +128,7 @@ node RetrievalInteractAction :InteractAction: {
         }
     }
 
-    can process_query(visitor: interact_graph_walker) -> dict {
+    def process_query(visitor: interact_graph_walker) -> dict {
 
         query = {};
 
@@ -163,7 +163,7 @@ node RetrievalInteractAction :InteractAction: {
     }
 
 
-    can retrieve_context(query:str, filter:Optional[str] = "") -> list {
+    def retrieve_context(query:str, filter:Optional[str] = "") -> list {
         # override to implement custom retrieval operation
 
         # """
@@ -213,7 +213,7 @@ node RetrievalInteractAction :InteractAction: {
         return context_data;
     }
 
-    can healthcheck() -> Union[bool, dict] {
+    def healthcheck() -> Union[bool, dict] {
 
         vector_store_action = self.get_agent().get_action(action_label=self.vector_store_action);
         if(not vector_store_action) {

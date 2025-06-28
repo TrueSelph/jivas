@@ -1,8 +1,8 @@
-import:py logging;
-import:py traceback;
-import:py from logging { Logger }
-import:py from jivas.agent.modules.agentlib.utils { Utils }
-import:jac from jivas.agent.core.app { App }
+import logging;
+import traceback;
+import from logging { Logger }
+import from jivas.agent.modules.agentlib.utils { Utils }
+import from jivas.agent.core.app { App }
 
 walker graph_walker {
     # base walker designed to traverse along app graph;
@@ -24,13 +24,13 @@ walker graph_walker {
         }
     }
 
-    can export(ignore_keys: list = ['__jac__']) {
+    def export(ignore_keys: list = ['__jac__']) {
         # convert the object to dictionary
         node_export = Utils.export_to_dict(self, ignore_keys);
         return node_export;
     }
 
-    can update(data: dict = {}) -> graph_walker {
+    def update(data: dict = {}) -> graph_walker {
         # updates a graph node; expects a dict of attribute names mapped to values for updating
         if(data) {
             for attr in data.keys() {
@@ -45,7 +45,7 @@ walker graph_walker {
         return self;
     }
 
-    can post_update {
+    def post_update {
         # can be overriden to execute following a walker update
     }
 

@@ -1,13 +1,13 @@
-import:py io;
-import:py yaml;
-import:py logging;
-import:py traceback;
-import:py from logging { Logger }
-import:jac from jivas.agent.core.agent { Agent }
-import:jac from jivas.agent.core.agent_graph_walker {agent_graph_walker}
+import io;
+import yaml;
+import logging;
+import traceback;
+import from logging { Logger }
+import from jivas.agent.core.agent { Agent }
+import from jivas.agent.core.agent_graph_walker {agent_graph_walker}
 
 
-walker install_action :agent_graph_walker: {
+walker install_action(agent_graph_walker) {
     # installs a single action on an agent
 
     has reporting:bool = False;  # Flag to enable reporting

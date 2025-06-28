@@ -1,16 +1,16 @@
-import:py os;
-import:py yaml;
-import:py io;
-import:py logging;
-import:py traceback;
-import:py from logging { Logger }
-import:jac from jivas.agent.core.agent { Agent }
-import:jac from jivas.agent.core.agents { Agents }
-import:jac from jivas.agent.core.agent_graph_walker { agent_graph_walker }
-import:jac from jivas.agent.core.import_agent {import_agent}
-import:py from jivas.agent.modules.agentlib.utils { Utils, jvdata_file_interface }
+import os;
+import yaml;
+import io;
+import logging;
+import traceback;
+import from logging { Logger }
+import from jivas.agent.core.agent { Agent }
+import from jivas.agent.core.agents { Agents }
+import from jivas.agent.core.agent_graph_walker { agent_graph_walker }
+import from jivas.agent.core.import_agent {import_agent}
+import from jivas.agent.modules.agentlib.utils { Utils, jvdata_file_interface }
 
-walker init_agents :agent_graph_walker: {
+walker init_agents(agent_graph_walker) {
     # initializes agents on the graph using the existing file-based descriptor
 
     has reporting:bool = False;

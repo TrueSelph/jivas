@@ -1,13 +1,13 @@
-import:py io;
-import:py zipfile;
-import:jac from jivas.agent.core.agent_graph_walker { agent_graph_walker }
-import:jac from jivas.agent.core.agent { Agent }
-import:jac from jivas.agent.action.action { Action }
-import:jac from jivas.agent.action.actions { Actions }
-import:py from jivas.agent.modules.agentlib.utils { Utils }
+import io;
+import zipfile;
+import from jivas.agent.core.agent_graph_walker { agent_graph_walker }
+import from jivas.agent.core.agent { Agent }
+import from jivas.agent.action.action { Action }
+import from jivas.agent.action.actions { Actions }
+import from jivas.agent.modules.agentlib.utils { Utils }
 
 
-walker export_daf :agent_graph_walker: {
+walker export_daf(agent_graph_walker) {
     # exports and packages an agent daf, saves it to file and returns the URL for download
 
     has clean:bool = False;

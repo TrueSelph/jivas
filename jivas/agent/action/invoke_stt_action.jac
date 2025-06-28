@@ -1,12 +1,12 @@
-import:jac from jivas.agent.core.agent { Agent }
-import:jac from jivas.agent.action.action { Action }
-import:jac from jivas.agent.action.actions { Actions }
-import:jac from jivas.agent.action.interact_graph_walker { interact_graph_walker }
-import:py os;
-import:py uuid;
-import:py base64;
+import from jivas.agent.core.agent { Agent }
+import from jivas.agent.action.action { Action }
+import from jivas.agent.action.actions { Actions }
+import from jivas.agent.action.interact_graph_walker { interact_graph_walker }
+import os;
+import uuid;
+import base64;
 
-walker invoke_stt_action :interact_graph_walker: {
+walker invoke_stt_action(interact_graph_walker) {
 
     has files: list[dict] = [];
     has response: dict = {};

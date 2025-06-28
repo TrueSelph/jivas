@@ -1,10 +1,10 @@
-import:py logging;
-import:py traceback;
-import:py from typing { Union }
-import:py from logging { Logger }
-import:jac from jivas.agent.action.action { Action }
+import logging;
+import traceback;
+import from typing { Union }
+import from logging { Logger }
+import from jivas.agent.action.action { Action }
 
-node STTAction :Action: {
+node STTAction(Action) {
     # The Speech-to-text base action for all STT actions.
 
     # set up logger
@@ -13,7 +13,7 @@ node STTAction :Action: {
     has api_key:str = "";
     has model:str = "";
 
-    can invoke(audio_url:str) {
+    def invoke(audio_url:str) {
         # """
         # Convert speech to text and return text.
 
@@ -24,7 +24,7 @@ node STTAction :Action: {
         # override with specifics of STT model then save in audio
     }
 
-    can invoke_base64(audio_base64:str, audio_type:str="audio/mp3") {
+    def invoke_base64(audio_base64:str, audio_type:str="audio/mp3") {
         # """
         # Convert an audio file from a base64 string to text using Deepgram API.
 
@@ -36,7 +36,7 @@ node STTAction :Action: {
         # override with specifics of STT model then save in audio
     }
 
-    can healthcheck() -> Union[bool, dict] {
+    def healthcheck() -> Union[bool, dict] {
 
         if(not self.api_key) {
             return {

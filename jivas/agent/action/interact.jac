@@ -1,26 +1,26 @@
-import:py os;
-import:py pytz;
-import:py json;
-import:py logging;
-import:py traceback;
-import:py from typing { Optional }
-import:py from logging { Logger }
-import:py from jivas.agent.modules.agentlib.utils { Utils }
-import:py from datetime { datetime, timezone, timedelta }
-import:jac from jivas.agent.action.actions { Actions }
-import:jac from jivas.agent.action.interact_action { InteractAction }
-import:jac from jivas.agent.action.exit_interact_action { ExitInteractAction }
-import:jac from jivas.agent.memory.memory { Memory }
-import:jac from jivas.agent.memory.frame { Frame }
-import:jac from jivas.agent.memory.interaction { Interaction }
-import:jac from jivas.agent.memory.interaction_response { InteractionResponse, InteractionMessage, SilentInteractionMessage }
-import:jac from jivas.agent.core.agent { Agent }
-import:jac from jivas.agent.core.agents { Agents }
-import:jac from jivas.agent.core.app { App }
-import:jac from jivas.agent.action { interact_graph_walker }
-import:py from jac_cloud.core.architype { NodeAnchor }
+import os;
+import pytz;
+import json;
+import logging;
+import traceback;
+import from typing { Optional }
+import from logging { Logger }
+import from jivas.agent.modules.agentlib.utils { Utils }
+import from datetime { datetime, timezone, timedelta }
+import from jivas.agent.action.actions { Actions }
+import from jivas.agent.action.interact_action { InteractAction }
+import from jivas.agent.action.exit_interact_action { ExitInteractAction }
+import from jivas.agent.memory.memory { Memory }
+import from jivas.agent.memory.frame { Frame }
+import from jivas.agent.memory.interaction { Interaction }
+import from jivas.agent.memory.interaction_response { InteractionResponse, InteractionMessage, SilentInteractionMessage }
+import from jivas.agent.core.agent { Agent }
+import from jivas.agent.core.agents { Agents }
+import from jivas.agent.core.app { App }
+import from jivas.agent.action { interact_graph_walker }
+import from jac_cloud.core.archetype { NodeAnchor }
 
-walker interact :interact_graph_walker: {
+walker interact(interact_graph_walker) {
     # Walker for interacting with the agent
 
     # set up logger
@@ -149,7 +149,7 @@ walker interact :interact_graph_walker: {
         self.respond();
     }
 
-    can init_interaction() -> bool {
+    def init_interaction() -> bool {
         # performs validation checks on the interaction
         try  {
             self.agent_node = &self.agent_id;
@@ -258,7 +258,7 @@ walker interact :interact_graph_walker: {
         return True;
     }
 
-    can is_valid_message_length(utterance: str, max_length: int) -> bool {
+    def is_valid_message_length(utterance: str, max_length: int) -> bool {
         # validates the acceptable length of a message
 
         chunks = Utils.chunk_long_message(
@@ -274,7 +274,7 @@ walker interact :interact_graph_walker: {
         }
     }
 
-    can is_flood_active() {
+    def is_flood_active() {
         # evaluates and tracks for flood control in incoming requests
         # returns TRUE if flood is in effect
 
@@ -379,7 +379,7 @@ walker interact :interact_graph_walker: {
 
     }
 
-    can set_next_action(action_label: str, action_node: Optional[InteractAction]=None) {
+    def set_next_action(action_label: str, action_node: Optional[InteractAction]=None) {
         # inserts the supplied action as the next action in the walk path
         next_action_node = None;
 
@@ -396,7 +396,7 @@ walker interact :interact_graph_walker: {
         }
     }
 
-    can set_resume_action(action_label: str, action_node: Optional[InteractAction]=None) {
+    def set_resume_action(action_label: str, action_node: Optional[InteractAction]=None) {
         # queues the supplied action as the first action on the next turn
         resume_action_label = None;
 
@@ -412,7 +412,7 @@ walker interact :interact_graph_walker: {
         }
     }
 
-    can append_action(action_label: str, action_node: Optional[InteractAction]=None) {
+    def append_action(action_label: str, action_node: Optional[InteractAction]=None) {
         # appends the supplied action to the end of the walk path (before exit)
         append_action_node = None;
 
@@ -429,7 +429,7 @@ walker interact :interact_graph_walker: {
         }
     }
 
-    can dequeue_action(action_label: str, action_node: Optional[InteractAction]=None) {
+    def dequeue_action(action_label: str, action_node: Optional[InteractAction]=None) {
         # dequeue the supplied action as the next action in the walk path
 
         if(action_label) {
@@ -440,7 +440,7 @@ walker interact :interact_graph_walker: {
         }
     }
 
-    can append_interact_action(interact_action: InteractAction) {
+    def append_interact_action(interact_action: InteractAction) {
         # adds the interact action to the end of the active walk path (before exit)
 
         # first grab exit action
@@ -473,7 +473,7 @@ walker interact :interact_graph_walker: {
         return None;
     }
 
-    can dequeue_interact_action(interact_action: InteractAction) {
+    def dequeue_interact_action(interact_action: InteractAction) {
         # removes the interact action from the active walk path
         if (self.__jac__.next and interact_action) {
             for (i, node_ref) in enumerate(self.__jac__.next) {
@@ -489,7 +489,7 @@ walker interact :interact_graph_walker: {
         return None;
     }
 
-    can prepend_interact_action(interact_action: InteractAction) {
+    def prepend_interact_action(interact_action: InteractAction) {
         # adds the interact action to the head of the active walk path
         if (self.dequeue_interact_action(interact_action)) {
 
@@ -509,7 +509,7 @@ walker interact :interact_graph_walker: {
         return None;
     }
 
-    can trim_interact_actions(index:InteractAction, interact_actions: list) -> list {
+    def trim_interact_actions(index:InteractAction, interact_actions: list) -> list {
         # Returns a new list with all actions before the indexed_interact_action removed
         trimmed = [];
         found = False;
@@ -524,7 +524,7 @@ walker interact :interact_graph_walker: {
         return trimmed;
     }
 
-    can has_access(action_node: Action) -> bool {
+    def has_access(action_node: Action) -> bool {
         # implements access control routine if access_control_action is in play, then executes touch if permitted
 
         access = True;
@@ -545,7 +545,7 @@ walker interact :interact_graph_walker: {
         return access;
     }
 
-    can has_function(action_node: InteractAction) -> bool {
+    def has_function(action_node: InteractAction) -> bool {
         # determines whether action is intended to be triggered by the intent within the interaction, then executes touch if permitted
         if (action_node.get_type() in ['IntentInteractAction', 'FunctionInteractAction', 'ExitInteractAction']) {
             return True;
@@ -566,7 +566,7 @@ walker interact :interact_graph_walker: {
         return True;
     }
 
-    can is_intended(action_node: InteractAction) -> bool {
+    def is_intended(action_node: InteractAction) -> bool {
         # determines whether action is intended to be triggered by the intent within the interaction, then executes touch if permitted
         if (action_node.get_type() in ['IntentInteractAction', 'FunctionInteractAction', 'ExitInteractAction']) {
             return True;
@@ -587,7 +587,7 @@ walker interact :interact_graph_walker: {
         return True;
     }
 
-    can respond() {
+    def respond() {
 
         if (self.agent_node and self.interaction_node) {
 
@@ -667,7 +667,7 @@ walker interact :interact_graph_walker: {
         }
     }
 
-    can log_interaction(data: dict) {
+    def log_interaction(data: dict) {
         collection = NodeAnchor.Collection.get_collection("interactions");
         collection.insert_one(json.loads(json.dumps(data)));
     }

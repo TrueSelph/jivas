@@ -1,9 +1,9 @@
-import:jac from jivas.agent.core.agent_graph_walker { agent_graph_walker }
-import:jac from jivas.agent.core.agent { Agent }
-import:jac from jivas.agent.action.action { Action }
-import:jac from jivas.agent.action.actions { Actions }
+import from jivas.agent.core.agent_graph_walker { agent_graph_walker }
+import from jivas.agent.core.agent { Agent }
+import from jivas.agent.action.action { Action }
+import from jivas.agent.action.actions { Actions }
 
-walker export_descriptor :agent_graph_walker: {
+walker export_descriptor(agent_graph_walker) {
     # accepts agent_id and returns dict / yaml of exported agent descriptor
 
     has as_yaml: bool = False;

@@ -1,13 +1,13 @@
-import:py os;
-import:py uuid;
-import:py base64;
-import:py logging;
-import:py traceback;
-import:py from typing { Union }
-import:py from logging { Logger }
-import:jac from jivas.agent.action.action { Action }
+import os;
+import uuid;
+import base64;
+import logging;
+import traceback;
+import from typing { Union }
+import from logging { Logger }
+import from jivas.agent.action.action { Action }
 
-node TTSAction :Action: {
+node TTSAction(Action) {
     # The Text-to-speech base action for all TTS actions.
 
     # set up logger
@@ -16,7 +16,7 @@ node TTSAction :Action: {
     has api_key:str = "";
     has model:str = "";
 
-    can invoke(text:str, as_base64:bool=False, as_url:bool=False) {
+    def invoke(text:str, as_base64:bool=False, as_url:bool=False) {
         # """
         # Convert text to speech and save the audio file.
 
@@ -33,7 +33,7 @@ node TTSAction :Action: {
         return self.get_audio_as(audio, as_base64, as_url);
     }
 
-    can get_audio_as(audio:bytes, as_base64:bool=False, as_url:bool=False) {
+    def get_audio_as(audio:bytes, as_base64:bool=False, as_url:bool=False) {
         # prepares the audio bytes as base64 string or url for download
 
         if not audio {
@@ -68,7 +68,7 @@ node TTSAction :Action: {
         return None;
     }
 
-    can healthcheck() -> Union[bool, dict] {
+    def healthcheck() -> Union[bool, dict] {
 
         if(not self.api_key) {
             return {

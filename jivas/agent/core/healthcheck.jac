@@ -1,7 +1,7 @@
-import:jac from jivas.agent.core.agent {Agent}
-import:jac from jivas.agent.core.agent_graph_walker {agent_graph_walker}
+import from jivas.agent.core.agent {Agent}
+import from jivas.agent.core.agent_graph_walker {agent_graph_walker}
 
-walker healthcheck :agent_graph_walker: {
+walker healthcheck(agent_graph_walker) {
     # performs agent healthcheck; triggers the healthcheck ability of all actions on an agent
 
     obj __specs__ {

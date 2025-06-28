@@ -1,14 +1,14 @@
-import:py os;
-import:py logging;
-import:py traceback;
-import:py json;
-import:py from logging { Logger }
-import:py from datetime { datetime, timedelta }
-import:jac from jivas.agent.core.agent_graph_walker { agent_graph_walker }
-import:jac from jivas.agent.core.agent { Agent }
-import:py from jac_cloud.core.architype { NodeAnchor }
+import os;
+import logging;
+import traceback;
+import json;
+import from logging { Logger }
+import from datetime { datetime, timedelta }
+import from jivas.agent.core.agent_graph_walker { agent_graph_walker }
+import from jivas.agent.core.agent { Agent }
+import from jac_cloud.core.archetype { NodeAnchor }
 
-walker get_interaction_logs :agent_graph_walker: {
+walker get_interaction_logs(agent_graph_walker) {
 	# returns the list of interactions within a date range
     has start_date: str = "";
     has end_date: str = "";

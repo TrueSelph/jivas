@@ -1,6 +1,6 @@
 import from enum { unique }
-import:py from typing { Any }
-import:py from jivas.agent.modules.agentlib.utils { Utils }
+import from typing { Any }
+import from jivas.agent.modules.agentlib.utils { Utils }
 
 @unique
 enum MessageType {
@@ -16,7 +16,7 @@ obj InteractionMessage {
     has content:Any=None;
     has meta:dict = {};
 
-    can load(data:dict) {
+    def load(data:dict) {
         # loads a compatible interaction message data struct
         if (data and isinstance(data, dict)) {
             for attr in data.keys() {
@@ -28,23 +28,23 @@ obj InteractionMessage {
         }
     }
 
-    can get_type() -> str {
+    def get_type() -> str {
         return self.message_type;
     }
 
-    can set_meta(key:str, value: any) {
+    def set_meta(key:str, value: any) {
         self.meta[key] = value;
     }
 
-    can get_meta(key:str) {
+    def get_meta(key:str) {
         return self.meta.get(key, None);
     }
 
-    can get_content() {
+    def get_content() {
         return self.content;
     }
 
-    can has_content() -> bool {
+    def has_content() -> bool {
         # abstract has content check
         if self.content {
             return True;
@@ -52,32 +52,32 @@ obj InteractionMessage {
         return False;
     }
 
-    can export(ignore_keys: list = ['__jac__']) {
+    def export(ignore_keys: list = ['__jac__']) {
         # convert the object to dictionary
         node_export = Utils.export_to_dict(self, ignore_keys);
         return node_export;
     }
 }
 
-obj SilentInteractionMessage :InteractionMessage: {
+obj SilentInteractionMessage(InteractionMessage) {
     has message_type:str = MessageType.SILENCE.value;
     has content:str = "...";
 }
 
-obj TextInteractionMessage :InteractionMessage: {
+obj TextInteractionMessage(InteractionMessage) {
 
     has message_type:str = MessageType.TEXT.value;
     has content:str = "";
 }
 
-obj MediaInteractionMessage :InteractionMessage: {
+obj MediaInteractionMessage(InteractionMessage) {
 
     has message_type:str = MessageType.MEDIA.value;
     has mime:str = "";
     has data:Any = None;
     has content:str = "";
 
-    can has_content() -> bool {
+    def has_content() -> bool {
         # content check
         if self.data {
             return True;
@@ -86,12 +86,12 @@ obj MediaInteractionMessage :InteractionMessage: {
     }
 }
 
-obj MultiInteractionMessage :InteractionMessage: {
+obj MultiInteractionMessage(InteractionMessage) {
 
     has message_type:str = MessageType.MULTI.value;
     has content:list[dict] = [];
 
-    can load(data:dict) {
+    def load(data:dict) {
         # loads a compatible interaction message data struct
         if (data) {
             for attr in data.keys() {
@@ -103,17 +103,17 @@ obj MultiInteractionMessage :InteractionMessage: {
         }
     }
 
-    can add_interaction_message(message:InteractionMessage) {
+    def add_interaction_message(message:InteractionMessage) {
         if( not isinstance(message, MultiInteractionMessage) ) {
             self.content.append(message.export());
         }
     }
 
-    can clear_interaction_messages() {
+    def clear_interaction_messages() {
         self.content = [];
     }
 
-    can has_content() -> bool {
+    def has_content() -> bool {
         # abstract has content check
         if type(self.content) == list {
             if len(self.content) > 0 {
@@ -123,7 +123,7 @@ obj MultiInteractionMessage :InteractionMessage: {
         return False;
     }
 
-    can get_content() {
+    def get_content() {
         content = "";
         for content_item in self.content {
             content = f"{content} \n {content_item.get('content')}";
@@ -131,7 +131,7 @@ obj MultiInteractionMessage :InteractionMessage: {
         return content;
     }
 
-    can get_content_items() {
+    def get_content_items() {
 
         content_items = [];
 
@@ -165,7 +165,7 @@ obj InteractionResponse {
     has message:dict = {};
     has tokens:int = 0;
 
-    can load(data:dict) {
+    def load(data:dict) {
         # loads a compatible interaction response data struct
         if (data) {
             for attr in data.keys() {
@@ -177,7 +177,7 @@ obj InteractionResponse {
         }
     }
 
-    can set_message(message:InteractionMessage) {
+    def set_message(message:InteractionMessage) {
 
         if(message) {
             self.message = message.export();
@@ -187,15 +187,15 @@ obj InteractionResponse {
 
     }
 
-    can set_tokens(tokens:int) {
+    def set_tokens(tokens:int) {
         self.tokens = tokens;
     }
 
-    can get_type() {
+    def get_type() {
         return self.message_type;
     }
 
-    can get_message() -> InteractionMessage {
+    def get_message() -> InteractionMessage {
 
         # loads an existing message object or returns None
         message = None;
@@ -218,7 +218,7 @@ obj InteractionResponse {
         return message;
     }
 
-    can export(ignore_keys: list = ['__jac__']) {
+    def export(ignore_keys: list = ['__jac__']) {
         # convert the object to dictionary
         node_export = Utils.export_to_dict(self, ignore_keys);
         return node_export;

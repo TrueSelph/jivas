@@ -1,9 +1,9 @@
-import:py inspect;
-import:py logging;
-import:py from logging { Logger }
-import:py from jivas.agent.modules.agentlib.utils { Utils }
-import:py from typing { Optional, Type, Union }
-import:py from dataclasses { fields, MISSING }
+import inspect;
+import logging;
+import from logging { Logger }
+import from jivas.agent.modules.agentlib.utils { Utils }
+import from typing { Optional, Type, Union }
+import from dataclasses { fields, MISSING }
 
 node GraphNode {
     # base graph node for all nodes in agent graph, under app node.
@@ -17,23 +17,23 @@ node GraphNode {
     # set up logger
     static has logger:Logger = logging.getLogger(__name__);
 
-    can postinit {
+    def postinit {
         if (not self.id) {
             self.id = jid(self);
         }
     }
 
-    can get_type -> str {
+    def get_type() -> str {
         # returns the string-based representation of the class name
         return type(self).__name__;
     }
 
-    can get_parent_type -> str {
+    def get_parent_type() -> str {
         # returns the string-based representation of the class name
         return type(super()).__name__;
     }
 
-    can export(ignore_keys: list = [], clean: bool = False) -> dict {
+    def export(ignore_keys: list = [], clean: bool = False) -> dict {
         # exports graph node as dict; if clean is set, exports a snapshot of node which matches architype initializations
 
         if(clean) {
@@ -74,7 +74,7 @@ node GraphNode {
         }
     }
 
-    can update(data: dict = {}) -> GraphNode {
+    def update(data: dict = {}) -> GraphNode {
         # updates a graph node; expects a dict of attribute names mapped to values for updating
         if (data) {
             for attr in data.keys() {
@@ -95,7 +95,7 @@ node GraphNode {
         return self;
     }
 
-    can post_update {
+    def post_update {
         # can be overriden to execute following a node update
     }
 }

@@ -1,14 +1,14 @@
-import:py os;
-import:py yaml;
-import:py logging;
-import:py traceback;
-import:py from logging { Logger }
-import:jac from jivas.agent.core.agent {Agent}
-import:jac from jivas.agent.action.action {Action}
-import:jac from jivas.agent.action.actions {Actions}
-import:jac from interact_graph_walker {interact_graph_walker}
+import os;
+import yaml;
+import logging;
+import traceback;
+import from logging { Logger }
+import from jivas.agent.core.agent {Agent}
+import from jivas.agent.action.action {Action}
+import from jivas.agent.action.actions {Actions}
+import from interact_graph_walker {interact_graph_walker}
 
-walker get_action :interact_graph_walker: {
+walker get_action(interact_graph_walker) {
     # retrieves a named action package and metadata
     # must be spawned on agent or actions node or supplied with agent_id
     has agent_id: str = "";
@@ -31,7 +31,7 @@ walker get_action :interact_graph_walker: {
 
     can on_action with Action entry {
         if here.id == self.action_id {
-            # if the action is found, we can export its data
+            # if the action is found, we def export its data
             report here.export();
             disengage;
         }

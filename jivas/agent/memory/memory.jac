@@ -1,27 +1,27 @@
-import:py dotenv;
-import:py os;
-import:py json;
-import:py uuid;
-import:py yaml;
-import:py from datetime { datetime }
-import:py logging;
-import:py traceback;
-import:py from logging { Logger }
-import:py from jivas.agent.modules.agentlib.utils { Utils }
-import:jac from jivas.agent.core.graph_node { GraphNode }
-import:jac from jivas.agent.memory.frame { Frame }
-import:jac from jivas.agent.memory.collection { Collection }
-import:jac from jivas.agent.memory.retrace { Retrace }
-import:jac from jivas.agent.memory.tail { Tail }
-import:jac from jivas.agent.memory.interaction { Interaction }
+import dotenv;
+import os;
+import json;
+import uuid;
+import yaml;
+import from datetime { datetime }
+import logging;
+import traceback;
+import from logging { Logger }
+import from jivas.agent.modules.agentlib.utils { Utils }
+import from jivas.agent.core.graph_node { GraphNode }
+import from jivas.agent.memory.frame { Frame }
+import from jivas.agent.memory.collection { Collection }
+import from jivas.agent.memory.retrace { Retrace }
+import from jivas.agent.memory.tail { Tail }
+import from jivas.agent.memory.interaction { Interaction }
 
-node Memory :GraphNode: {
+node Memory(GraphNode) {
     # represents the root memory node for an agent
 
     # set up logger
     static has logger:Logger = logging.getLogger(__name__);
 
-    can get_frame(agent_id:str, session_id:str, label:str="", user_name:str="", force_session:bool=False, lookup:bool=False) -> Frame {
+    def get_frame(agent_id:str, session_id:str, label:str="", user_name:str="", force_session:bool=False, lookup:bool=False) -> Frame {
         # attempt to retrieve an existing session or spawn then traverse to a new one if force is on
         # if lookup is on, it operates in search mode
 
@@ -40,7 +40,7 @@ node Memory :GraphNode: {
         return frame_node;
     }
 
-    can get_frames(session_id:str="") -> list[Frame] {
+    def get_frames(session_id:str="") -> list[Frame] {
         # returns a list of all frame nodes attached to memory or specific ones by session_id if supplied
 
         if session_id {
@@ -49,10 +49,10 @@ node Memory :GraphNode: {
 
         frames = [-->](`?Frame);
         # sort frames by 'created_on' ISO datetime string
-        return sorted(frames, key = with frame:Frame can datetime.fromisoformat(frame.created_on) if hasattr(frame, 'created_on') and frame.created_on else "", reverse=True);
+        return sorted(frames, key = lambda frame:Frame:datetime.fromisoformat(frame.created_on) if hasattr(frame, 'created_on') and frame.created_on else "", reverse=True);
     }
 
-    can get_collection(collection_name:str) -> Collection {
+    def get_collection(collection_name:str) -> Collection {
         # attempt to retrieve an existing collection or spawn then traverse to a new one if it doesnt exist
 
         collection_node = Utils.node_obj( [-->](`?Collection)(?name == collection_name) );
@@ -66,7 +66,7 @@ node Memory :GraphNode: {
         return collection_node;
     }
 
-    can import_memory(data:dict, overwrite:bool=True) -> bool {
+    def import_memory(data:dict, overwrite:bool=True) -> bool {
         # imports a structured memory dump into memory
         # set overwrite to True in order to wipe memory first
         if not data or not isinstance(data, dict) {
@@ -123,12 +123,12 @@ node Memory :GraphNode: {
         return False;
     }
 
-    can export_memory(session_id:str="") {
+    def export_memory(session_id:str="") {
         # return a structured memory dump of all agent frames or only those with session_id if supplied
         return (self spawn _export_memory(session_id=session_id)).frame_data;
     }
 
-    can memory_healthcheck(session_id:str = "") {
+    def memory_healthcheck(session_id:str = "") {
 
         # init stats
         total_frames = 0;
@@ -150,22 +150,22 @@ node Memory :GraphNode: {
         };
     }
 
-    can purge(session_id:str=None) {
+    def purge(session_id:str=None) {
         # backwards compat for older actions
         return self.purge_frame_memory(session_id);
     }
 
-    can purge_frame_memory(session_id:str=None) {
+    def purge_frame_memory(session_id:str=None) {
         # removes all frames and interactions (or by session_id)
         return (self spawn _purge_frames(session_id=session_id)).removed;
     }
 
-    can purge_collection_memory(collection_name:str=None) -> list {
+    def purge_collection_memory(collection_name:str=None) -> list {
         # removes all collections and related child nodes (or by collection_name)
         return (self spawn _purge_collections(collection_name=collection_name)).removed;
     }
 
-    can refresh(session_id:str) {
+    def refresh(session_id:str) {
         # prunes interactions under frame down to the last, most recent one
         if ( frame_node := self.get_frame(None, session_id = session_id) ) {
             frame_node.refresh_interactions();
@@ -175,7 +175,7 @@ node Memory :GraphNode: {
         return False;
     }
 
-    can get_agent() {
+    def get_agent() {
         return Utils.node_obj([<--]);
     }
 }
@@ -200,14 +200,14 @@ walker _purge_frames {
     }
 
     can on_frame with Frame entry {
-        visit [-:Tail:->] else {
+        visit [->:Tail:->] else {
             self.removed.append(here);
             Jac.destroy(here);
         }
     }
 
     can on_interaction with Interaction entry {
-        visit [-:Retrace:->];
+        visit [->:Retrace:->];
         self.removed.append(here);
         Jac.destroy(here);
     }

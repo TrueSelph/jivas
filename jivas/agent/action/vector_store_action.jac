@@ -1,22 +1,22 @@
-import:py math;
-import:py json;
-import:py yaml;
-import:py logging;
-import:py traceback;
-import:py from typing { Any, Optional, Tuple, List, Dict, Union, Iterator }
-import:py from logging { Logger }
-import:jac from jivas.agent.action.action { Action }
-import:py from jivas.agent.modules.agentlib.utils { Utils }
-import:jac from jivas.agent.action.interact_graph_walker {interact_graph_walker}
-import:py from langchain_community.document_loaders { TextLoader }
-import:py from langchain_text_splitters { CharacterTextSplitter }
-import:py from langchain_core.vectorstores.base { VectorStore }
-import:py from langchain_core.documents.base { Document }
-import:py from langchain_openai { OpenAIEmbeddings }
-import:py from langchain_openai { AzureOpenAIEmbeddings }
-import:py from jivas.agent.modules.embeddings.jivas_embeddings { JivasEmbeddings }
+import math;
+import json;
+import yaml;
+import logging;
+import traceback;
+import from typing { Any, Optional, Tuple, List, Dict, Union, Iterator }
+import from logging { Logger }
+import from jivas.agent.action.action { Action }
+import from jivas.agent.modules.agentlib.utils { Utils }
+import from jivas.agent.action.interact_graph_walker {interact_graph_walker}
+import from langchain_community.document_loaders { TextLoader }
+import from langchain_text_splitters { CharacterTextSplitter }
+import from langchain_core.vectorstores.base { VectorStore }
+import from langchain_core.documents.base { Document }
+import from langchain_openai { OpenAIEmbeddings }
+import from langchain_openai { AzureOpenAIEmbeddings }
+import from jivas.agent.modules.embeddings.jivas_embeddings { JivasEmbeddings }
 
-node VectorStoreAction :Action: {
+node VectorStoreAction(Action) {
     # base node for all vector store action implementations
     has collection_name:str = "";
     has logger:Logger = logging.getLogger(__name__);
@@ -99,17 +99,17 @@ node VectorStoreAction :Action: {
             Returns: True if successful, False otherwise.
     *#
 
-    can get_client() abs;
-    can get_collection(collection_name:str) abs;
-    can get_vectorstore() abs;
-    can metadata_search(metadata:dict, k:int=10, **kwargs:dict) -> List[Document] abs;
-    can list_documents(page:int=1, per_page:int=10, with_embeddings:bool=False) -> dict abs;
-    can get_document(id:str) -> Union[dict, None] abs;
-    can update_document(id:str, data:dict) -> Union[dict, None] abs;
-    can delete_document(id:str) -> Union[dict, None] abs;
-    can delete_collection() -> bool abs;
+    def get_client() abs;
+    def get_collection(collection_name:str) abs;
+    def get_vectorstore() abs;
+    def metadata_search(metadata:dict, k:int=10, **kwargs:dict) -> List[Document] abs;
+    def list_documents(page:int=1, per_page:int=10, with_embeddings:bool=False) -> dict abs;
+    def get_document(id:str) -> Union[dict, None] abs;
+    def update_document(id:str, data:dict) -> Union[dict, None] abs;
+    def delete_document(id:str) -> Union[dict, None] abs;
+    def delete_collection() -> bool abs;
 
-    can load_text_document(filepath:str, chunk_size:int=400, chunk_overlap:int=0) -> Union[list[str], None] {
+    def load_text_document(filepath:str, chunk_size:int=400, chunk_overlap:int=0) -> Union[list[str], None] {
         # """
         # Loads a text-based document into vectorstore
 
@@ -131,7 +131,7 @@ node VectorStoreAction :Action: {
         }
     }
 
-    can import_knodes(data: Union[list, str], with_embeddings: bool = False) -> bool {
+    def import_knodes(data: Union[list, str], with_embeddings: bool = False) -> bool {
         # Import knodes (knowledge nodes) into the vector store.
         knodes = [];
         if isinstance(data, str) {
@@ -186,7 +186,7 @@ node VectorStoreAction :Action: {
         }
     }
 
-    can export_knodes(as_json: bool = False, with_embeddings: bool = False, with_ids: bool = False) -> str {
+    def export_knodes(as_json: bool = False, with_embeddings: bool = False, with_ids: bool = False) -> str {
         # Export knodes from the vector store in a standardized format.
 
         try {
@@ -228,7 +228,7 @@ node VectorStoreAction :Action: {
         }
     }
 
-    can list_documents_generator(page_size: int = 250, with_embeddings:bool = False) -> Iterator[List[Dict]] {
+    def list_documents_generator(page_size: int = 250, with_embeddings:bool = False) -> Iterator[List[Dict]] {
         #*
         Generator that yields batches of documents in a standardized format
         {id: str, text: str, metadata: dict}
@@ -265,7 +265,7 @@ node VectorStoreAction :Action: {
         }
     }
 
-    can add_texts(texts:list[str], metadatas:Union[list[dict], None]=None,
+    def add_texts(texts:list[str], metadatas:Union[list[dict], None]=None,
                  ids:Union[list[str], None]=None, **kwargs:dict) -> Union[list[str], None] {
         #*
         Run more texts through the embedding and add to the vectorstore.
@@ -290,7 +290,7 @@ node VectorStoreAction :Action: {
         }
     }
 
-    can add_texts_with_embeddings(texts:list[str], embeddings:Optional[List[List[float]]], metadatas:Union[list[dict], None]=None,
+    def add_texts_with_embeddings(texts:list[str], embeddings:Optional[List[List[float]]], metadatas:Union[list[dict], None]=None,
                  ids:Union[list[str], None]=None, **kwargs:dict) -> Union[list[str], None] {
         #*
         Run more texts through the embedding and add to the vectorstore.
@@ -326,7 +326,7 @@ node VectorStoreAction :Action: {
         return doc_ids;
     }
 
-    can insert_document(data:dict) -> Union[str, None] {
+    def insert_document(data:dict) -> Union[str, None] {
         #*
         Insert a document with its metadata and vector into the vectorstore.
 
@@ -351,7 +351,7 @@ node VectorStoreAction :Action: {
         }
     }
 
-    can add_documents(documents:list[Document], **kwargs:dict) -> Union[list[str], None] {
+    def add_documents(documents:list[Document], **kwargs:dict) -> Union[list[str], None] {
         #*
         Add or update documents in the vectorstore.
 
@@ -370,7 +370,7 @@ node VectorStoreAction :Action: {
         }
     }
 
-    can get_embedding_model() -> Union[OpenAIEmbeddings, AzureOpenAIEmbeddings, JivasEmbeddings, None] {
+    def get_embedding_model() -> Union[OpenAIEmbeddings, AzureOpenAIEmbeddings, JivasEmbeddings, None] {
         if self.embedding_model_provider == "openai" {
             return OpenAIEmbeddings(
                 model=self.embedding_model_name,
@@ -398,7 +398,7 @@ node VectorStoreAction :Action: {
         }
     }
 
-    can similarity_search(query:str, k:int=10, filter:Union[str, None]=None, **kwargs:dict) -> Union[List[Document], None] {
+    def similarity_search(query:str, k:int=10, filter:Union[str, None]=None, **kwargs:dict) -> Union[List[Document], None] {
         #*
         Return typesense documents most similar to query.
 
@@ -421,7 +421,7 @@ node VectorStoreAction :Action: {
         }
     }
 
-    can similarity_search_with_score(query:str, k:int=10, filter:Union[str, None]=None, **kwargs:dict) -> Union[List[Tuple[Document, float]], None] {
+    def similarity_search_with_score(query:str, k:int=10, filter:Union[str, None]=None, **kwargs:dict) -> Union[List[Tuple[Document, float]], None] {
         #*
         Return typesense documents most similar to query.
 
@@ -444,7 +444,7 @@ node VectorStoreAction :Action: {
         }
     }
 
-    can max_marginal_relevance_search(query:str, k:int=10, fetch_k:int=20,
+    def max_marginal_relevance_search(query:str, k:int=10, fetch_k:int=20,
                                      lamda_mult:float=0.5, **kwargs:dict) -> Union[List[Document], None] {
         #*
         Maximal marginal relevance optimizes for similarity to query AND diversity among selected documents.
@@ -469,7 +469,7 @@ node VectorStoreAction :Action: {
         }
     }
 
-    can vector_similarity_search(embedding:list[float], k:int=10, **kwargs:dict) -> Union[List[Document], None] {
+    def vector_similarity_search(embedding:list[float], k:int=10, **kwargs:dict) -> Union[List[Document], None] {
         #*
         Return docs most similar to embedding vector.
 
@@ -490,7 +490,7 @@ node VectorStoreAction :Action: {
         }
     }
 
-    can healthcheck() -> Union[bool, dict] {
+    def healthcheck() -> Union[bool, dict] {
         try {
             if not self.get_embedding_model() {
                 return {

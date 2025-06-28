@@ -1,12 +1,12 @@
-import:py json;
-import:py from typing { Union }
+import json;
+import from typing { Union }
 import from enum { unique }
-import:py from openai { OpenAI }
-import:py from jivas.agent.modules.interview_interact_action.utils { evaluate_conditional_expression }
-import:jac from jivas.agent.action.interact_action { InteractAction }
-import:jac from jivas.agent.action.interact_graph_walker { interact_graph_walker }
+import from openai { OpenAI }
+import from jivas.agent.modules.interview_interact_action.utils { evaluate_conditional_expression }
+import from jivas.agent.action.interact_action { InteractAction }
+import from jivas.agent.action.interact_graph_walker { interact_graph_walker }
 
-node InterviewInteractAction :InteractAction: {
+node InterviewInteractAction(InteractAction) {
     #*
     * represents a multiturn interactive execution on the agent action graph
     * designed to allow implementors to specify a sequence of required and non-required fields
@@ -89,21 +89,21 @@ node InterviewInteractAction :InteractAction: {
         """;
     has question_index:dict = {};
 
-    can setup() {
+    def setup() {
         if self.auto_intents {
             self.generate_intents();
         }
     }
 
-    can on_register() {
+    def on_register() {
         self.setup();
     }
 
-    can post_update() {
+    def post_update() {
         self.setup();
     }
 
-    can touch(visitor: interact_graph_walker) -> bool {
+    def touch(visitor: interact_graph_walker) -> bool {
         has_intent = False;
         if(self.get_agent().get_action("IntentInteractAction")) {
             has_intent = (self.label in visitor.interaction_node.intents);
@@ -113,7 +113,7 @@ node InterviewInteractAction :InteractAction: {
         return (has_intent and (visitor.utterance or visitor.data));
     }
 
-    can execute(visitor: interact_graph_walker) {
+    def execute(visitor: interact_graph_walker) {
         # initializes the session and calls the process response ability, then exports the visitor obj
         interview_session = self.init_session(visitor);
         # call process_response which needs to be implemented
@@ -123,9 +123,9 @@ node InterviewInteractAction :InteractAction: {
     }
 
     # abstract ability meant to contain implemented handling logic based on interview state
-    can process_response(visitor: interact_graph_walker) abs;
+    def process_response(visitor: interact_graph_walker) abs;
 
-    can init_session(visitor: interact_graph_walker) -> InterviewSession {
+    def init_session(visitor: interact_graph_walker) -> InterviewSession {
         # performs extraction and updates the session responses
         interview_session = self.get_session(visitor);
 
@@ -240,7 +240,7 @@ node InterviewInteractAction :InteractAction: {
         return interview_session;
     }
 
-    can exit_session(interview_session: InterviewSession, visitor: interact_graph_walker) {
+    def exit_session(interview_session: InterviewSession, visitor: interact_graph_walker) {
         # contains all operations to clean up and update once process_response completes
 
         # ensure we update the session in frame before export
@@ -256,7 +256,7 @@ node InterviewInteractAction :InteractAction: {
 
     }
 
-    can healthcheck() -> Union[bool, dict] {
+    def healthcheck() -> Union[bool, dict] {
 
         invalid_question_message = "";
         if isinstance(self.question_index, dict) {
@@ -298,7 +298,7 @@ node InterviewInteractAction :InteractAction: {
 
     # -- UTILITIES --
 
-    can generate_intents() {
+    def generate_intents() {
         # generates a list of formatted intents based on question index and sets them to self.intents
         if not isinstance(self.question_index, dict) {
             return [];
@@ -319,7 +319,7 @@ node InterviewInteractAction :InteractAction: {
         }
     }
 
-    can create_session(visitor: interact_graph_walker) -> InterviewSession {
+    def create_session(visitor: interact_graph_walker) -> InterviewSession {
         # adds a new interview session to the frame for the current user
 
         all_fields = self.get_question_fields();
@@ -333,22 +333,22 @@ node InterviewInteractAction :InteractAction: {
         return interview_session;
     }
 
-    can delete_session(visitor: interact_graph_walker) {
+    def delete_session(visitor: interact_graph_walker) {
         # removes the session object from the current user's frame
         visitor.frame_node.variable_del(key=f"{self.get_type()}_session");
     }
 
-    can update_session(interview_session:InterviewSession, visitor: interact_graph_walker) {
+    def update_session(interview_session:InterviewSession, visitor: interact_graph_walker) {
         # updates interview session for the current user
         visitor.frame_node.variable_set(key=f"{self.get_type()}_session", value=interview_session.export());
     }
 
-    can get_question_fields() -> dict {
+    def get_question_fields() -> dict {
         # returns the list of question fields (keys)
         return list(self.question_index.keys());
     }
 
-    can get_next_question(interview_session: InterviewSession) -> str {
+    def get_next_question(interview_session: InterviewSession) -> str {
         # returns the next question based on the state of the session, or None if no more
         # considers question index features such as conditional specifiers
         while next_field := interview_session.get_next_field() {
@@ -368,12 +368,12 @@ node InterviewInteractAction :InteractAction: {
         return "";
     }
 
-    can get_next_question_directive(interview_session: InterviewSession) -> str {
+    def get_next_question_directive(interview_session: InterviewSession) -> str {
         # composes the next question directive based on the next question
         return self.question_directive.format(question=self.get_next_question(interview_session)) if (next_question := self.get_next_question(interview_session)) else "";
     }
 
-    can get_confirmation_directive(interview_session: InterviewSession) -> str {
+    def get_confirmation_directive(interview_session: InterviewSession) -> str {
         # composes the confirmation directive based on the details collected
         responses = (interview_session.export()).get('responses', {});
         # Convert the responses dict to a markdown bulleted list
@@ -387,7 +387,7 @@ node InterviewInteractAction :InteractAction: {
         return self.confirmation_directive.format(summary=responses if (responses) else "");
     }
 
-    can filter_question_index(interview_session: InterviewSession) -> list {
+    def filter_question_index(interview_session: InterviewSession) -> list {
         # reutrns a list of question functions which are applicable to the session state and remaining fields
 
         # cater to OPEN state
@@ -409,7 +409,7 @@ node InterviewInteractAction :InteractAction: {
         return self.question_index;
     }
 
-    can get_session(visitor:interact_graph_walker) -> InterviewSession {
+    def get_session(visitor:interact_graph_walker) -> InterviewSession {
         # retrieves the active session, if any
         interview_session_data = visitor.frame_node.variable_get(key=f"{self.get_type()}_session");
         if interview_session_data and isinstance(interview_session_data, dict) {
@@ -444,7 +444,7 @@ node InterviewInteractAction :InteractAction: {
         return None;
     }
 
-    can update_responses(responses:dict, interview_session:InterviewSession) {
+    def update_responses(responses:dict, interview_session:InterviewSession) {
 
         if type(responses) is not dict {
             return;
@@ -457,7 +457,7 @@ node InterviewInteractAction :InteractAction: {
         }
     }
 
-    can generate_extraction_prompt(question_index: dict) -> str {
+    def generate_extraction_prompt(question_index: dict) -> str {
         # accepts the question index schema and prepares an extraction prompt
 
         entities_list = [];
@@ -488,7 +488,7 @@ node InterviewInteractAction :InteractAction: {
         return prompt;
     }
 
-    can generate_revision_extraction_prompt(interview_session:InterviewSession) -> str {
+    def generate_revision_extraction_prompt(interview_session:InterviewSession) -> str {
         # prepares the revision extraction prompt
 
         entities_list = [];
@@ -529,12 +529,12 @@ node InterviewInteractAction :InteractAction: {
         return prompt;
     }
 
-    can extract(prompt:str, question_index:list, visitor: interact_graph_walker, history:Union[bool,None] = None) -> Union[dict, None] {
+    def extract(prompt:str, question_index:list, visitor: interact_graph_walker, history:Union[bool,None] = None) -> Union[dict, None] {
         # performs entity extraction based on question_index items
         return self.call_llm(prompt, visitor, history, json_only=True);
     }
 
-    can call_llm(prompt:str, visitor: interact_graph_walker, history:Union[bool,None] = None, json_only:bool = False) -> Union[str, dict, None] {
+    def call_llm(prompt:str, visitor: interact_graph_walker, history:Union[bool,None] = None, json_only:bool = False) -> Union[str, dict, None] {
         # performs function tool calling for extracting question responses based on question
 
         prompt_messages = [];
@@ -614,15 +614,15 @@ obj InterviewSession {
     has responses: dict = {};
     has data: dict = {};
 
-    can get_state() -> SessionState {
+    def get_state() -> SessionState {
         return self.state;
     }
 
-    can set_state(state:SessionState) {
+    def set_state(state:SessionState) {
         self.state = state;
     }
 
-    can get_next_field() -> str {
+    def get_next_field() -> str {
 
         response_fields = self.responses.keys();
 
@@ -636,43 +636,43 @@ obj InterviewSession {
         return None;
     }
 
-    can on_required_field() -> boolean {
+    def on_required_field() -> boolean {
         return (self.get_next_field() in self.get_required_fields());
     }
 
-    can get_answered_fields() -> list {
+    def get_answered_fields() -> list {
         return list(self.responses.keys()) or [];
     }
 
-    can get_unanswered_fields() -> list {
+    def get_unanswered_fields() -> list {
         return [field for field in self.all_fields if field not in self.get_answered_fields()];
     }
 
-    can get_required_fields() -> list {
+    def get_required_fields() -> list {
         return self.required_fields;
     }
 
-    can get_response(field: str) -> str {
+    def get_response(field: str) -> str {
         return self.responses.get(field, "");
     }
 
-    can set_response(field: str, response: str) {
+    def set_response(field: str, response: str) {
         self.responses[field] = response;
     }
 
-    can del_response(field: str) {
+    def del_response(field: str) {
         del self.responses[field];
     }
 
-    can get_data_item(label:str) -> any {
+    def get_data_item(label:str) -> any {
         return self.data.get(label, None);
     }
 
-    can set_data_item(label:str, value:any) {
+    def set_data_item(label:str, value:any) {
         self.data[label] = value;
     }
 
-    can export() -> dict {
+    def export() -> dict {
         return {
             'state': self.state.value,
             'all_fields': self.all_fields,
