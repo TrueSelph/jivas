@@ -156,8 +156,7 @@ node Actions(GraphNode) {
         module_root = action_data.get('context', {}).get('_package', {}).get('config', {}).get('module_root', None);
 
         if(module_root) {
-            AgentInterface.load_module(module_root);
-            #jac_import(f"{module_root}.lib", base_path="./", reload_module = True);
+            AgentInterface.load_module(f"{module_root}.lib");
             return True;
         }
 
