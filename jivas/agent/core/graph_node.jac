@@ -34,18 +34,18 @@ node GraphNode {
     }
 
     def export(ignore_keys: list = [], clean: bool = False) -> dict {
-        # exports graph node as dict; if clean is set, exports a snapshot of node which matches architype initializations
+        # exports graph node as dict; if clean is set, exports a snapshot of node which matches archetype initializations
 
         if(clean) {
             ignore_keys = ignore_keys + self.transient_attrs;
 
-            architype_context = {};
+            archetype_context = {};
             for f in fields(self) {
                 if f.default is not MISSING {
-                    architype_context[f.name] = f.default;
+                    archetype_context[f.name] = f.default;
                 }
                 elif f.default_factory is not MISSING {
-                    architype_context[f.name] = f.default_factory();
+                    archetype_context[f.name] = f.default_factory();
                 }
             }
 
@@ -57,7 +57,7 @@ node GraphNode {
                 del node_export['_context'];
             }
 
-            return Utils.clean_context(node_context=node_export, architype_context=architype_context, ignore_keys=ignore_keys);
+            return Utils.clean_context(node_context=node_export, archetype_context=archetype_context, ignore_keys=ignore_keys);
 
         } else {
             # set the keys to ignore

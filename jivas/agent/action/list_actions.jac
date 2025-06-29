@@ -52,8 +52,15 @@ walker list_actions(interact_graph_walker) {
             if (action.get('_package', {}).get('meta', {}).get('type', 'action') == 'interact_action'
             or action['label'] == 'ExitInteractAction')
         ];
-        self.actions = (sorted(interact_actions, key = with action:int can action['weight'] )) + other_actions;
-
+    
+        self.actions = (
+            sorted(interact_actions, key=self.get_weight)
+        ) + other_actions;
+        
         report self.actions;
+    }
+
+    def get_weight(action:dict) -> int {
+        return int(action.get('weight', 0));
     }
 }

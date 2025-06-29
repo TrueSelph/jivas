@@ -4,6 +4,7 @@ import re;
 import subprocess;
 import pkg_resources;
 import sys;
+import types;
 import yaml;
 import logging;
 import traceback;
@@ -14,12 +15,13 @@ import from logging { Logger }
 import from jivas.agent.modules.agentlib.utils { Utils }
 import from jvcli.api { RegistryAPI }
 import from jvcli.utils { is_version_compatible }
-import from jvserve.lib.agent_interface { AgentInterface }
+import from jaclang { JacMachine }
 import from jivas.agent.action.action { Action }
 import from jivas.agent.action.interact_action { InteractAction }
 import from jivas.agent.core.graph_node { GraphNode }
 import from jivas.agent.action.exit_interact_action { ExitInteractAction }
 import from jivas.agent.core.purge { purge }
+
 
 node Actions(GraphNode) {
 
@@ -156,31 +158,37 @@ node Actions(GraphNode) {
         module_root = action_data.get('context', {}).get('_package', {}).get('config', {}).get('module_root', None);
 
         if(module_root) {
-            AgentInterface.load_module(f"{module_root}.lib");
-            return True;
+            module_name = f"{module_root}.lib";
+            try {
+                JacMachine.jac_import(target=module_name, base_path="./", reload_module = True);
+                return True;
+            } except Exception as e {
+                self.logger.error(f"Unable to load module {module_name}: {e}");
+            }
+            
         }
-
         return False;
     }
 
-    def register_action(action_data: dict, parent: str="") -> Action {
+    def register_action(action_data: dict, parent: str="") -> Union[Action, None] {
         # registers an agent action
-        # expects an action descriptor object with optional architype source embeddings;
+        # expects an action descriptor object with optional archetype source embeddings;
         action_node = None;
 
         if(not action_data) {
-            self.logger.error(f"unable to register action {label}, missing or invalid action data");
+            self.logger.error(f"unable to register action, missing or invalid action data");
             return None;
         }
 
         label = action_data.get('context', {}).get('label', action_data.get('action', None));
-        architype = action_data.get('context', {}).get('_package', {}).get('architype', None);
+        archetype = action_data.get('context', {}).get('_package', {}).get('archetype', None);
         module = action_data.get('context', {}).get('_package', {}).get('config', {}).get('module', None);
+        package_name = action_data.get('context', {}).get('_package', {}).get('config', {}).get('package_name', None);
         singleton = action_data.get('context', {}).get('_package', {}).get('config', {}).get('singleton', False);
         action_type = action_data.get('context', {}).get('_package', {}).get('meta', {}).get('type','action');
 
-        if (not architype or not module or not label) {
-            self.logger.error(f"unable to register action {label}, missing label, architype or module name");
+        if (not archetype or not package_name or not label) {
+            self.logger.error(f"unable to register action {label}, missing label, archetype or module name");
             return None;
         }
 
@@ -198,50 +206,55 @@ node Actions(GraphNode) {
                 return None;
             }
 
-            # spawn the action node without any prop values, then do a update - it's safer this way
-            action_node = AgentInterface.spawn_node(
-                node_name=architype,
-                attributes={},
-                module_name=module
-            );
-
-            # at this point all architypes related to this action are registered, let's map
-            if (action_node) {
-
-                # update the action node with the action data
-                attributes = action_data.get('context', {});
-                for attr in attributes.keys() {
-                    if (hasattr(action_node, attr)) {
-                        setattr(action_node, attr, attributes[attr]);
-                    } else {
-                        # we place all non attributes in _context for integration later
-                        action_node._context[attr] = attributes[attr];
-                    }
-                }
-
-                # get action parent node
-                if (not parent) {
-                    action_parent_node = self;
-                } else {
-                    action_parent_node = self.get_by_type(action_type=parent, only_enabled=False);
-                }
-                # map the action
-                action_parent_node ++> action_node;
-
-                # execute the action's on_register ability for on registration inits
-                action_node.on_register();
-
-                # log success if all went well
-                self.logger.info(f"registered action: {action_node.label}");
+            # see if the action module is actually loaded
+            if not JacMachine.loaded_modules.get(package_name) {
+                raise ValueError(f"Unable to spawn: {archetype}, module not loaded.");
             }
 
+            # spawn the action node without any prop values, then do a update - it's safer this way
+            action_node = JacMachine.spawn_node(
+                node_name=archetype,
+                module_name=package_name
+            );
+            
+            if not action_node {
+                raise ValueError(f"Unable to spawn: {archetype}");
+            }
+
+            # at this point all archetypes related to this action are registered, let's map
+            # update the action node with the action data
+            attributes = action_data.get('context', {});
+            for attr in attributes.keys() {
+                if (hasattr(action_node, attr)) {
+                    setattr(action_node, attr, attributes[attr]);
+                } else {
+                    # we place all non attributes in _context for integration later
+                    action_node._context[attr] = attributes[attr];
+                }
+            }
+
+            # get action parent node
+            if (not parent) {
+                action_parent_node = self;
+            } else {
+                action_parent_node = self.get_by_type(action_type=parent, only_enabled=False);
+            }
+            # map the action
+            action_parent_node ++> action_node;
+
+            # execute the action's on_register ability for on registration inits
+            action_node.on_register();
+
+            # log success if all went well
+            self.logger.info(f"registered action: {action_node.label}");
+            
             # Handle child actions; only interact_actions can have child actions
             # we also cannot nest regular actions under interact_actions
             if ("children" in action_data and action_type == 'interact_action') {
                 for child_data in action_data["children"] {
                     self.register_action(
                         action_data=child_data,
-                        parent=architype
+                        parent=archetype
                     );
                 }
             }
@@ -353,10 +366,10 @@ node Actions(GraphNode) {
 
                     action_data['context']['agent_id'] = agent_id;
                     action_data['context']['_package'] = action_info;
-                    # grab the action architype name
-                    architype = action_info.get('architype', None);
-                    # label, if set will be used, otherwise use architype
-                    action_data['context']['label'] = action_data.get('context', {}).get('label', architype);
+                    # grab the action archetype name
+                    archetype = action_info.get('archetype', None);
+                    # label, if set will be used, otherwise use archetype
+                    action_data['context']['label'] = action_data.get('context', {}).get('label', archetype);
                     # apply the description in the info file to the action entry
                     action_data['context']['description'] = action_info.get('meta', {}).get('description', '');
 

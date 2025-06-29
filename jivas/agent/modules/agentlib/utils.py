@@ -808,32 +808,32 @@ class Utils:
 
     @staticmethod
     def clean_context(
-        node_context: dict, architype_context: dict, ignore_keys: list
+        node_context: dict, archetype_context: dict, ignore_keys: list
     ) -> dict:
         """
         Cleans and sanitizes node_context by:
-        - Removing keys that match in node_context and architype_context.
+        - Removing keys that match in node_context and archetype_context.
         - Removing empty values except boolean `False`.
         - Removing keys listed in ignore_keys.
 
         :param node_context: Dictionary containing existing snapshot of spawned node.
-        :param architype_context: Dictionary containing original architype context variables and values.
+        :param archetype_context: Dictionary containing original archetype context variables and values.
         :param ignore_keys: List of keys to remove.
         :return: Sanitized dictionary.
         """
 
         # Check for matching keys and remove them if they match
-        for key in list(architype_context.keys()):
+        for key in list(archetype_context.keys()):
             if key in node_context:
                 if isinstance(node_context[key], str):
                     str1 = Utils.normalize_text(node_context[key])
-                    str2 = Utils.normalize_text(architype_context[key])
+                    str2 = Utils.normalize_text(archetype_context[key])
 
                     if str1 == str2:
                         del node_context[key]
 
                 else:
-                    if node_context[key] == architype_context[key]:
+                    if node_context[key] == archetype_context[key]:
                         del node_context[key]
 
         # Prepare keys to remove

@@ -6,7 +6,7 @@ import from jivas.agent.action.action { Action }
 import from jivas.agent.modules.agentlib.utils { Utils }
 
 node ModelAction(Action) {
-    # Generic model action node architype for abstracted, standardized LLM interfacing
+    # Generic model action node archetype for abstracted, standardized LLM interfacing
 
     # set up logger
     static has logger: Logger = logging.getLogger(__name__);
