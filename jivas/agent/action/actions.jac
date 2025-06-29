@@ -84,7 +84,12 @@ node Actions(GraphNode) {
         # based on weights and precedence specified in _package.config.order
 
         # this is the Jaclang equivalent of a lamda function
-        return sorted(actions, key = lambda action: InteractAction:action.weight );
+        # Sort actions by their weight attribute without using a lambda
+        def get_weight(action: InteractAction) -> int {
+            return action.weight;
+        }
+        
+        return sorted(actions, key=get_weight);
     }
 
     def get_action_info(namespace_package_name:str, version:str=None, jpr_api_key:str=None) -> dict {
