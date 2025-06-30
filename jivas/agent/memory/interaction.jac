@@ -19,9 +19,10 @@ node Interaction(GraphNode) {
     has directives: list = []; # TODO: make this private; holds queued directives for from interact_actions
     has context_data: dict = {};
     has events: list = [];
-    has response: dict = {};
+    has response: InteractionResponse = None;
     has data: dict = {};
     has closed: bool = False; # flag to determine whether interaction is complete / closed or not
+    
     def postinit {
         super.postinit();
         # add of node attributes which are protected from update operation
@@ -45,30 +46,34 @@ node Interaction(GraphNode) {
     def set_message(message: InteractionMessage) {
         # set the interaction response message object
         # loads an existing interaction response object or returns a fresh one
-
-        interaction_response = self.get_response() or InteractionResponse();
+        interaction_response = self.get_response();
         interaction_response.set_message(message);
-        self.response = interaction_response.export();
+        self.response = interaction_response;
     }
 
     def get_message() -> InteractionMessage {
         # get the interaction response message object
-        if (interaction_response := self.get_response()) {
-            return interaction_response.get_message();
+        if (response := self.get_response()) {            
+            return response.get_message();
         }
-
         return None;
     }
 
     def get_response() -> InteractionResponse {
         # loads an existing interaction response object or returns a fresh one
-        interaction_response = None;
-        if (self.response) {
-            interaction_response = InteractionResponse();
-            interaction_response.load(self.response);
+
+        if not self.response {
+            self.response = InteractionResponse();
         }
 
-        return interaction_response;
+        # TODO: trace where this reverts to a dict; ensure we reinstate the object
+        if (isinstance(self.response, dict)) {
+            interaction_response = InteractionResponse();
+            interaction_response.load(self.response);
+            self.response = interaction_response;
+        }
+
+        return self.response;
     }
 
     def has_response -> bool {

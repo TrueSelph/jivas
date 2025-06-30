@@ -99,7 +99,7 @@ node Frame(GraphNode) {
             agent_id=self.agent_id,
             channel=channel,
             utterance=utterance,
-            response = InteractionResponse(session_id=self.session_id).export()
+            response = InteractionResponse(session_id=self.session_id)
         );
 
         return self.insert_interaction(interaction_node, last_interaction_node);
@@ -118,8 +118,8 @@ node Frame(GraphNode) {
             channel=channel,
             response=InteractionResponse(
                 session_id=self.session_id,
-                message=TextInteractionMessage(content=message).export()
-            ).export()
+                message=TextInteractionMessage(content=message)
+            )
         );
 
         # close the unprompted interaction

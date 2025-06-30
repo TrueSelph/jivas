@@ -60,19 +60,19 @@ obj InteractionMessage {
 }
 
 obj SilentInteractionMessage(InteractionMessage) {
-    has message_type:str = MessageType.SILENCE.value;
+    has message_type:MessageType = MessageType.SILENCE;
     has content:str = "...";
 }
 
 obj TextInteractionMessage(InteractionMessage) {
 
-    has message_type:str = MessageType.TEXT.value;
+    has message_type:MessageType = MessageType.TEXT;
     has content:str = "";
 }
 
 obj MediaInteractionMessage(InteractionMessage) {
 
-    has message_type:str = MessageType.MEDIA.value;
+    has message_type:MessageType = MessageType.MEDIA;
     has mime:str = "";
     has data:Any = None;
     has content:str = "";
@@ -88,8 +88,8 @@ obj MediaInteractionMessage(InteractionMessage) {
 
 obj MultiInteractionMessage(InteractionMessage) {
 
-    has message_type:str = MessageType.MULTI.value;
-    has content:list[dict] = [];
+    has message_type:MessageType = MessageType.MULTI;
+    has content:list[InteractionMessage] = [];
 
     def load(data:dict) {
         # loads a compatible interaction message data struct
@@ -126,43 +126,21 @@ obj MultiInteractionMessage(InteractionMessage) {
     def get_content() {
         content = "";
         for content_item in self.content {
-            content = f"{content} \n {content_item.get('content')}";
+            content = f"{content} \n {content_item.get_content()}";
         }
         return content;
     }
 
     def get_content_items() {
-
-        content_items = [];
-
-        if(self.content) {
-            # for each item, instantiate the message object based on the set type
-            for content_item in self.content {
-
-                message = SilentInteractionMessage();
-
-                if(content_item.get('message_type') == MessageType.MULTI.value) {
-                    message = MultiInteractionMessage();
-                } elif (content_item.get('message_type') == MessageType.MEDIA.value) {
-                    message = MediaInteractionMessage();
-                } elif (content_item.get('message_type') == MessageType.TEXT.value) {
-                    message = TextInteractionMessage();
-                }
-
-                message.load(content_item);
-                content_items.append(message);
-            }
-        }
-
-        return content_items;
+        return self.content;
     }
 }
 
 obj InteractionResponse {
 
     has session_id:str = "";
-    has message_type:str = MessageType.TEXT.value;
-    has message:dict = {};
+    has message_type:MessageType = MessageType.TEXT;
+    has message:InteractionMessage = None;
     has tokens:int = 0;
 
     def load(data:dict) {
@@ -180,7 +158,7 @@ obj InteractionResponse {
     def set_message(message:InteractionMessage) {
 
         if(message) {
-            self.message = message.export();
+            self.message = message;
             # auto-update the type based on the type
             self.message_type = message.get_type();
         }
@@ -191,31 +169,13 @@ obj InteractionResponse {
         self.tokens = tokens;
     }
 
-    def get_type() {
+    def get_type() -> MessageType {
         return self.message_type;
     }
 
-    def get_message() -> InteractionMessage {
-
+    def get_message() -> Union[InteractionMessage, None] {
         # loads an existing message object or returns None
-        message = None;
-
-        if(self.message) {
-            # instantiate the message object based on the set type
-            if(self.message_type == MessageType.MULTI.value) {
-                message = MultiInteractionMessage();
-            } elif (self.message_type == MessageType.MEDIA.value) {
-                message = MediaInteractionMessage();
-            } elif (self.message_type == MessageType.TEXT.value) {
-                message = TextInteractionMessage();
-            } else {
-                message = SilentInteractionMessage();
-            }
-
-            message.load(self.message);
-        }
-
-        return message;
+        return self.message;
     }
 
     def export(ignore_keys: list = ['__jac__']) {
