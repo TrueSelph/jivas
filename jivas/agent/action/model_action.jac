@@ -17,7 +17,7 @@ node ModelAction(Action) {
     has model_max_tokens: int = 2048;
 
     # abstract invoke ability for the model meant to be overidden with specifics of model call
-    def invoke(prompt_messages: list, prompt_variables: dict, kwargs: dict={}) -> Optional[ModelActionResult] abs;
+    def invoke(prompt_messages:list, prompt_variables:dict, **kwargs:dict) -> Optional[ModelActionResult] abs;
 
     def call_model(
         prompt_messages: list,
@@ -25,7 +25,7 @@ node ModelAction(Action) {
         interaction_node: Optional[Interaction]=None,
         logging: bool=False,
         streaming: bool=False,
-        kwargs: dict={}
+        **kwargs:dict
     ) -> Optional[ModelActionResult] {
 
         # add streaming flag in kwargs
@@ -34,7 +34,7 @@ node ModelAction(Action) {
         if (model_action_result := self.invoke(
             prompt_messages,
             prompt_variables,
-            kwargs
+            **kwargs
         )) {
             if (interaction_node) {
                 # add exported model action result to context data
@@ -65,25 +65,21 @@ node ModelAction(Action) {
         }
 
         test_prompt_messages = [{"system": "Output the result of 2 + 2"}];
-        test_kwargs = {
-            "model_name": self.model_name,
-            "model_temperature": self.model_temperature,
-            "model_max_tokens": self.model_max_tokens
-        };
+
         try  {
             if (model_action_result := self.call_model(
                 prompt_messages=test_prompt_messages,
                 prompt_variables={},
-                kwargs=test_kwargs
+                model_name=self.model_name,
+                model_temperature=self.model_temperature,
+                model_max_tokens=self.model_max_tokens
             )) { # set the interaction message+
-
-
-            interaction_message = model_action_result.get_result();
-            if not interaction_message {
-                return False;
-            } else {
-                return True;
-            }
+                interaction_message = model_action_result.get_result();
+                if not interaction_message {
+                    return False;
+                } else {
+                    return True;
+                }
             }
             return False;
         } except Exception as e {
