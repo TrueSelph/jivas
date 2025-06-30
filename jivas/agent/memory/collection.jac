@@ -1,4 +1,5 @@
 import from jivas.agent.core.graph_node { GraphNode }
+import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 
 node Collection(GraphNode) {
     # represents a named collection for long-term memory storage

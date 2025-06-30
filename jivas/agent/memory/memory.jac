@@ -14,6 +14,7 @@ import from jivas.agent.memory.collection { Collection }
 import from jivas.agent.memory.retrace { Retrace }
 import from jivas.agent.memory.tail { Tail }
 import from jivas.agent.memory.interaction { Interaction }
+import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 
 node Memory(GraphNode) {
     # represents the root memory node for an agent

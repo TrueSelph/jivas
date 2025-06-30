@@ -1,6 +1,7 @@
 import from typing { Optional }
 import from jivas.agent.memory.memory_frame_walker { memory_frame_walker }
 import from jivas.agent.memory.memory { Memory }
+import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 
 walker add_frame(memory_frame_walker) {
     # endpoint to add a new frame to memory

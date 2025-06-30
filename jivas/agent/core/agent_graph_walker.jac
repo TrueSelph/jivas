@@ -4,6 +4,7 @@ import from logging { Logger }
 import from jivas.agent.core.app { App }
 import from jivas.agent.core.agents { Agents }
 import from jivas.agent.core.graph_walker { graph_walker }
+import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 
 walker agent_graph_walker(graph_walker) {
     # base walker designed to traverse graph specific to agent_id;

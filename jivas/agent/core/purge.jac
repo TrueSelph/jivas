@@ -1,6 +1,7 @@
 import logging;
 import traceback;
 import from logging { Logger }
+import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 
 walker purge {
     # removes all nodes extending from the node on which it is spawned and the spawn node too

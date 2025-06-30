@@ -5,6 +5,7 @@ import from jivas.agent.core.agent { Agent }
 import from jivas.agent.action.action { Action }
 import from jivas.agent.action.actions { Actions }
 import from jivas.agent.modules.agentlib.utils { Utils }
+import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 
 
 walker export_daf(agent_graph_walker) {

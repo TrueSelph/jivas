@@ -9,6 +9,7 @@ import from jivas.agent.action.interact_action { InteractAction }
 import from jivas.agent.memory.tail { Tail }
 import from jivas.agent.memory.advance { Advance }
 import from jivas.agent.memory.retrace { Retrace }
+import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 
 node Frame(GraphNode) {
     # represents the root node of a collection of interactions beloning to a single user (session)

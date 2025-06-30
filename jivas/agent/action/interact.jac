@@ -17,8 +17,9 @@ import from jivas.agent.memory.interaction_response { InteractionResponse, Inter
 import from jivas.agent.core.agent { Agent }
 import from jivas.agent.core.agents { Agents }
 import from jivas.agent.core.app { App }
-import from jivas.agent.action { interact_graph_walker }
+import from jivas.agent.action.interact_graph_walker { interact_graph_walker }
 import from jac_cloud.core.archetype { NodeAnchor }
+import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 
 walker interact(interact_graph_walker) {
     # Walker for interacting with the agent
