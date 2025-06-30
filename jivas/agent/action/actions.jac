@@ -2,7 +2,6 @@ import io;
 import os;
 import re;
 import subprocess;
-import pkg_resources;
 import sys;
 import types;
 import yaml;
@@ -10,8 +9,11 @@ import logging;
 import traceback;
 import tarfile;
 import requests;
+import importlib.metadata;
 import from typing { Union }
 import from logging { Logger }
+import from packaging.version { Version, parse as parse_version }
+import from packaging.specifiers { SpecifierSet }
 import from jivas.agent.modules.agentlib.utils { Utils }
 import from jvcli.api { RegistryAPI }
 import from jvcli.utils { is_version_compatible }
@@ -493,29 +495,29 @@ node Actions(GraphNode) {
     def has_pip_package(package_name:str, version:str=None) -> bool {
         # """
         # Checks if a pip package is installed and optionally verifies the version with optional comparator operators.
-
-        # Parameters:
-        # package_name (str): The name of the package to check.
-        # version (str, optional): The specific version to check for, with optional comparator operators (e.g., >=, <=, etc.). Defaults to None.
-
-        # Returns:
-        # bool: True if the package is installed and the version matches the condition (if specified), otherwise False.
+        # Uses importlib.metadata (Python 3.8+)
         # """
         try {
-            package_distribution = pkg_resources.get_distribution(package_name);
+            
+            try {
+                installed_version = importlib.metadata.version(package_name);
+            } except importlib.metadata.PackageNotFoundError {
+                return False;
+            }
 
             if version is None {
-                # If no version is specified, simply confirm the package is installed
                 return True;
-            } else {
-                # If no operator is detected, assume '=='
-                if (not re.match(r'^(==|>=|<=|>|<|~=|!=)', version)) {
-                    version = f"=={version}";
-                }
-                # Compare the installed package's version with the specified version
-                return pkg_resources.parse_version(package_distribution.version) in pkg_resources.Requirement.parse(f"{package_name}{version}");
             }
-        } except pkg_resources.DistributionNotFound {
+
+            # If no operator is detected, assume '=='
+            if not re.match(r'^(==|>=|<=|>|<|~=|!=)', version) {
+                version = f"=={version}";
+            }
+
+            spec = SpecifierSet(version);
+            return Version(installed_version) in spec;
+            
+        } except Exception as e {
             return False;
         }
     }
