@@ -88,7 +88,7 @@ node Actions(GraphNode) {
         def get_weight(action: InteractAction) -> int {
             return action.weight;
         }
-        
+
         return sorted(actions, key=get_weight);
     }
 
@@ -192,7 +192,7 @@ node Actions(GraphNode) {
         singleton = action_data.get('context', {}).get('_package', {}).get('config', {}).get('singleton', False);
         action_type = action_data.get('context', {}).get('_package', {}).get('meta', {}).get('type','action');
 
-        if (not archetype or not package_name or not label) {
+        if (not archetype or not module or not label) {
             self.logger.error(f"unable to register action {label}, missing label, archetype or module name");
             return None;
         }
@@ -212,14 +212,14 @@ node Actions(GraphNode) {
             }
 
             # see if the action module is actually loaded
-            if not JacMachine.loaded_modules.get(package_name) {
+            if not JacMachine.loaded_modules.get(module) {
                 raise ValueError(f"Unable to spawn: {archetype}, module not loaded.");
             }
 
             # spawn the action node without any prop values, then do a update - it's safer this way
             action_node = JacMachine.spawn_node(
                 node_name=archetype,
-                module_name=package_name
+                module_name=module
             );
             
             if not action_node {
