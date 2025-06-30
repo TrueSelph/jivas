@@ -193,7 +193,7 @@ node Actions(GraphNode) {
         action_type = action_data.get('context', {}).get('_package', {}).get('meta', {}).get('type','action');
 
         if (not archetype or not module or not label) {
-            self.logger.error(f"unable to register action {label}, missing label, archetype or module name");
+            self.logger.error(f"unable to register action {label or ''} - missing label, archetype or module. Ensure the info.yaml is well-formed and try again.");
             return None;
         }
 
