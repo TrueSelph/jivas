@@ -40,6 +40,7 @@ setup(
     python_requires=">=3.12.0",
     install_requires=[
         "jvcli>=2.0.30",
+        "jvclient>=0.0.2",
         "jvserve>=2.0.16",
         "pytz>=2024.2",
         "types-pytz>=2024.2.0.20241003",

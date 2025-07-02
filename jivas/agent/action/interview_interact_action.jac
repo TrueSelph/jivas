@@ -2,6 +2,7 @@ import:py json;
 import:py from typing { Union }
 import from enum { unique }
 import:py from openai { OpenAI }
+import:py from jivas.agent.modules.interview_interact_action.utils { evaluate_conditional_expression }
 import:jac from jivas.agent.action.interact_action { InteractAction }
 import:jac from jivas.agent.action.interact_graph_walker { interact_graph_walker }
 
@@ -134,7 +135,7 @@ node InterviewInteractAction :InteractAction: {
         }
 
         # load any branch choice results for detection
-        branch_choice_response = self.call_llm(self.branch_choice_prompt, visitor, json_only=True);
+        branch_choice_response = self.call_llm(self.branch_choice_prompt, visitor, json_only=True) or {};
 
         if interview_session.get_state() in [SessionState.OPEN, SessionState.COMPLETED, SessionState.REVISION] {
             # Check for abort response
@@ -187,6 +188,7 @@ node InterviewInteractAction :InteractAction: {
 
             question_index = self.filter_question_index(interview_session);
             prompt = self.generate_extraction_prompt(question_index);
+
             question_responses = self.extract(prompt, question_index, visitor);
 
             # update any extracted responses
@@ -348,8 +350,22 @@ node InterviewInteractAction :InteractAction: {
 
     can get_next_question(interview_session: InterviewSession) -> str {
         # returns the next question based on the state of the session, or None if no more
-        field = interview_session.get_next_field();
-        return self.question_index.get(field, {}).get('question', "");
+        # considers question index features such as conditional specifiers
+        while next_field := interview_session.get_next_field() {
+            field_data = self.question_index.get(next_field, {});
+
+            if not (conditional := field_data.get('conditional', {})) {
+                return field_data.get('question', "");
+            }
+
+            responses = (interview_session.export()).get('responses', {});
+            if evaluate_conditional_expression(conditional, responses) {
+                return field_data.get('question', "");
+            }
+
+            interview_session.set_response(next_field, "n/a");
+        }
+        return "";
     }
 
     can get_next_question_directive(interview_session: InterviewSession) -> str {
