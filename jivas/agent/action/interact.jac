@@ -39,7 +39,6 @@ walker interact(interact_graph_walker) {
     # protected vars
     has response: dict = {};
     has message: InteractionMessage = None;
-    has execute: bool = False;
     has context_data: dict = {};
     has frame_node: Frame = None;
     has interaction_node: Interaction = None;
@@ -58,6 +57,7 @@ walker interact(interact_graph_walker) {
             "agent_node"
         ]; # Supported in jac-cloud > 0.0.3
     }
+
     can on_root with `root entry {
         # validate interaction or disengage
         if (self.init_interaction()) {
@@ -77,7 +77,6 @@ walker interact(interact_graph_walker) {
         # if we have a resume action... head there instead
         # ensure we include a resume flag in the context_data of the
         # current interaction node for the benefit of action handlers
-
         # the interact walk, sorts the interact actions by weight to preserve execution order before walk
 
         # since we have a fresh interaction node at this point, we have to up the depth of retraces to get the last one
@@ -116,32 +115,21 @@ walker interact(interact_graph_walker) {
     }
 
     can on_action with InteractAction entry {
-
         # performs execute routine for action nodes
-        result = {};
 
-        intended = self.is_intended(here);
-        has_access = self.has_access(here);
-        has_function = self.has_function(here);
-        if (intended) {
+        if not self.is_intended(here) {
+            return;
+        }
 
-            if (has_access) {
-                # execute touch
-                self.logger.debug(f"Touching: {here.label}");
-                self.execute = here.touch(self);
-                if (self.execute) {
-                    # execute the action
-                    self.logger.debug(f"Executing: {here.label}");
-                    here.execute(self);
-                    self.interaction_node.trail.append(here.label);
-                    self.execute = False;
-                }
+        if not self.has_access(here) {
+            here.deny(self);
+            return;
+        }
 
-            } else {
-                # execute the deny ability to handle access denial condition
-                here.deny(self);
-            }
-
+        if here.touch(self) {
+            # execute the action
+            here.execute(self);
+            self.interaction_node.trail.append(here.label);
         }
     }
 

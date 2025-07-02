@@ -27,23 +27,23 @@ node Action(GraphNode) {
         self.transient_attrs += ['agent_id'];
     }
 
-    def on_register {
+    def on_register() {
         # override to execute operations upon registration of action
     }
 
-    def post_register {
+    def post_register() {
         # override to execute any setup code when all actions are in place
     }
 
-    def on_enable {
+    def on_enable() {
         # override to execute operations upon enabling of action
     }
 
-    def on_disable {
+    def on_disable() {
         # override to execute operations upon disabling of action
     }
 
-    def on_deregister {
+    def on_deregister() {
         # override to execute operations upon deregistration of action
     }
 

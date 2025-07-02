@@ -11,14 +11,13 @@ node InteractAction(Action) {
     has weight:int = 0;
 
     # implement to authorize, redirect or deny the interact walker from running execute
-    def touch(visitor: interact_graph_walker) -> bool abs;
+    def touch(visitor:interact_graph_walker) -> bool abs;
 
     # implement action execution
-    def execute(visitor: interact_graph_walker) -> dict abs;
+    def execute(visitor:interact_graph_walker) abs;
 
-    def deny(visitor: interact_graph_walker) -> dict {
-        # override to implement action access denial
-    }
+    # override to implement action access denial
+    def deny(visitor:interact_graph_walker) { }
 
     def get_children() {
         # returns immediate child actions of this action

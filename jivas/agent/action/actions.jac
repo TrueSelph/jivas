@@ -172,7 +172,7 @@ node Actions(GraphNode) {
             } except Exception as e {
                 self.logger.error(f"Unable to load module {module_name}: {e}");
             }
-            
+
         }
         return False;
     }
@@ -223,7 +223,7 @@ node Actions(GraphNode) {
                 node_name=archetype,
                 module_name=module
             );
-            
+
             if not action_node {
                 raise ValueError(f"Unable to spawn: {archetype}");
             }
@@ -254,7 +254,7 @@ node Actions(GraphNode) {
 
             # log success if all went well
             self.logger.info(f"registered action: {action_node.label}");
-            
+
             # Handle child actions; only interact_actions can have child actions
             # we also cannot nest regular actions under interact_actions
             if ("children" in action_data and action_type == 'interact_action') {
@@ -498,7 +498,7 @@ node Actions(GraphNode) {
         # Uses importlib.metadata (Python 3.8+)
         # """
         try {
-            
+
             try {
                 installed_version = importlib.metadata.version(package_name);
             } except importlib.metadata.PackageNotFoundError {
@@ -516,7 +516,7 @@ node Actions(GraphNode) {
 
             spec = SpecifierSet(version);
             return Version(installed_version) in spec;
-            
+
         } except Exception as e {
             return False;
         }

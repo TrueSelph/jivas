@@ -578,7 +578,7 @@ node InterviewInteractAction(InteractAction) {
                 interaction_node=visitor.interaction_node
                 model_name=self.model_name,
                 model_temperature=self.model_temperature,
-                model_max_tokens=self.model_max_tokens                
+                model_max_tokens=self.model_max_tokens
             );
 
             if model_action_result {

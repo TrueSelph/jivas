@@ -22,7 +22,7 @@ node Interaction(GraphNode) {
     has response: InteractionResponse = None;
     has data: dict = {};
     has closed: bool = False; # flag to determine whether interaction is complete / closed or not
-    
+
     def postinit {
         super.postinit();
         # add of node attributes which are protected from update operation
@@ -53,7 +53,7 @@ node Interaction(GraphNode) {
 
     def get_message() -> InteractionMessage {
         # get the interaction response message object
-        if (response := self.get_response()) {            
+        if (response := self.get_response()) {
             return response.get_message();
         }
         return None;

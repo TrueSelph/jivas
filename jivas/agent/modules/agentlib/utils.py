@@ -7,7 +7,6 @@ import mimetypes
 import os
 import re
 import shutil
-import subprocess
 import unicodedata
 from collections import defaultdict, deque
 from datetime import datetime

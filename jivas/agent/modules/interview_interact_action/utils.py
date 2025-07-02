@@ -3,44 +3,39 @@
 import contextlib
 import logging
 import re
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Sequence, Union
 
 logger = logging.getLogger(__name__)
 # logging.basicConfig(level=logging.DEBUG) # Uncomment for detailed parsing logs
 
 
-def parse_condition_string(condition_str: str) -> Optional[List[Union[str, List[str]]]]:
+def parse_condition_string(
+    condition_str: str,
+) -> Optional[List[Union[str, bool, List[str]]]]:
     """Parse a single condition string into its components.
 
     Args:
         condition_str: The condition string to parse.
 
     Returns:
-        A list containing [field_name, operator, value] or None if parsing fails.
+        A list containing [field_name, operator, value] where value can be str, bool, or List[str],
+        or None if parsing fails.
     """
     condition_str = condition_str.strip()
 
-    # Order is crucial: More specific patterns (like those with brackets) first.
-    # Field names can contain [\w.-]
-    # Values inside lists/ranges are captured and processed further.
     patterns = {
-        # field:[min..max]
         "range": r"^([\w.-]+)\s*:\s*\[\s*([\d.-]+)\s*\.\.\s*([\d.-]+)\s*\]$",
-        # field:![v1,v2,v3] (non-greedy match for content inside brackets)
         "not_in_list": r"^([\w.-]+)\s*:\s*!\[\s*([^\]]*?)\s*\]$",
-        # field:[v1,v2,v3]
         "in_list": r"^([\w.-]+)\s*:\s*\[\s*([^\]]*?)\s*\]$",
-        # Standard operators
-        "exact_not_equal": r"^([\w.-]+)\s*!:=\s*(.+)$",  # Custom, less common
+        "exact_not_equal": r"^([\w.-]+)\s*!:=\s*(.+)$",
         "not_equal": r"^([\w.-]+)\s*!=\s*(.+)$",
         "exact_equal": r"^([\w.-]+)\s*:=\s*(.+)$",
         "greater_equal": r"^([\w.-]+)\s*>=\s*([\d.-]+)$",
         "less_equal": r"^([\w.-]+)\s*<=\s*([\d.-]+)$",
         "greater_than": r"^([\w.-]+)\s*>\s*([\d.-]+)$",
         "less_than": r"^([\w.-]+)\s*<\s*([\d.-]+)$",
-        # Partial equal (colon) MUST be after list/range checks to avoid capturing them.
         "partial_equal": r"^([\w.-]+)\s*:\s*(.+)$",
-        "simple_equal": r"^([\w.-]+)\s*=\s*(.+)$",  # General equals
+        "simple_equal": r"^([\w.-]+)\s*=\s*(.+)$",
     }
 
     op_mapping = {
@@ -63,17 +58,14 @@ def parse_condition_string(condition_str: str) -> Optional[List[Union[str, List[
         if not match:
             continue
 
-        # logger.debug(f"Matched op_key '{op_key}' for condition '{condition_str}'")
         field = match.group(1).strip()
         operator_symbol = op_mapping[op_key]
 
         if op_key == "range":
-            # value1 is group 2, value2 is group 3 for range
             val1 = match.group(2).strip()
             val2 = match.group(3).strip()
             return [field, operator_symbol, [val1, val2]]
         if op_key in ["in_list", "not_in_list"]:
-            # values_str is group 2 for lists
             values_str = match.group(2).strip()
             values = (
                 [v.strip() for v in values_str.split(",") if v.strip()]
@@ -82,12 +74,11 @@ def parse_condition_string(condition_str: str) -> Optional[List[Union[str, List[
             )
             return [field, operator_symbol, values]
 
-        # value_str is group 2 for most other operators
         value_str = match.group(2).strip()
         if value_str.lower() == "true":
-            value = "true"
+            value: Union[str, bool] = True
         elif value_str.lower() == "false":
-            value = "false"
+            value = False
         else:
             value = value_str
         return [field, operator_symbol, value]
@@ -99,12 +90,12 @@ def parse_condition_string(condition_str: str) -> Optional[List[Union[str, List[
 
 
 def evaluate_single_condition(
-    parsed_condition: List[Union[str, List[str]]], responses: Dict[str, Any]
+    parsed_condition: Sequence[Union[str, bool, List[str]]], responses: Dict[str, Any]
 ) -> bool:
     """Evaluate a single parsed condition against response data.
 
     Args:
-        parsed_condition: The parsed condition as [field, operator, value].
+        parsed_condition: The parsed condition as [field, operator, value] where value can be str, bool, or List[str].
         responses: Dictionary of response data to evaluate against.
 
     Returns:
@@ -118,13 +109,16 @@ def evaluate_single_condition(
     operator = parsed_condition[1]
     expected_value = parsed_condition[2]
 
-    # field_name must be str for responses.get
     if not isinstance(field_name, str):
         logger.warning(f"Field name is not a string: {field_name}")
         return False
 
     actual_value_from_responses = responses.get(field_name)
     if actual_value_from_responses is None:
+        if operator == "!=":
+            return True
+        if operator == "![]":
+            return True
         logger.warning(f"Field '{field_name}' not found in responses.")
         return False
 
@@ -132,11 +126,10 @@ def evaluate_single_condition(
 
     try:
         if operator in (">", "<", ">=", "<="):
-            actual_val_num = float(actual_value_str)
-            # expected_value must be str for float conversion
             if not isinstance(expected_value, str):
                 logger.warning(f"Expected value is not a string: {expected_value}")
                 return False
+            actual_val_num = float(actual_value_str)
             expected_val_num = float(expected_value)
             if operator == ">":
                 return actual_val_num > expected_val_num
@@ -158,11 +151,9 @@ def evaluate_single_condition(
             max_val = float(expected_value[1])
             return min_val <= actual_val_num <= max_val
 
-        if operator == "=" or operator == ":=":
-            if expected_value == "true":
-                return actual_value_str.lower() == "true"
-            if expected_value == "false":
-                return actual_value_str.lower() == "false"
+        if operator in ("=", ":="):
+            if isinstance(expected_value, bool):
+                return actual_value_str.lower() == str(expected_value).lower()
             with contextlib.suppress(ValueError):
                 if (
                     isinstance(expected_value, str)
@@ -172,10 +163,8 @@ def evaluate_single_condition(
             return actual_value_str == str(expected_value)
 
         if operator == "!=":
-            if expected_value == "true":
-                return actual_value_str.lower() != "true"
-            if expected_value == "false":
-                return actual_value_str.lower() != "false"
+            if isinstance(expected_value, bool):
+                return actual_value_str.lower() != str(expected_value).lower()
             with contextlib.suppress(ValueError):
                 if (
                     isinstance(expected_value, str)
@@ -188,9 +177,13 @@ def evaluate_single_condition(
             return str(expected_value).lower() in actual_value_str.lower()
 
         if operator == "[]":
+            if not isinstance(expected_value, list):
+                return False
             return actual_value_str in [str(v) for v in expected_value]
 
         if operator == "![]":
+            if not isinstance(expected_value, list):
+                return True
             return actual_value_str not in [str(v) for v in expected_value]
 
     except ValueError as e:

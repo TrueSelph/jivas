@@ -12,8 +12,6 @@ walker graph_walker {
     # set up logger
     static has logger:Logger = logging.getLogger(__name__);
 
-    self.logger.warning(graph_walker.__class__);
-
     obj __specs__ {
         # all graph_walkers are private by default, unless overridden
         static has private: bool = True;

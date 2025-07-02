@@ -56,11 +56,11 @@ walker list_actions(interact_graph_walker) {
         def get_weight(action:dict) -> int {
             return int(action.get('weight', 0));
         }
-    
+
         self.actions = (
             sorted(interact_actions, key=get_weight)
         ) + other_actions;
-        
+
         report self.actions;
     }
 

@@ -149,7 +149,7 @@ node RetrievalInteractAction(InteractAction) {
                     interaction_node = visitor.interaction_node,
                     model_name=self.model_name,
                     model_temperature=self.model_temperature,
-                    model_max_tokens=self.model_max_tokens                    
+                    model_max_tokens=self.model_max_tokens
                 )) {
                     # add the resulting intent, if any to the interaction to trigger the relevant action(s)
                     query = model_action_result.get_json_result();
