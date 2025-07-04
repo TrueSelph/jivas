@@ -9,7 +9,7 @@ import from jivas.agent.action.action { Action }
 import from jivas.agent.action.interact_action { InteractAction }
 import from jivas.agent.action.actions { Actions }
 import from jivas.agent.memory.memory { Memory }
-import from typing { Union }
+import from typing { Union, Optional }
 import from jvserve.lib.file_interface { file_interface }
 import from jac_cloud.core.archetype { NodeAnchor }
 
@@ -86,7 +86,7 @@ node Agent(GraphNode) {
         return None;
     }
 
-    def get_tts_action() -> Union[Action, None] {
+    def get_tts_action() -> Optional[Action] {
         # fetch text to speech action node if enabled and configured
 
         if(tts_action_node := self.get_action(action_label=self.tts_action)) {
@@ -96,7 +96,7 @@ node Agent(GraphNode) {
         return None;
     }
 
-    def get_stt_action() -> Union[Action, None] {
+    def get_stt_action() -> Optional[Action] {
         # fetch speech to text action node if enabled and configured
 
         if(stt_action_node := self.get_action(action_label=self.stt_action)) {
@@ -106,7 +106,7 @@ node Agent(GraphNode) {
         return None;
     }
 
-    def get_vector_store_action() -> Union[Action, None] {
+    def get_vector_store_action() -> Optional[Action] {
         # fetch vector store action node if enabled and configured
 
         if(vector_store_action_node := self.get_action(action_label=self.vector_store_action)) {

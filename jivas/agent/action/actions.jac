@@ -10,7 +10,7 @@ import traceback;
 import tarfile;
 import requests;
 import importlib.metadata;
-import from typing { Union }
+import from typing { Union, Optional }
 import from logging { Logger }
 import from packaging.version { Version, parse as parse_version }
 import from packaging.specifiers { SpecifierSet }
@@ -177,7 +177,7 @@ node Actions(GraphNode) {
         return False;
     }
 
-    def register_action(action_data: dict, parent: str="") -> Union[Action, None] {
+    def register_action(action_data: dict, parent: str="") -> Optional[Action] {
         # registers an agent action
         # expects an action descriptor object with optional archetype source embeddings;
         action_node = None;
