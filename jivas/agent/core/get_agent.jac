@@ -1,4 +1,4 @@
-import from jivas.agent.core.agent_graph_walker { agent_graph_walker }
+import from jivas.agent.action.agent_graph_walker { agent_graph_walker }
 import from jivas.agent.core.agent { Agent }
 
 walker get_agent(agent_graph_walker) {

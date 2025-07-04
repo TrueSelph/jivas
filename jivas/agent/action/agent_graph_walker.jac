@@ -9,7 +9,7 @@ import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 walker agent_graph_walker(graph_walker) {
     # base walker designed to traverse graph specific to agent_id;
 
-    has :protect agent_id: str = "";
+    has agent_id: str = "";
 
     # set up logger
     static has logger:Logger = logging.getLogger(__name__);

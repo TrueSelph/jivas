@@ -1,5 +1,5 @@
 import from jivas.agent.core.agent {Agent}
-import from jivas.agent.core.agent_graph_walker {agent_graph_walker}
+import from jivas.agent.action.agent_graph_walker {agent_graph_walker}
 import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 
 walker healthcheck(agent_graph_walker) {

@@ -1,6 +1,6 @@
 import from jivas.agent.core.graph_node { GraphNode }
 import from jivas.agent.action.interact_action { InteractAction }
-import from jivas.agent.core.agent_graph_walker { agent_graph_walker }
+import from jivas.agent.action.agent_graph_walker { agent_graph_walker }
 
 node ExitInteractAction(InteractAction) {
 # core exit action is always present on all action graphs at the very end of the graph

@@ -4,7 +4,7 @@ import from enum { unique }
 import from openai { OpenAI }
 import from jivas.agent.modules.interview_interact_action.utils { evaluate_conditional_expression }
 import from jivas.agent.action.interact_action { InteractAction }
-import from jivas.agent.core.agent_graph_walker { agent_graph_walker }
+import from jivas.agent.action.agent_graph_walker { agent_graph_walker }
 
 node InterviewInteractAction(InteractAction) {
     #*

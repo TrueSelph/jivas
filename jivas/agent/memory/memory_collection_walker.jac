@@ -1,7 +1,7 @@
 import from jivas.agent.core.agent { Agent }
 import from jivas.agent.memory.memory { Memory }
 import from jivas.agent.memory.frame { Frame }
-import from jivas.agent.core.agent_graph_walker { agent_graph_walker }
+import from jivas.agent.action.agent_graph_walker { agent_graph_walker }
 
 walker memory_collection_walker(agent_graph_walker) {
     # base walker for agent memory collection graph traversal

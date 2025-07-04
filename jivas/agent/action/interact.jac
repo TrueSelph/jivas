@@ -13,7 +13,7 @@ import from jivas.agent.memory.frame { Frame }
 import from jivas.agent.memory.interaction { Interaction }
 import from jivas.agent.memory.interaction_response { InteractionResponse, InteractionMessage, SilentInteractionMessage }
 import from jivas.agent.core.agent { Agent }
-import from jivas.agent.core.agent_graph_walker { agent_graph_walker }
+import from jivas.agent.action.agent_graph_walker { agent_graph_walker }
 import from jac_cloud.core.archetype { NodeAnchor }
 import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 
@@ -38,7 +38,6 @@ walker interact(agent_graph_walker) {
     has :pub context_data: dict = {};
     has :pub frame_node: Frame = None;
     has :pub interaction_node: Interaction = None;
-    has agent_node: Agent = None;
 
     obj __specs__ {
         static has auth: bool = True;
@@ -49,8 +48,7 @@ walker interact(agent_graph_walker) {
             "execute",
             "context_data",
             "frame_node",
-            "interaction_node",
-            "agent_node"
+            "interaction_node"
         ]; # excluded from API specification
     }
 
@@ -128,10 +126,16 @@ walker interact(agent_graph_walker) {
         self.respond();
     }
 
-    def init_interaction(agent_node:Agent) -> bool {
+    def get_agent() -> Optional[Agent] {
+        # returns the agent node
+        if not self.agent_id {
+            return None;
+        }
 
-        # set the ref to the agent node
-        self.agent_node = agent_node;
+        return (&self.agent_id);
+    }
+
+    def init_interaction(agent_node:Agent) -> bool {
 
         # validate channel specifier
         if not agent_node.has_channel(self.channel) {
@@ -355,7 +359,7 @@ walker interact(agent_graph_walker) {
         next_action_node = None;
 
         if(action_label) {
-            next_action_node = self.agent_node.get_action(action_label=action_label);
+            next_action_node = self.get_agent().get_action(action_label=action_label);
         } elif(action_node) {
             next_action_node = action_node;
         }
@@ -388,7 +392,7 @@ walker interact(agent_graph_walker) {
         append_action_node = None;
 
         if(action_label) {
-            append_action_node = self.agent_node.get_action(action_label=action_label);
+            append_action_node = self.get_agent().get_action(action_label=action_label);
         } elif(action_node) {
             append_action_node = action_node;
         }
@@ -404,7 +408,7 @@ walker interact(agent_graph_walker) {
         # dequeue the supplied action as the next action in the walk path
 
         if(action_label) {
-            action_node = self.agent_node.get_action(action_label=action_label);
+            action_node = self.get_agent().get_action(action_label=action_label);
         }
         if (action_node) {
             self.dequeue_interact_action(action_node);
@@ -415,7 +419,7 @@ walker interact(agent_graph_walker) {
         # adds the interact action to the end of the active walk path (before exit)
 
         # first grab exit action
-        if (exit_action := self.agent_node.get_action(action_label="ExitInteractAction") ) {
+        if (exit_action := self.get_agent().get_action(action_label="ExitInteractAction") ) {
             exit_action_node_ref = None;
 
             # remove and save the exit action
@@ -502,7 +506,7 @@ walker interact(agent_graph_walker) {
         if (action_node.get_type() in ['AccessControlAction', 'ExitInteractAction']) {
             return True;
         }
-        if (access_control_action_node := (self.agent_node.get_action(
+        if (access_control_action_node := (self.get_agent().get_action(
             action_label='AccessControlAction'
         ))) {
 
@@ -521,7 +525,7 @@ walker interact(agent_graph_walker) {
         if (action_node.get_type() in ['IntentInteractAction', 'FunctionInteractAction', 'ExitInteractAction']) {
             return True;
         }
-        if ((function_interact_action_node := self.agent_node.get_action(
+        if ((function_interact_action_node := self.get_agent().get_action(
             action_label='FunctionInteractAction'
         ))) {
             if (function_interact_action_node.enabled
@@ -542,7 +546,7 @@ walker interact(agent_graph_walker) {
         if (action_node.get_type() in ['IntentInteractAction', 'FunctionInteractAction', 'ExitInteractAction']) {
             return True;
         }
-        if (intent_interact_action_node := self.agent_node.get_action(
+        if (intent_interact_action_node := self.get_agent().get_action(
             action_label='IntentInteractAction'
         )) {
             if (intent_interact_action_node.enabled
@@ -560,7 +564,9 @@ walker interact(agent_graph_walker) {
 
     def respond() {
 
-        if (self.agent_node and self.interaction_node) {
+        agent_node = self.get_agent();
+
+        if (agent_node and self.interaction_node) {
 
             # close the interaction
             self.interaction_node.close();
@@ -589,7 +595,7 @@ walker interact(agent_graph_walker) {
                     } else {
                         self.response = {"response": self.interaction_node.get_response().export()};
                     }
-                    if (self.agent_node.is_logging()) {
+                    if (agent_node.is_logging()) {
                         # log interaction
                         self.log_interaction(data=interaction_data);
                     }
@@ -611,7 +617,7 @@ walker interact(agent_graph_walker) {
 
             # activate pruning protocol to shed old interactions beyond frame_size limit from this interaction frame
             self.frame_node.prune_interactions(
-                frame_size=self.agent_node.frame_size
+                frame_size=agent_node.frame_size
             );
 
         } else {
@@ -621,7 +627,7 @@ walker interact(agent_graph_walker) {
 
         # handle text-to-speech if enabled
         if (self.tts) {
-            if (tts_action := self.agent_node.get_tts_action()) {
+            if (tts_action := agent_node.get_tts_action()) {
 
                 content = self.message.get_meta('phoneme_content')
                     or self.message.get_content();
