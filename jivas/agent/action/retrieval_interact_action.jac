@@ -4,7 +4,7 @@ import traceback;
 import from typing { Optional, Union }
 import from logging { Logger }
 import from jivas.agent.action.interact_action { InteractAction }
-import from jivas.agent.action.interact_graph_walker { InteractGraphWalker }
+import from jivas.agent.action.agent_graph_walker { InteractGraphWalker }
 import from jivas.agent.action.model_action { ModelAction, ModelActionResult }
 
 node RetrievalInteractAction(InteractAction) {
@@ -78,14 +78,14 @@ node RetrievalInteractAction(InteractAction) {
         }
     }
 
-    def touch(visitor: interact_graph_walker) -> bool {
+    def touch(visitor: agent_graph_walker) -> bool {
         # implementation of touch for retrieval interact
         if(visitor.utterance) {
             return True;
         }
     }
 
-    def execute(visitor: interact_graph_walker) {
+    def execute(visitor: agent_graph_walker) {
 
         # first prepare the query with context completion
         # prepare query using conversation history or fallback to original utterance
@@ -128,7 +128,7 @@ node RetrievalInteractAction(InteractAction) {
         }
     }
 
-    def process_query(visitor: interact_graph_walker) -> dict {
+    def process_query(visitor: agent_graph_walker) -> dict {
 
         query = {};
 

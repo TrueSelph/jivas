@@ -1,5 +1,5 @@
 import from jivas.agent.action.action { Action }
-import from jivas.agent.action.interact_graph_walker { interact_graph_walker }
+import from jivas.agent.core.agent_graph_walker { agent_graph_walker }
 
 node InteractAction(Action) {
     # represents an interactive execution on the agent action graph
@@ -11,13 +11,13 @@ node InteractAction(Action) {
     has weight:int = 0;
 
     # implement to authorize, redirect or deny the interact walker from running execute
-    def touch(visitor:interact_graph_walker) -> bool abs;
+    def touch(visitor:agent_graph_walker) -> bool abs;
 
     # implement action execution
-    def execute(visitor:interact_graph_walker) abs;
+    def execute(visitor:agent_graph_walker) abs;
 
     # override to implement action access denial
-    def deny(visitor:interact_graph_walker) { }
+    def deny(visitor:agent_graph_walker) { }
 
     def get_children() {
         # returns immediate child actions of this action

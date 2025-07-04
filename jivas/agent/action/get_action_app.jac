@@ -6,10 +6,10 @@ import from logging { Logger }
 import from jivas.agent.core.agent { Agent }
 import from jivas.agent.action.action { Action }
 import from jivas.agent.action.actions { Actions }
-import from interact_graph_walker { interact_graph_walker }
+import from agent_graph_walker { agent_graph_walker }
 import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 
-walker get_action_app(interact_graph_walker) {
+walker get_action_app(agent_graph_walker) {
     # retrieves the action app source for the named action
 
     has agent_id: str = "";

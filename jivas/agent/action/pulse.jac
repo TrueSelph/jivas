@@ -1,9 +1,9 @@
 import from jivas.agent.core.agent {Agent}
 import from jivas.agent.action.action {Action}
 import from jivas.agent.action.actions {Actions}
-import from interact_graph_walker {interact_graph_walker}
+import from agent_graph_walker {agent_graph_walker}
 
-walker pulse(interact_graph_walker) {
+walker pulse(agent_graph_walker) {
     # when triggered, will trigger the pulse_action's relay pulse ability based on args supplied
     # this works in conjunction with the AgentPulse service
 

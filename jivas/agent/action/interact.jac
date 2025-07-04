@@ -9,19 +9,15 @@ import from jivas.agent.modules.agentlib.utils { Utils }
 import from datetime { datetime, timezone, timedelta }
 import from jivas.agent.action.actions { Actions }
 import from jivas.agent.action.interact_action { InteractAction }
-import from jivas.agent.action.exit_interact_action { ExitInteractAction }
-import from jivas.agent.memory.memory { Memory }
 import from jivas.agent.memory.frame { Frame }
 import from jivas.agent.memory.interaction { Interaction }
 import from jivas.agent.memory.interaction_response { InteractionResponse, InteractionMessage, SilentInteractionMessage }
 import from jivas.agent.core.agent { Agent }
-import from jivas.agent.core.agents { Agents }
-import from jivas.agent.core.app { App }
-import from jivas.agent.action.interact_graph_walker { interact_graph_walker }
+import from jivas.agent.core.agent_graph_walker { agent_graph_walker }
 import from jac_cloud.core.archetype { NodeAnchor }
 import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 
-walker interact(interact_graph_walker) {
+walker interact(agent_graph_walker) {
     # Walker for interacting with the agent
 
     # set up logger
@@ -37,11 +33,11 @@ walker interact(interact_graph_walker) {
     has streaming: bool = False; # activate streaming response
     has generator: any = None; # activate streaming response
     # protected vars
-    has response: dict = {};
-    has message: InteractionMessage = None;
-    has context_data: dict = {};
-    has frame_node: Frame = None;
-    has interaction_node: Interaction = None;
+    has :protect response: dict = {};
+    has :protect message: InteractionMessage = None;
+    has :pub context_data: dict = {};
+    has :pub frame_node: Frame = None;
+    has :pub interaction_node: Interaction = None;
     has agent_node: Agent = None;
 
     obj __specs__ {
@@ -55,22 +51,16 @@ walker interact(interact_graph_walker) {
             "frame_node",
             "interaction_node",
             "agent_node"
-        ]; # Supported in jac-cloud > 0.0.3
-    }
-
-    can on_root with `root entry {
-        # validate interaction or disengage
-        if (self.init_interaction()) {
-            # head to agent node if valid
-            visit self.agent_node;
-        } else {
-            disengage;
-        }
+        ]; # excluded from API specification
     }
 
     can on_agent with Agent entry {
-        # traverse to actions branch node
-        visit [-->](`?Actions);
+        if (self.init_interaction(here)) {
+            # traverse to actions branch node
+            visit [-->](`?Actions);
+        } else {
+            disengage;
+        }
     }
 
     can on_actions with Actions entry {
@@ -138,28 +128,20 @@ walker interact(interact_graph_walker) {
         self.respond();
     }
 
-    def init_interaction() -> bool {
-        # performs validation checks on the interaction
-        try  {
-            self.agent_node = &self.agent_id;
-            if (not self.agent_node) {
-                return False;
-            }
-        } except Exception as e {
-            Jac.get_context().status = 400;
-            self.logger.error("invalid agent id");
-            return False;
-        }
+    def init_interaction(agent_node:Agent) -> bool {
+
+        # set the ref to the agent node
+        self.agent_node = agent_node;
 
         # validate channel specifier
-        if not self.agent_node.has_channel(self.channel) {
+        if not agent_node.has_channel(self.channel) {
             # use default channel if invalid
             self.channel = 'default';
         }
 
         # load or spawn a frame for this interaction
-        self.frame_node = self.agent_node.get_memory().get_frame(
-            agent_id=self.agent_node.id,
+        self.frame_node = agent_node.get_memory().get_frame(
+            agent_id=agent_node.id,
             session_id=self.session_id
         );
 
@@ -173,7 +155,7 @@ walker interact(interact_graph_walker) {
 
         if (not self.is_valid_message_length(
             self.utterance,
-            self.agent_node.message_limit
+            agent_node.message_limit
         )) {
             Jac.get_context().status = 400;
             self.logger.warning(
@@ -184,7 +166,7 @@ walker interact(interact_graph_walker) {
 
         # flood control
 
-        if self.is_flood_active() {
+        if self.is_flood_active(agent_node) {
             Jac.get_context().status = 429;
             self.logger.warning(
                 f"flood control active on {self.frame_node.session_id}"
@@ -263,14 +245,14 @@ walker interact(interact_graph_walker) {
         }
     }
 
-    def is_flood_active() {
+    def is_flood_active(agent_node: Agent) -> bool {
         # evaluates and tracks for flood control in incoming requests
         # returns TRUE if flood is in effect
 
-        flood_control = self.agent_node.flood_control;
-        flood_block_time = self.agent_node.flood_block_time;
-        window_time = self.agent_node.window_time;
-        flood_threshold = self.agent_node.flood_threshold;
+        flood_control = agent_node.flood_control;
+        flood_block_time = agent_node.flood_block_time;
+        window_time = agent_node.window_time;
+        flood_threshold = agent_node.flood_threshold;
 
         # handle flood control logic if flood control set
         if flood_control {

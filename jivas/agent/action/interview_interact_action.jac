@@ -4,7 +4,7 @@ import from enum { unique }
 import from openai { OpenAI }
 import from jivas.agent.modules.interview_interact_action.utils { evaluate_conditional_expression }
 import from jivas.agent.action.interact_action { InteractAction }
-import from jivas.agent.action.interact_graph_walker { interact_graph_walker }
+import from jivas.agent.core.agent_graph_walker { agent_graph_walker }
 
 node InterviewInteractAction(InteractAction) {
     #*
@@ -103,7 +103,7 @@ node InterviewInteractAction(InteractAction) {
         self.setup();
     }
 
-    def touch(visitor: interact_graph_walker) -> bool {
+    def touch(visitor: agent_graph_walker) -> bool {
         has_intent = False;
         if(self.get_agent().get_action("IntentInteractAction")) {
             has_intent = (self.label in visitor.interaction_node.intents);
@@ -113,7 +113,7 @@ node InterviewInteractAction(InteractAction) {
         return (has_intent and (visitor.utterance or visitor.data));
     }
 
-    def execute(visitor: interact_graph_walker) {
+    def execute(visitor: agent_graph_walker) {
         # initializes the session and calls the process response ability, then exports the visitor obj
         interview_session = self.init_session(visitor);
         # call process_response which needs to be implemented
@@ -123,9 +123,9 @@ node InterviewInteractAction(InteractAction) {
     }
 
     # abstract ability meant to contain implemented handling logic based on interview state
-    def process_response(visitor: interact_graph_walker) abs;
+    def process_response(visitor: agent_graph_walker) abs;
 
-    def init_session(visitor: interact_graph_walker) -> InterviewSession {
+    def init_session(visitor: agent_graph_walker) -> InterviewSession {
         # performs extraction and updates the session responses
         interview_session = self.get_session(visitor);
 
@@ -240,7 +240,7 @@ node InterviewInteractAction(InteractAction) {
         return interview_session;
     }
 
-    def exit_session(interview_session: InterviewSession, visitor: interact_graph_walker) {
+    def exit_session(interview_session: InterviewSession, visitor: agent_graph_walker) {
         # contains all operations to clean up and update once process_response completes
 
         # ensure we update the session in frame before export
@@ -319,7 +319,7 @@ node InterviewInteractAction(InteractAction) {
         }
     }
 
-    def create_session(visitor: interact_graph_walker) -> InterviewSession {
+    def create_session(visitor: agent_graph_walker) -> InterviewSession {
         # adds a new interview session to the frame for the current user
 
         all_fields = self.get_question_fields();
@@ -333,12 +333,12 @@ node InterviewInteractAction(InteractAction) {
         return interview_session;
     }
 
-    def delete_session(visitor: interact_graph_walker) {
+    def delete_session(visitor: agent_graph_walker) {
         # removes the session object from the current user's frame
         visitor.frame_node.variable_del(key=f"{self.get_type()}_session");
     }
 
-    def update_session(interview_session:InterviewSession, visitor: interact_graph_walker) {
+    def update_session(interview_session:InterviewSession, visitor: agent_graph_walker) {
         # updates interview session for the current user
         visitor.frame_node.variable_set(key=f"{self.get_type()}_session", value=interview_session.export());
     }
@@ -409,7 +409,7 @@ node InterviewInteractAction(InteractAction) {
         return self.question_index;
     }
 
-    def get_session(visitor:interact_graph_walker) -> InterviewSession {
+    def get_session(visitor:agent_graph_walker) -> InterviewSession {
         # retrieves the active session, if any
         interview_session_data = visitor.frame_node.variable_get(key=f"{self.get_type()}_session");
         if interview_session_data and isinstance(interview_session_data, dict) {
@@ -529,12 +529,12 @@ node InterviewInteractAction(InteractAction) {
         return prompt;
     }
 
-    def extract(prompt:str, question_index:list, visitor: interact_graph_walker, history:Union[bool,None] = None) -> Union[dict, None] {
+    def extract(prompt:str, question_index:list, visitor: agent_graph_walker, history:Union[bool,None] = None) -> Union[dict, None] {
         # performs entity extraction based on question_index items
         return self.call_llm(prompt, visitor, history, json_only=True);
     }
 
-    def call_llm(prompt:str, visitor: interact_graph_walker, history:Union[bool,None] = None, json_only:bool = False) -> Union[str, dict, None] {
+    def call_llm(prompt:str, visitor: agent_graph_walker, history:Union[bool,None] = None, json_only:bool = False) -> Union[str, dict, None] {
         # performs function tool calling for extracting question responses based on question
 
         prompt_messages = [];

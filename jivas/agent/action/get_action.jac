@@ -6,9 +6,9 @@ import from logging { Logger }
 import from jivas.agent.core.agent {Agent}
 import from jivas.agent.action.action {Action}
 import from jivas.agent.action.actions {Actions}
-import from interact_graph_walker {interact_graph_walker}
+import from agent_graph_walker {agent_graph_walker}
 
-walker get_action(interact_graph_walker) {
+walker get_action(agent_graph_walker) {
     # retrieves a named action package and metadata
     # must be spawned on agent or actions node or supplied with agent_id
     has agent_id: str = "";
