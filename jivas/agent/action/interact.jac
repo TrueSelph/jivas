@@ -88,7 +88,7 @@ walker interact(agent_graph_walker) {
             if(trimmed_queue) {
                 # prepare resumption trail
                 self.interaction_node.add_intent(root_action.label);
-                self.interaction_node.context_data["resumed"] = True;
+                self.interaction_node.set_data_item("resumed", True);
                 visit trimmed_queue;
             } else {
                 # we fall back on visiting the original trail if unable to orchestrate resumption

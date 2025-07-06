@@ -8,20 +8,19 @@ import from jivas.agent.memory.interaction_response { InteractionMessage, Intera
 
 node Interaction(GraphNode) {
 
-    has agent_id: str = "";
-    has channel: str = "";
-    has utterance: str = "";
-    has tokens: int = 0;
-    has time_stamp: str = str((datetime.now(timezone.utc)).isoformat());
-    has trail: list = [];
-    has intents: list = []; # TODO: make this private; this holds the node names of actions which must be executed; capable of multiple intent executions...
-    has functions: dict = {}; # holds the intended action as the key and classified tool calls as values
-    has directives: list = []; # TODO: make this private; holds queued directives for from interact_actions
-    has context_data: dict = {};
-    has events: list = [];
-    has response: InteractionResponse = None;
-    has data: dict = {};
-    has closed: bool = False; # flag to determine whether interaction is complete / closed or not
+    has :priv agent_id: str = "";
+    has :priv channel: str = "";
+    has :priv utterance: str = "";
+    has :priv tokens: int = 0;
+    has :priv time_stamp: str = str((datetime.now(timezone.utc)).isoformat());
+    has :priv trail: list = [];
+    has :priv intents: list = []; # TODO: make this private; this holds the node names of actions which must be executed; capable of multiple intent executions...
+    has :priv functions: dict = {}; # holds the intended action as the key and classified tool calls as values
+    has :priv directives: list = []; # TODO: make this private; holds queued directives for from interact_actions
+    has :priv events: list = [];
+    has :priv response: InteractionResponse = None;
+    has :priv data: dict = {}; # holds data items which are not part of the response, but are relevant to the interaction
+    has :priv closed: bool = False; # flag to determine whether interaction is complete / closed or not
 
     def postinit {
         super.postinit();
@@ -36,7 +35,7 @@ node Interaction(GraphNode) {
     }
 
     def is_new_user() -> bool {
-        return self.context_data.get('new_user', False);
+        return (self.get_data_item('new_user') is not None);
     }
 
     def set_text_message(message: str) {
@@ -45,10 +44,7 @@ node Interaction(GraphNode) {
 
     def set_message(message: InteractionMessage) {
         # set the interaction response message object
-        # loads an existing interaction response object or returns a fresh one
-        interaction_response = self.get_response();
-        interaction_response.set_message(message);
-        self.response = interaction_response;
+        self.get_response().set_message(message);
     }
 
     def get_message() -> InteractionMessage {
@@ -61,18 +57,9 @@ node Interaction(GraphNode) {
 
     def get_response() -> InteractionResponse {
         # loads an existing interaction response object or returns a fresh one
-
         if not self.response {
             self.response = InteractionResponse();
         }
-
-        # TODO: trace where this reverts to a dict; ensure we reinstate the object
-        if (isinstance(self.response, dict)) {
-            interaction_response = InteractionResponse();
-            interaction_response.load(self.response);
-            self.response = interaction_response;
-        }
-
         return self.response;
     }
 
@@ -81,7 +68,6 @@ node Interaction(GraphNode) {
         if (self.get_message()) {
             return True;
         }
-
         return False;
     }
 
@@ -90,8 +76,8 @@ node Interaction(GraphNode) {
         return (intent in self.intents);
     }
 
-    def set_data_item(label: str, meta: dict, content: any) {
-        # adds or updates a data node on the current interaction
+    def set_data_item(label: str, content: any, meta: dict = {}) {
+        # adds or updates a data item on the current interaction
         if (data_obj := self.get_data_item(label)) {
             if (type(meta) == dict) {
                 data_obj.meta = meta;
@@ -99,19 +85,36 @@ node Interaction(GraphNode) {
             if (content) {
                 data_obj.content = content;
             }
-            self.data[label] = data_obj.export();
+            self.data[label] = data_obj;
         } else {
             data_obj = Data(label=label, meta=meta, content=content);
-            self.data[label] = data_obj.export();
+            self.data[label] = data_obj;
+        }
+    }
+
+    def append_data_item(label: str, content: any, meta: dict = {}) {
+        # appends a content item to an existing data item
+        if (data_item := self.get_data_item(label)) {
+            if (type(meta) == dict) {
+                data_item.meta.update(meta);
+            }
+            if (content) {
+                if (type(data_item.content) == list) {
+                    data_item.content.append(content);
+                } else {
+                    data_item.content = [data_item.content, content];
+                }
+            }
+            self.data[label] = data_item;
+        } else {
+            self.set_data_item(label, content, meta);
         }
     }
 
     def get_data_item(label: str) -> Data {
         # retrieves a data item of the current interaction
         if (data_item := self.data.get(label)) {
-            data_obj = Data();
-            data_obj.load(data_item);
-            return data_obj;
+            return data_item;
         }
 
         return None;
@@ -148,12 +151,8 @@ node Interaction(GraphNode) {
     def add_tokens(tokens: int) {
         # update token tally
         self.tokens += tokens;
-
         # update token tally in response obj
-        if (response := self.get_response()) {
-            response.set_tokens(self.tokens);
-            self.response = response.export();
-        }
+        self.get_response().set_tokens(self.tokens);
     }
 
     def get_intents() -> list {

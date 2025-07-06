@@ -59,14 +59,14 @@ node Frame(GraphNode) {
     def is_first_interaction -> bool {
         # denotes the very first interaction of this frame
         last_interaction = self.get_last_interaction();
-        return ("new_user" in last_interaction.context_data);
+        return (last_interaction.get_data_item("new_user") is not None);
     }
 
     def set_resume_action(action_label:str) {
         # adds a named resume action node name to the context_data of the interaction
         # the interact walker will head straight here once it's turn comes back up
         if(last_interaction := self.get_last_interaction()) {
-            last_interaction.context_data["resume_action"] = action_label;
+            last_interaction.set_data_item("resume_action", action_label);
         }
     }
 
@@ -76,9 +76,8 @@ node Frame(GraphNode) {
         action_node = None;
 
         if(last_interaction_node) {
-            if("resume_action" in last_interaction_node.context_data) {
+            if(action_label := last_interaction_node.get_data_item("resume_action")) {
                 agent_node = self.get_agent();
-                action_label = last_interaction_node.context_data["resume_action"];
                 action_node = agent_node.get_action(action_label = action_label);
             }
         }
@@ -139,7 +138,7 @@ node Frame(GraphNode) {
             # add a tail reference
             self +>:Tail:+> interaction_node;
             # this is a first-time interaction, add the new_user flag
-            interaction_node.context_data["new_user"] = True;
+            interaction_node.set_data_item("new_user", True);
 
         } else {
 

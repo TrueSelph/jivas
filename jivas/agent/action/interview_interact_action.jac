@@ -575,7 +575,7 @@ node InterviewInteractAction(InteractAction) {
             model_action_result = model_action.call_model(
                 prompt_messages=prompt_messages,
                 prompt_variables={},
-                interaction_node=visitor.interaction_node
+                interaction_node=visitor.interaction_node,
                 model_name=self.model_name,
                 model_temperature=self.model_temperature,
                 model_max_tokens=self.model_max_tokens

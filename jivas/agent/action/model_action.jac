@@ -38,11 +38,9 @@ node ModelAction(Action) {
         )) {
             if (interaction_node) {
                 # add exported model action result to context data
-                if ('ModelActionResult' not in interaction_node.context_data) {
-                    interaction_node.context_data['ModelActionResult'] = [];
-                }
-                interaction_node.context_data['ModelActionResult'].append(
-                    model_action_result.export()
+                interaction_node.append_data_item(
+                    label="ModelActionResult",
+                    content=model_action_result
                 );
                 # update token tally
                 interaction_node.add_tokens(
@@ -50,7 +48,7 @@ node ModelAction(Action) {
                 );
             }
             if (logging) {
-                self.logger.warning(model_action_result.get_result());
+                self.logger.info(model_action_result.get_result());
             }
 
             return model_action_result;
@@ -161,6 +159,5 @@ obj ModelActionResult {
     def export(ignore_keys: list=['__jac__']) {
         # convert the object to dictionary
         node_export = Utils.export_to_dict(self, ignore_keys);
-        return node_export;
     }
 }
