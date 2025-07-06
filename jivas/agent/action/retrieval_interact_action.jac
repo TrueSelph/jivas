@@ -102,9 +102,9 @@ node RetrievalInteractAction(InteractAction) {
         }
 
         # update interaction node with query and context data
-        interaction_context = visitor.interaction_node.get_data_item(self.get_type());
+        interaction_context = visitor.interaction_node.data_get(key=self.get_type());
         if not interaction_context {
-            visitor.interaction_node.set_data_item(self.get_type(), interaction_context);
+            visitor.interaction_node.data_set(key=self.get_type(), value=interaction_context);
         }
         interaction_context['query'] = query.get("query", visitor);
 

@@ -14,14 +14,6 @@ node Collection(GraphNode) {
         self.name = name;
     }
 
-    def get_data_item(label:str) -> any {
-        return self.data.get(label, None);
-    }
-
-    def set_data_item(label:str, value:any) {
-        self.data[label] = value;
-    }
-
     def delete() -> list {
         return (self spawn _purge_collection()).removed;
     }

@@ -38,9 +38,9 @@ node ModelAction(Action) {
         )) {
             if (interaction_node) {
                 # add exported model action result to context data
-                interaction_node.append_data_item(
-                    label="ModelActionResult",
-                    content=model_action_result
+                interaction_node.data_append(
+                    key="ModelActionResult",
+                    value=model_action_result
                 );
                 # update token tally
                 interaction_node.add_tokens(

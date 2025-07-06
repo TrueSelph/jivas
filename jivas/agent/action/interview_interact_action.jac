@@ -328,19 +328,19 @@ node InterviewInteractAction(InteractAction) {
         # initialize active field
         interview_session.get_next_field();
         # add to the frame node
-        visitor.frame_node.variable_set(key=f"{self.get_type()}_session", value=interview_session.export());
+        visitor.frame_node.data_set(key=f"{self.get_type()}_session", value=interview_session.export());
 
         return interview_session;
     }
 
     def delete_session(visitor: agent_graph_walker) {
         # removes the session object from the current user's frame
-        visitor.frame_node.variable_del(key=f"{self.get_type()}_session");
+        visitor.frame_node.data_del(key=f"{self.get_type()}_session");
     }
 
     def update_session(interview_session:InterviewSession, visitor: agent_graph_walker) {
         # updates interview session for the current user
-        visitor.frame_node.variable_set(key=f"{self.get_type()}_session", value=interview_session.export());
+        visitor.frame_node.data_set(key=f"{self.get_type()}_session", value=interview_session.export());
     }
 
     def get_question_fields() -> dict {
@@ -411,7 +411,7 @@ node InterviewInteractAction(InteractAction) {
 
     def get_session(visitor:agent_graph_walker) -> InterviewSession {
         # retrieves the active session, if any
-        interview_session_data = visitor.frame_node.variable_get(key=f"{self.get_type()}_session");
+        interview_session_data = visitor.frame_node.data_get(key=f"{self.get_type()}_session");
         if interview_session_data and isinstance(interview_session_data, dict) {
 
             # load session state, if any
@@ -605,12 +605,12 @@ enum SessionState {
 }
 
 obj InterviewSession {
-    has state:SessionState = SessionState.OPEN;
-    has all_fields: list = [];
-    has required_fields: list = [];
-    has active_field: str = "";
-    has responses: dict = {};
-    has data: dict = {};
+    has :priv state:SessionState = SessionState.OPEN;
+    has :priv all_fields: list = [];
+    has :priv required_fields: list = [];
+    has :priv active_field: str = "";
+    has :priv responses: dict = {};
+    has :priv data: dict = {};
 
     def get_state() -> SessionState {
         return self.state;
@@ -662,11 +662,11 @@ obj InterviewSession {
         del self.responses[field];
     }
 
-    def get_data_item(label:str) -> any {
+    def data_get(label:str) -> any {
         return self.data.get(label, None);
     }
 
-    def set_data_item(label:str, value:any) {
+    def data_set(label:str, value:any) {
         self.data[label] = value;
     }
 

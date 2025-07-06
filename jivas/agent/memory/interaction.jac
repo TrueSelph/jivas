@@ -35,7 +35,7 @@ node Interaction(GraphNode) {
     }
 
     def is_new_user() -> bool {
-        return (self.get_data_item('new_user') is not None);
+        return (self.data_get('new_user') is not None);
     }
 
     def set_text_message(message: str) {
@@ -74,55 +74,6 @@ node Interaction(GraphNode) {
     def has_intent(intent: str) {
         # checks if intent exists in interaction
         return (intent in self.intents);
-    }
-
-    def set_data_item(label: str, content: any, meta: dict = {}) {
-        # adds or updates a data item on the current interaction
-        if (data_obj := self.get_data_item(label)) {
-            if (type(meta) == dict) {
-                data_obj.meta = meta;
-            }
-            if (content) {
-                data_obj.content = content;
-            }
-            self.data[label] = data_obj;
-        } else {
-            data_obj = Data(label=label, meta=meta, content=content);
-            self.data[label] = data_obj;
-        }
-    }
-
-    def append_data_item(label: str, content: any, meta: dict = {}) {
-        # appends a content item to an existing data item
-        if (data_item := self.get_data_item(label)) {
-            if (type(meta) == dict) {
-                data_item.meta.update(meta);
-            }
-            if (content) {
-                if (type(data_item.content) == list) {
-                    data_item.content.append(content);
-                } else {
-                    data_item.content = [data_item.content, content];
-                }
-            }
-            self.data[label] = data_item;
-        } else {
-            self.set_data_item(label, content, meta);
-        }
-    }
-
-    def get_data_item(label: str) -> Data {
-        # retrieves a data item of the current interaction
-        if (data_item := self.data.get(label)) {
-            return data_item;
-        }
-
-        return None;
-    }
-
-    def get_data_items() -> list {
-        # retrieves all data items belonging to the current interaction
-        return self.data;
     }
 
     def add_directive(directive: str) {

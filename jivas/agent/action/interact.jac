@@ -88,7 +88,7 @@ walker interact(agent_graph_walker) {
             if(trimmed_queue) {
                 # prepare resumption trail
                 self.interaction_node.add_intent(root_action.label);
-                self.interaction_node.set_data_item("resumed", True);
+                self.interaction_node.data_set("resumed", True);
                 visit trimmed_queue;
             } else {
                 # we fall back on visiting the original trail if unable to orchestrate resumption
@@ -208,11 +208,7 @@ walker interact(agent_graph_walker) {
             if (all([isinstance(item, dict) for item in self.data])) {
                 for item in self.data {
                     if (all([field in item for field in required_fields])) {
-                        self.interaction_node.set_data_item(
-                            label=item["label"],
-                            meta=item["meta"],
-                            content=item["content"]
-                        );
+                        self.interaction_node.data_set(key=item["label"], value=item["content"]);
                     } else {
                         Jac.get_context().status = 400;
                         self.logger.error(
@@ -267,7 +263,7 @@ walker interact(agent_graph_walker) {
             now = datetime.now(timezone.utc);# already timezone-aware
 
             # Check if flood is active
-            flood = self.frame_node.variable_get(key="flood");
+            flood = self.frame_node.data_get(key="flood");
 
             if flood {
                 # Standardize expiration time to UTC-aware datetime
@@ -287,7 +283,7 @@ walker interact(agent_graph_walker) {
             }
             # Track message window count
 
-            message_window = self.frame_node.variable_get(key="message_window");
+            message_window = self.frame_node.data_get(key="message_window");
 
             if message_window {
                 # Standardize 'start' and 'end' to aware datetimes
@@ -323,13 +319,13 @@ walker interact(agent_graph_walker) {
                 if message_window.get("count", 0) > flood_threshold {
                     # Set flood control
                     flood = {"expiration": now + timedelta(seconds=flood_block_time)};
-                    self.frame_node.variable_set(key="flood", value=flood);
+                    self.frame_node.data_set(key="flood", value=flood);
                     return True;
                 }
 
                 # Save updated message_window
 
-                self.frame_node.variable_set(
+                self.frame_node.data_set(
                     key="message_window",
                     value=message_window
                 );
@@ -341,7 +337,7 @@ walker interact(agent_graph_walker) {
                     "end": now + timedelta(seconds=window_time),
                     "count": 1
                 };
-                self.frame_node.variable_set(
+                self.frame_node.data_set(
                     key="message_window",
                     value=message_window
                 );

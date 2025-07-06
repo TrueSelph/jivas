@@ -13,41 +13,18 @@ import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 
 node Frame(GraphNode) {
     # represents the root node of a collection of interactions beloning to a single user (session)
-    has agent_id: str = "";
-    has session_id: str = str(uuid4());
-    has label: str = "";
-    has user_name: str = "";
-    has created_on:str = str((datetime.now(timezone.utc)).isoformat());
-    has last_interacted_on:str = str((datetime.now(timezone.utc)).isoformat());
-    has variables: dict = {};
+    has :priv agent_id: str = "";
+    has :priv session_id: str = str(uuid4());
+    has :priv label: str = "";
+    has :priv user_name: str = "";
+    has :priv created_on:str = str((datetime.now(timezone.utc)).isoformat());
+    has :priv last_interacted_on:str = str((datetime.now(timezone.utc)).isoformat());
+    has :priv variables: dict = {};
 
     def postinit {
         super.postinit();
         # add of node attributes which are protected from update operation
         self.protected_attrs += ['agent_id'];
-    }
-
-    def variable_get(key:str, default:Optional[Any] = None) -> Any {
-        # retrieves a named variable by key
-        if (variable := self.variables.get(key)) {
-            return variable;
-        } elif( default ) {
-            return default;
-        } else {
-            return None;
-        }
-    }
-
-    def variable_set(key:str, value:Any) {
-        # sets a named variable by key
-        self.variables[key] = value;
-    }
-
-    def variable_del(key:str) {
-        # completely removes the variable and value from frame
-        if key in self.variables.keys() {
-            del self.variables[key];
-        }
     }
 
     def get_last_interaction(retraces:int=1) -> Interaction {
@@ -59,14 +36,14 @@ node Frame(GraphNode) {
     def is_first_interaction -> bool {
         # denotes the very first interaction of this frame
         last_interaction = self.get_last_interaction();
-        return (last_interaction.get_data_item("new_user") is not None);
+        return (last_interaction.data_get("new_user") is not None);
     }
 
     def set_resume_action(action_label:str) {
         # adds a named resume action node name to the context_data of the interaction
         # the interact walker will head straight here once it's turn comes back up
         if(last_interaction := self.get_last_interaction()) {
-            last_interaction.set_data_item("resume_action", action_label);
+            last_interaction.data_set(key="resume_action", value=action_label);
         }
     }
 
@@ -76,7 +53,7 @@ node Frame(GraphNode) {
         action_node = None;
 
         if(last_interaction_node) {
-            if(action_label := last_interaction_node.get_data_item("resume_action")) {
+            if(action_label := last_interaction_node.data_get("resume_action")) {
                 agent_node = self.get_agent();
                 action_node = agent_node.get_action(action_label = action_label);
             }
@@ -138,7 +115,7 @@ node Frame(GraphNode) {
             # add a tail reference
             self +>:Tail:+> interaction_node;
             # this is a first-time interaction, add the new_user flag
-            interaction_node.set_data_item("new_user", True);
+            interaction_node.data_set(key="new_user", value=True);
 
         } else {
 

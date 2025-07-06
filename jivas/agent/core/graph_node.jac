@@ -2,25 +2,63 @@ import inspect;
 import logging;
 import from logging { Logger }
 import from jivas.agent.modules.agentlib.utils { Utils }
-import from typing { Optional, Type, Union }
+import from typing { Optional, Type, Union, Any }
 import from dataclasses { fields, MISSING }
 
 node GraphNode {
     # base graph node for all nodes in agent graph, under app node.
-    has id: str = "";
+    has :protect id: str = "";
     # list of node attributes which are protected from update operation
-    has protected_attrs: list = ["id"];
+    has :protect protected_attrs: list = ["id"];
     # list of node attributes which should be excluded from export
-    has transient_attrs: list = ['__jac__', 'protected_attrs', 'transient_attrs', 'package_path'];
+    has :protect transient_attrs: list = ['__jac__', 'protected_attrs', 'transient_attrs', 'package_path'];
+    # for storing data items
+    has :priv data: dict = {};
     # for storing extended attributes
-    has _context: dict = {};
+    has :priv _context: dict = {};
     # set up logger
-    static has logger:Logger = logging.getLogger(__name__);
+    static has :priv logger:Logger = logging.getLogger(__name__);
 
     def postinit {
         if (not self.id) {
             self.id = jid(self);
         }
+    }
+
+    def data_get(key:str, default:Optional[Any] = None) -> Any {
+        # retrieves a named variable by key
+        return self.data.get(key, default);
+    }
+
+    def data_set(key:str, value:Any) {
+        # sets a named variable by key
+        self.data[key] = value;
+    }
+
+    def data_append(key: str, value: Any) -> None {
+        current = self.data.get(key, None);
+        if current is None {
+            self.data[key] = [value];
+        } elif isinstance(current, list) {
+            current.append(value);
+        } else {
+            self.data[key] = [current, value];
+        }
+    }
+
+    def data_keys() -> list[str] {
+        # Return all current keys (snapshot copy).
+        return list(self.data.keys());
+    }
+
+    def data_items() -> list {
+        # Return all items (snapshot copy).
+        return list(self.data.items());
+    }
+
+    def data_del(key:str) -> None {
+        # completely removes the variable and value from frame
+        self.data.pop(key, None);
     }
 
     def get_type() -> str {
