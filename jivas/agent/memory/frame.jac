@@ -136,9 +136,9 @@ node Frame(GraphNode) {
         return interaction_node;
     }
 
-    def get_transcript_statements(interactions:int = 10, max_statement_length:int = 0, with_events:bool = False) -> list[dict] {
-        # returns the transcript of the last specified number of interactions as a list
-        return (self spawn _get_transcript_statements(interactions, max_statement_length, with_events=with_events)).statements;
+    def get_interaction_history(interactions:int = 0) -> list[Optional[Interaction]] {
+        # returns the list of interactions in this frame with optional limit
+        return (self spawn _get_interaction_history(interactions=interactions)).interaction_nodes;
     }
 
     def get_transcript(interactions:int = 10, max_statement_length:int = 0, with_events:bool = False) -> str {
@@ -148,7 +148,6 @@ node Frame(GraphNode) {
         statements = self.get_transcript_statements(interactions, max_statement_length, with_events=with_events);
 
         for item in statements {
-
             key = next(iter(item));
             value = item[key];
             transcript += f"{key} : {value} \n";
@@ -157,7 +156,13 @@ node Frame(GraphNode) {
         return transcript;
     }
 
+    def get_transcript_statements(interactions:int = 10, max_statement_length:int = 0, with_events:bool = False) -> list[dict] {
+        # returns the transcript of the last specified number of interactions as a list
+        return (self spawn _get_transcript_statements(interactions, max_statement_length, with_events=with_events)).statements;
+    }
+
     def get_interactions() -> list {
+        # returns the list of interactions in this frame (in chronoligical order)
         return (self spawn _get_interactions()).interactions;
     }
 
@@ -196,16 +201,11 @@ node Frame(GraphNode) {
     }
 }
 
-walker _get_transcript_statements {
-    # returns the transcript of the last specified number of interactions as a list
-
-    has interactions:int = 1;
-    has max_statement_length:int = 0;
-
-    has statements:list = [];
-    has last_interaction:Interaction = None;
-    has retrace_count:int = 0;
-    has with_events:bool = False;
+walker _get_interaction_history {
+    # returns a collection of closed (complete) interactions in a frame by retracing from the last interaction node
+    has interactions:int = 0; # number of recent interactions to retrieve; 0 is all
+    has interaction_nodes:list = [];
+    has walks:int = 0;
 
     obj __specs__ {
         # make this a private walker
@@ -213,30 +213,60 @@ walker _get_transcript_statements {
     }
 
     can on_frame with Frame entry {
-        last_interaction = here.get_last_interaction();
-        visit last_interaction;
+        visit [->:Tail:->](`?Interaction);
     }
 
     can on_interaction with Interaction entry {
-        # if we're at the last interaction, retrace
-        if (here == self.last_interaction) {
-            visit [->:Retrace:->](`?Interaction) else {
+
+        if here.is_closed() {
+            self.walks += 1;
+            if(self.interactions > 0 and (self.interactions == self.walks) ) {
+                self.interaction_nodes.reverse();
                 disengage;
             }
-        } elif (self.retrace_count < self.interactions) {
+            self.interaction_nodes.append(here);
+        }
 
+        visit [->:Retrace:->](`?Interaction)(?closed == True);
+    }
+
+    can on_exit with exit {
+        # reverse the order of recent interaction nodes to be in chronological order
+        self.interaction_nodes.reverse();
+    }
+}
+
+walker _get_transcript_statements {
+    # returns the transcript of the last specified number of interactions as a list
+
+    has interactions:int = 1;
+    has max_statement_length:int = 0;
+    has with_events:bool = False;
+    has statements:list = [];
+
+    obj __specs__ {
+        # make this a private walker
+        static has private: bool = True;
+    }
+
+    can on_frame with Frame entry {
+        
+        interaction_nodes = (here spawn _get_interaction_history(interactions=self.interactions)).interaction_nodes;
+
+        for interaction in interaction_nodes {
             ai_statement = "";
             human_statement = "";
 
-            # add events to the transcript
-            if (here.events and self.with_events) {
-                for event in here.events {
-                    self.statements.append({"ai": f"event: {event}"});
-                }
+            # record the user utterance
+            if (interaction.utterance) {
+                human_statement = Utils.escape_string(interaction.utterance);
+                human_statement = self.chunk_message(message=human_statement);
+                self.statements.append({"human": human_statement});
             }
 
-            if (here.has_response()) {
-                content = here.get_message().get_content();
+            # record the AI response
+            if (interaction.has_response()) {
+                content = interaction.get_message().get_content();
                 if(type(content) == list){
                     for item in content {
                         ai_statement = item['content'];
@@ -251,20 +281,13 @@ walker _get_transcript_statements {
                 }
             }
 
-            if (here.utterance) {
-                human_statement = Utils.escape_string(here.utterance);
-                human_statement = self.chunk_message(message=human_statement);
-                self.statements.append({"human": human_statement});
+            # add events to the transcript
+            if (interaction.events and self.with_events) {
+                for event in interaction.events {
+                    self.statements.append({"ai": f"event: {event}"});
+                }
             }
-
-            self.retrace_count += 1;
-            visit [->:Retrace:->](`?Interaction);
         }
-
-    }
-
-    can on_exit with exit {
-        (self.statements).reverse();
     }
 
     def chunk_message(message:str) -> str {
@@ -274,13 +297,12 @@ walker _get_transcript_statements {
                 message = message_chunks[0];
             }
         }
-
         return message;
     }
 }
 
 walker _get_interactions {
-    # returns the list of interactions of a frame.
+    # returns the list of interactions of a frame (in chronoligcal order)
     has interactions:list = [];
 
     obj __specs__ {

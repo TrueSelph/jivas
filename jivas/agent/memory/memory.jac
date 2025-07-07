@@ -151,11 +151,6 @@ node Memory(GraphNode) {
         };
     }
 
-    def purge(session_id:str=None) {
-        # backwards compat for older actions
-        return self.purge_frame_memory(session_id);
-    }
-
     def purge_frame_memory(session_id:str=None) {
         # removes all frames and interactions (or by session_id)
         return (self spawn _purge_frames(session_id=session_id)).removed;
