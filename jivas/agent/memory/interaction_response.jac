@@ -66,18 +66,6 @@ obj MultiInteractionMessage(InteractionMessage) {
     has message_type:MessageType = MessageType.MULTI;
     has content:list[InteractionMessage] = [];
 
-    def load(data:dict) {
-        # loads a compatible interaction message data struct
-        if (data) {
-            for attr in data.keys() {
-                # set if attribute is a valid attribute
-                if (hasattr(self, attr)) {
-                    setattr(self, attr, data[attr]);
-                }
-            }
-        }
-    }
-
     def add_interaction_message(message:InteractionMessage) {
         if( not isinstance(message, MultiInteractionMessage) ) {
             self.content.append(message.export());
