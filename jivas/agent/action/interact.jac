@@ -32,12 +32,13 @@ walker interact(agent_graph_walker) {
     has tts: bool = False; # activate text-to-speech response
     has streaming: bool = False; # activate streaming response
     has generator: any = None; # activate streaming response
+
+    has context_data: dict = {};
+    has frame_node: Frame = None;
+    has interaction_node: Interaction = None;
     # protected vars
     has :protect response: dict = {};
     has :protect message: InteractionMessage = None;
-    has :pub context_data: dict = {};
-    has :pub frame_node: Frame = None;
-    has :pub interaction_node: Interaction = None;
 
     obj __specs__ {
         static has auth: bool = True;
@@ -567,7 +568,6 @@ walker interact(agent_graph_walker) {
             # close the interaction
             self.interaction_node.close();
 
-
             # init var
             interaction_data = {};
 
@@ -580,7 +580,6 @@ walker interact(agent_graph_walker) {
 
                     # set the message obj
                     self.message = self.interaction_node.get_message();
-
                     # prepare the response payload
                     interaction_data = self.interaction_node.export();
 
@@ -607,7 +606,7 @@ walker interact(agent_graph_walker) {
                 self.message = SilentInteractionMessage();
                 self.response = InteractionResponse(
                     session_id=self.frame_node.session_id,
-                    message=self.message.export()
+                    message=self.message
                 ).export();
             }
 
@@ -618,14 +617,14 @@ walker interact(agent_graph_walker) {
 
         } else {
             self.message = SilentInteractionMessage();
-            self.response = InteractionResponse(message=self.message.export()).export();
+            self.response = InteractionResponse(message=self.message).export();
         }
 
         # handle text-to-speech if enabled
         if (self.tts) {
             if (tts_action := agent_node.get_tts_action()) {
 
-                content = self.message.get_meta('phoneme_content')
+                content = self.message.data_get('phoneme_content')
                     or self.message.get_content();
 
                 # perform TTS

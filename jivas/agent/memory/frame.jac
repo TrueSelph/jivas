@@ -19,7 +19,6 @@ node Frame(GraphNode) {
     has :priv user_name: str = "";
     has :priv created_on:str = str((datetime.now(timezone.utc)).isoformat());
     has :priv last_interacted_on:str = str((datetime.now(timezone.utc)).isoformat());
-    has :priv variables: dict = {};
 
     def postinit {
         super.postinit();

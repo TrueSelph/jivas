@@ -1,6 +1,5 @@
 import from datetime { datetime, timezone }
 import from jivas.agent.modules.agentlib.utils { Utils }
-import from jivas.agent.memory.data { Data }
 import from jivas.agent.memory.advance { Advance }
 import from jivas.agent.memory.retrace { Retrace }
 import from jivas.agent.core.graph_node { GraphNode }

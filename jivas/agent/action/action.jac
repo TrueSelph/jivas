@@ -15,45 +15,35 @@ node Action(GraphNode) {
     has _package: dict = {};
     # set up logger
     static has logger:Logger = logging.getLogger(__name__);
-    # [Bug] Do not do `def init` this without setting the has vars
-    # def init {
-    #     # override to initialize the action
-    # }
+
     def postinit {
         super.postinit();
-        # add of node attributes which are protected from update operation
+        # list of node attributes which are protected from update operation
         self.protected_attrs += ['_package', 'label', 'version', 'agent_id'];
-        # add of node attributes which should be excluded from export
+        # list of node attributes which should be excluded from export
         self.transient_attrs += ['agent_id'];
     }
 
-    def on_register() {
-        # override to execute operations upon registration of action
-    }
+    # override to execute operations upon registration of action
+    def on_register() { }
 
-    def post_register() {
-        # override to execute any setup code when all actions are in place
-    }
+    # override to execute any setup code when all actions are in place
+    def post_register() { }
 
-    def on_enable() {
-        # override to execute operations upon enabling of action
-    }
+    # override to execute operations upon enabling of action
+    def on_enable() { }
 
-    def on_disable() {
-        # override to execute operations upon disabling of action
-    }
+    # override to execute operations upon disabling of action
+    def on_disable() { }
 
-    def on_deregister() {
-        # override to execute operations upon deregistration of action
-    }
+    # override to execute operations upon deregistration of action
+    def on_deregister() { }
 
-    def pulse() {
-        # override to implement pulse operation
-    }
+    # override to implement pulse operation
+    def pulse() { }
 
-    def analytics() {
-        # override to furnish analytics data for the action
-    }
+    # override to furnish analytics data for the action
+    def analytics() { }
 
     def healthcheck() -> Union[bool, dict] {
         # override to implement healthcheck operation

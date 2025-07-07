@@ -57,8 +57,13 @@ node GraphNode {
     }
 
     def data_del(key:str) -> None {
-        # completely removes the variable and value from frame
+        # completely removes the data item and value
         self.data.pop(key, None);
+    }
+
+    def data_clear() -> None {
+        # clears all data items
+        self.data = {};
     }
 
     def get_type() -> str {

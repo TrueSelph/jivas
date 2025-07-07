@@ -13,7 +13,7 @@ node ExitInteractAction(InteractAction) {
         return True; # authorize the interact to run for tracking in trail
     }
 
-    def execute(visitor: agent_graph_walker) -> dict {
+    def execute(visitor: agent_graph_walker) -> None {
         # null implementation for execution
         return {};
     }

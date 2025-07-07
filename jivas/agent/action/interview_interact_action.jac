@@ -5,6 +5,7 @@ import from openai { OpenAI }
 import from jivas.agent.modules.interview_interact_action.utils { evaluate_conditional_expression }
 import from jivas.agent.action.interact_action { InteractAction }
 import from jivas.agent.action.agent_graph_walker { agent_graph_walker }
+import from jivas.agent.core.graph_object { GraphObject }
 
 node InterviewInteractAction(InteractAction) {
     #*
@@ -604,13 +605,12 @@ enum SessionState {
     ABORTED = 'ABORTED', # user has chosen to abandon the process -> remove the session
 }
 
-obj InterviewSession {
+obj InterviewSession(GraphObject) {
     has :priv state:SessionState = SessionState.OPEN;
     has :priv all_fields: list = [];
     has :priv required_fields: list = [];
     has :priv active_field: str = "";
     has :priv responses: dict = {};
-    has :priv data: dict = {};
 
     def get_state() -> SessionState {
         return self.state;
@@ -662,22 +662,4 @@ obj InterviewSession {
         del self.responses[field];
     }
 
-    def data_get(label:str) -> any {
-        return self.data.get(label, None);
-    }
-
-    def data_set(label:str, value:any) {
-        self.data[label] = value;
-    }
-
-    def export() -> dict {
-        return {
-            'state': self.state.value,
-            'all_fields': self.all_fields,
-            'required_fields': self.required_fields,
-            'active_field': self.active_field,
-            'responses': self.responses,
-            'data': self.data
-        };
-    }
 }

@@ -4,6 +4,7 @@ import from typing { Optional }
 import from logging { Logger }
 import from jivas.agent.action.action { Action }
 import from jivas.agent.modules.agentlib.utils { Utils }
+import from jivas.agent.core.graph_node { GraphNode }
 
 node ModelAction(Action) {
     # Generic model action node archetype for abstracted, standardized LLM interfacing
@@ -90,7 +91,7 @@ node ModelAction(Action) {
 
 }
 
-obj ModelActionResult {
+obj ModelActionResult(GraphNode) {
 
     # encapsulates a language model prompt, result and related tokens
     # this is meant to be instantiated with attr values and serve as the standard when interfacing with llms asyncronously
@@ -103,7 +104,6 @@ obj ModelActionResult {
     has temperature: float = 0;
     has model_name: str = "";
     has max_tokens: int = 0;
-    has meta: dict = {};
 
     def get_prompt() {
         return self.prompt;
@@ -148,16 +148,8 @@ obj ModelActionResult {
         return self.model_name;
     }
 
-    def get_meta() {
-        return self.meta;
-    }
-
     def get_generator() {
         return self.generator;
     }
 
-    def export(ignore_keys: list=['__jac__']) {
-        # convert the object to dictionary
-        node_export = Utils.export_to_dict(self, ignore_keys);
-    }
 }

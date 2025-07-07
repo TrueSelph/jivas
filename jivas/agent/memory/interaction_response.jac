@@ -1,6 +1,7 @@
 import from enum { unique }
 import from typing { Any }
 import from jivas.agent.modules.agentlib.utils { Utils }
+import from jivas.agent.core.graph_object { GraphObject }
 
 @unique
 enum MessageType {
@@ -10,34 +11,13 @@ enum MessageType {
     SILENCE = 'SILENCE'
 }
 
-obj InteractionMessage {
+obj InteractionMessage(GraphObject) {
     # abstract base class for interaction message
     has message_type:str = None;
     has content:Any=None;
-    has meta:dict = {};
-
-    def load(data:dict) {
-        # loads a compatible interaction message data struct
-        if (data and isinstance(data, dict)) {
-            for attr in data.keys() {
-                # set if attribute is a valid attribute
-                if (hasattr(self, attr)) {
-                    setattr(self, attr, data[attr]);
-                }
-            }
-        }
-    }
 
     def get_type() -> str {
         return self.message_type;
-    }
-
-    def set_meta(key:str, value: any) {
-        self.meta[key] = value;
-    }
-
-    def get_meta(key:str) {
-        return self.meta.get(key, None);
     }
 
     def get_content() {
@@ -52,11 +32,6 @@ obj InteractionMessage {
         return False;
     }
 
-    def export(ignore_keys: list = ['__jac__']) {
-        # convert the object to dictionary
-        node_export = Utils.export_to_dict(self, ignore_keys);
-        return node_export;
-    }
 }
 
 obj SilentInteractionMessage(InteractionMessage) {
@@ -136,24 +111,12 @@ obj MultiInteractionMessage(InteractionMessage) {
     }
 }
 
-obj InteractionResponse {
+obj InteractionResponse(GraphObject) {
 
     has session_id:str = "";
     has message_type:MessageType = MessageType.TEXT;
     has message:InteractionMessage = None;
     has tokens:int = 0;
-
-    def load(data:dict) {
-        # loads a compatible interaction response data struct
-        if (data) {
-            for attr in data.keys() {
-                # set if attribute is a valid attribute
-                if (hasattr(self, attr)) {
-                    setattr(self, attr, data[attr]);
-                }
-            }
-        }
-    }
 
     def set_message(message:InteractionMessage) {
 
@@ -178,9 +141,4 @@ obj InteractionResponse {
         return self.message;
     }
 
-    def export(ignore_keys: list = ['__jac__']) {
-        # convert the object to dictionary
-        node_export = Utils.export_to_dict(self, ignore_keys);
-        return node_export;
-    }
 }

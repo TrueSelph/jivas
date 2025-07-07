@@ -19,7 +19,7 @@ walker install_action(agent_graph_walker) {
     static has logger:Logger = logging.getLogger(__name__);  # Logger instance
 
     obj __specs__ {
-        static has private: bool = False;  # Private specification
+        static has private: bool = False; # Make this a public walker
     }
 
     can on_agent with Agent entry {
