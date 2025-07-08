@@ -307,6 +307,31 @@ node Actions(GraphNode) {
         return True;
     }
 
+    def init_actions(agent_id:str, action_list: list, jpr_api_key:str=None) -> bool {
+        # accepts the list of action data and related configurations and coordinates the reinitialization of action packages
+
+        if not agent_id {
+            self.logger.error('agent_id is required to initialize actions');
+            return False;
+        }
+
+        if not action_list {
+            self.logger.error('action_list is required to initialize actions');
+            return False;
+        }
+
+        # grab flattened list of action data indexed by namespace package name, ordered by action deps
+        action_data_index = self.index_action_packages(agent_id=agent_id, action_list=action_list, jpr_api_key=jpr_api_key);
+
+        for (namespace_package_name, action_data) in action_data_index.items() {
+            # load and re-import the action
+            loaded_action_data = self.load_action_package(indexed_action_data=action_data, jpr_api_key=jpr_api_key);
+            self.import_action(loaded_action_data);
+        }
+
+        return True;
+    }
+
     def deregister_action(action_type: str="", action_label: str="") {
         # gracefully disposes of an action, calling the on_deregister on each action node before destruction
         # can perform deregistration by type or by label
@@ -321,11 +346,9 @@ node Actions(GraphNode) {
         for action_node in target {
             action_node.on_deregister();
             # remove the action module folder and (TODO: related modules)
-            # Utils.clean_action(action_node._package.get('name')); # cant remove this until we can unload module in runtime
             # purge action from graph
             action_node spawn purge();
         }
-
     }
 
     def deregister_actions() {
@@ -342,7 +365,6 @@ node Actions(GraphNode) {
     }
 
     # UTILS
-
     def search_action_list(namespace_package_name:str, action_list:list) -> dict {
         # searches an action list for the entry based on the namespace_package_name
 

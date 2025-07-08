@@ -5,7 +5,7 @@ obj GraphObject {
     # base graph object to be used in JIVAS graph.
     has :protect id: str = "";
     has :priv data: dict = {};
-    
+
     def postinit {
         if (not self.id) {
             self.id = jid(self);

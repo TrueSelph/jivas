@@ -33,9 +33,7 @@ walker init_agents(agent_graph_walker) {
     can on_agent with Agent entry {
         try {
             self.logger.info(f'initializing agent {here.name}');
-
-            # TODO: remove the legacy jvdata_file_interface once all instances are updated
-            file_bytes = here.get_file(here.descriptor) or jvdata_file_interface.get_file(here.descriptor);
+            file_bytes = here.get_file(here.descriptor);
 
             if (not file_bytes) {
                 self.logger.error(f"agent descriptor not found: {here.descriptor}");
@@ -43,11 +41,11 @@ walker init_agents(agent_graph_walker) {
             }
 
             file = io.BytesIO(file_bytes);
-            descriptor = yaml.safe_load(file);
-            agents_node = Utils.node_obj([<--](`?Agents));
+            descriptor_data = yaml.safe_load(file);
+            jpr_api_key = descriptor_data.get('jpr_api_key', None);
 
-            if(descriptor) {
-                agents_node spawn import_agent(descriptor = descriptor, reporting = self.reporting);
+            if(descriptor_data) {
+                here.get_actions().init_actions(agent_id=here.id, action_list=descriptor_data.get('actions', []), jpr_api_key=jpr_api_key);
             }
 
         } except Exception as e {

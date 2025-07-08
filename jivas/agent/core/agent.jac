@@ -201,7 +201,7 @@ node Agent(GraphNode) {
 
             self.get_actions().install_actions(
                 agent_id=self.id,
-                action_list=data['actions'],
+                action_list=data.get('actions', []),
                 jpr_api_key=jpr_api_key
             );
         }

@@ -250,7 +250,7 @@ walker _get_transcript_statements {
     }
 
     can on_frame with Frame entry {
-        
+
         interaction_nodes = (here spawn _get_interaction_history(interactions=self.interactions)).interaction_nodes;
 
         for interaction in interaction_nodes {
