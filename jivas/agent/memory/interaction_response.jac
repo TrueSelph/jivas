@@ -35,19 +35,19 @@ obj InteractionMessage(GraphObject) {
 }
 
 obj SilentInteractionMessage(InteractionMessage) {
-    has message_type:MessageType = MessageType.SILENCE;
+    has message_type:MessageType = MessageType.SILENCE.value;
     has content:str = "...";
 }
 
 obj TextInteractionMessage(InteractionMessage) {
 
-    has message_type:MessageType = MessageType.TEXT;
+    has message_type:MessageType = MessageType.TEXT.value;
     has content:str = "";
 }
 
 obj MediaInteractionMessage(InteractionMessage) {
 
-    has message_type:MessageType = MessageType.MEDIA;
+    has message_type:MessageType = MessageType.MEDIA.value;
     has mime:str = "";
     has data:Any = None;
     has content:str = "";
@@ -63,7 +63,7 @@ obj MediaInteractionMessage(InteractionMessage) {
 
 obj MultiInteractionMessage(InteractionMessage) {
 
-    has message_type:MessageType = MessageType.MULTI;
+    has message_type:MessageType = MessageType.MULTI.value;
     has content:list[InteractionMessage] = [];
 
     def add_interaction_message(message:InteractionMessage) {
@@ -102,7 +102,7 @@ obj MultiInteractionMessage(InteractionMessage) {
 obj InteractionResponse(GraphObject) {
 
     has session_id:str = "";
-    has message_type:MessageType = MessageType.TEXT;
+    has message_type:MessageType = MessageType.TEXT.value;
     has message:InteractionMessage = None;
     has tokens:int = 0;
 

@@ -37,7 +37,7 @@ walker _purge_collection {
         }
     }
 
-    can on_collection_node with Node entry {
+    can on_collection_node with GraphNode entry {
         visit [-->];
         self.removed.append(here);
         Jac.destroy(here);
