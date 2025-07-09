@@ -320,13 +320,12 @@ node Actions(GraphNode) {
             return False;
         }
 
-        # grab flattened list of action data indexed by namespace package name, ordered by action deps
-        action_data_index = self.index_action_packages(agent_id=agent_id, action_list=action_list, jpr_api_key=jpr_api_key);
+        loaded_actions = self.load_actions(agent_id=agent_id, action_list=action_list, jpr_api_key=jpr_api_key);
 
-        for (namespace_package_name, action_data) in action_data_index.items() {
-            # load and re-import the action
-            loaded_action_data = self.load_action_package(indexed_action_data=action_data, jpr_api_key=jpr_api_key);
-            self.import_action(loaded_action_data);
+        # if actions data is empty, quit right here with error
+        if(not loaded_actions) {
+            self.logger.error('no actions loaded; unable to proceed with import');
+            return False;
         }
 
         return True;

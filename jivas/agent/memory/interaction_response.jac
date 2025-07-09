@@ -68,7 +68,7 @@ obj MultiInteractionMessage(InteractionMessage) {
 
     def add_interaction_message(message:InteractionMessage) {
         if( not isinstance(message, MultiInteractionMessage) ) {
-            self.content.append(message.export());
+            self.content.append(message);
         }
     }
 
