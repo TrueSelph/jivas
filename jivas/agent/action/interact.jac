@@ -201,29 +201,18 @@ walker interact(agent_graph_walker) {
             return False;
         }
 
+        if self.data and not isinstance(self.data, dict) {
+            Jac.get_context().status = 400;
+            self.logger.error(
+                "data must be a dictionary"
+            );
+            return False;
+        }
+
         # add any data to the interaction for processing later...
-        if (self.data and isinstance(self.data, list)) {
-
-            required_fields = ["label", "meta", "content"];
-
-            if (all([isinstance(item, dict) for item in self.data])) {
-                for item in self.data {
-                    if (all([field in item for field in required_fields])) {
-                        self.interaction_node.data_set(key=item["label"], value=item["content"]);
-                    } else {
-                        Jac.get_context().status = 400;
-                        self.logger.error(
-                            f"malformed data item; requires {required_fields} in each dictionary"
-                        );
-                        return False;
-                    }
-                }
-            } else {
-                Jac.get_context().status = 400;
-                self.logger.error(
-                    "data must be a list of dictionaries with required fields: 'label', 'meta', 'content'"
-                );
-                return False;
+        if self.data {
+            for (key, value) in self.data.items() {
+                self.interaction_node.data_set(key=key, value=value);
             }
         }
 
