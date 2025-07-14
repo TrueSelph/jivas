@@ -31,7 +31,7 @@ walker interact(agent_graph_walker) {
     has verbose: bool = False; # verbose payload or not
     has tts: bool = False; # activate text-to-speech response
     has streaming: bool = False; # activate streaming response
-    has generator: any = None; # activate streaming response
+    static has generator: any = None; # streaming response generator object
 
     has context_data: dict = {};
     has frame_node: Frame = None;
@@ -49,7 +49,8 @@ walker interact(agent_graph_walker) {
             "execute",
             "context_data",
             "frame_node",
-            "interaction_node"
+            "interaction_node",
+            "generator"
         ]; # excluded from API specification
     }
 
