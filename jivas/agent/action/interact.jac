@@ -52,6 +52,7 @@ walker interact(agent_graph_walker) {
             "interaction_node",
             "generator"
         ]; # excluded from API specification
+        has methods: list = ["websocket"];
     }
 
     can on_agent with Agent entry {
