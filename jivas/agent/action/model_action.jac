@@ -100,7 +100,6 @@ obj ModelActionResult(GraphNode) {
     has prompt: str = "";
     has functions: str = "";
     has result: str = "";
-    has generator: any = None;
     has tokens: int = 0;
     has temperature: float = 0;
     has model_name: str = "";
@@ -148,9 +147,4 @@ obj ModelActionResult(GraphNode) {
     def get_model_name() {
         return self.model_name;
     }
-
-    def get_generator() {
-        return self.generator;
-    }
-
 }
