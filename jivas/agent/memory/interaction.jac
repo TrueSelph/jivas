@@ -2,6 +2,7 @@ import from datetime { datetime, timezone }
 import from jivas.agent.modules.agentlib.utils { Utils }
 import from jivas.agent.memory.advance { Advance }
 import from jivas.agent.memory.retrace { Retrace }
+import from jivas.agent.memory.tail { Tail }
 import from jivas.agent.core.graph_node { GraphNode }
 import from jivas.agent.memory.interaction_response { InteractionMessage, InteractionResponse, TextInteractionMessage }
 
@@ -122,6 +123,10 @@ node Interaction(GraphNode) {
 
     def get_functions(action_label: str) -> list {
         return self.functions.get(action_label, []);
+    }
+
+    def get_frame() -> GraphNode {
+        return Utils.node_obj([<-:Tail:<-]);
     }
 
     def is_closed() -> bool {

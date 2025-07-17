@@ -27,11 +27,10 @@ walker interact(agent_graph_walker) {
     has session_id: str = "";
     has utterance: str = "";
     has channel: str = "default"; # other channels: 'kiosk', 'whatsapp', 'facebook', 'slack', etc.
-    has data: list[dict] = []; # expects [{'label': str, 'meta': dict, 'content': str}]
+    has data: dict = {}; # expects {'label': str, 'meta': dict, 'content': str}
     has verbose: bool = False; # verbose payload or not
     has tts: bool = False; # activate text-to-speech response
     has streaming: bool = False; # activate streaming response
-    static has generator: any = None; # streaming response generator object
 
     has context_data: dict = {};
     has frame_node: Frame = None;
@@ -40,9 +39,9 @@ walker interact(agent_graph_walker) {
     has :protect response: dict = {};
     has :protect message: InteractionMessage = None;
 
-    obj __specs__ {
+    class __specs__ {
         static has auth: bool = True;
-        static has private: bool = True;
+        static has private: bool = False;
         static has excluded: list = [
             "response",
             "message",
@@ -50,7 +49,6 @@ walker interact(agent_graph_walker) {
             "context_data",
             "frame_node",
             "interaction_node",
-            "generator"
         ]; # excluded from API specification
         has methods: list = ["websocket"];
     }

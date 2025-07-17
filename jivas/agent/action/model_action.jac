@@ -35,6 +35,7 @@ node ModelAction(Action) {
         if (model_action_result := self.invoke(
             prompt_messages,
             prompt_variables,
+        	interaction_node=interaction_node,
             **kwargs
         )) {
             if (interaction_node) {
