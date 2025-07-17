@@ -50,7 +50,11 @@ node Memory(GraphNode) {
 
         frames = [-->](`?Frame);
         # sort frames by 'created_on' ISO datetime string
-        return sorted(frames, key = lambda frame:Frame:datetime.fromisoformat(frame.created_on) if hasattr(frame, 'created_on') and frame.created_on else "", reverse=True);
+        def get_frame(frame: Frame) -> str {
+            return frame.created_on if hasattr(frame, 'created_on') and frame.created_on else "";
+        }
+
+        return sorted(frames, key=get_frame, reverse=True);
     }
 
     def get_collection(collection_name:str) -> Collection {

@@ -549,26 +549,20 @@ node InterviewInteractAction(InteractAction) {
             use_history = history;
         }
 
+        prompt_messages = [
+            {"human": visitor.utterance},
+            {"system": prompt}
+        ];
+
         # prepare the final prompt with history.
         if (use_history) {
-            # grab the history
-            prompt_messages = [];
-
             statements = visitor.frame_node.get_transcript_statements(interactions = self.history_size, max_statement_length = self.max_statement_length, with_events = True);
 
             if (statements) {
-                prompt_messages.extend(statements);
-                self.logger.debug(f"history: {json.dumps(statements)}");
+                # prepend statements to the prompt messages
+                prompt_messages = statements + prompt_messages;
             }
 
-            prompt_messages.extend([{"system": prompt}]);
-
-        } else {
-            # here we cater to whether we have context information or not..
-            prompt_messages = [
-                {"system": prompt},
-                {"human": visitor.utterance}
-            ];
         }
 
         model_action = self.get_agent().get_action(action_label=self.model_action);
