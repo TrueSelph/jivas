@@ -14,9 +14,9 @@ node Interaction(GraphNode) {
     has :priv tokens: int = 0;
     has :priv time_stamp: str = str((datetime.now(timezone.utc)).isoformat());
     has :priv trail: list = [];
-    has :priv intents: list = []; # TODO: make this private; this holds the node names of actions which must be executed; capable of multiple intent executions...
+    has :priv intents: list = []; # this holds the node names of actions which must be executed; capable of multiple intent executions...
     has :priv functions: dict = {}; # holds the intended action as the key and classified tool calls as values
-    has :priv directives: list = []; # TODO: make this private; holds queued directives for from interact_actions
+    has :priv directives: list = []; # holds queued directives for from interact_actions
     has :priv events: list = [];
     has :priv response: InteractionResponse = None;
     has :priv data: dict = {}; # holds data items which are not part of the response, but are relevant to the interaction
@@ -126,7 +126,7 @@ node Interaction(GraphNode) {
     }
 
     def get_frame() -> GraphNode {
-        return Utils.node_obj([<-:Tail:<-]);
+        return (self spawn _advance_to_frame()).frame_node;
     }
 
     def is_closed() -> bool {
@@ -135,6 +135,20 @@ node Interaction(GraphNode) {
 
     def close() {
         self.closed = True;
+    }
+
+}
+
+walker _advance_to_frame {
+    # Advance until no more, then return backtrace 
+    # of Tail edge to get the Frame node
+    has frame_node:GraphNode = None;
+
+    can on_interaction with Interaction entry {
+        visit [->:Advance:->] else {
+            # we're at the end of the convo / last interaction, return retrace of Tail
+            self.frame_node = Utils.node_obj([<-:Tail:<-]);
+        }
     }
 
 }
