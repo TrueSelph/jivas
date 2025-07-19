@@ -331,6 +331,31 @@ node Actions(GraphNode) {
         return True;
     }
 
+    def reload_actions(agent_id:str, action_list: list, jpr_api_key:str=None) -> bool {
+        # accepts the list of action data and related configurations and coordinates the hot-reloading of action packages
+
+        if not agent_id {
+            self.logger.error('agent_id is required to reload actions');
+            return False;
+        }
+
+        if not action_list {
+            self.logger.error('action_list is required to reload actions');
+            return False;
+        }
+
+        # grab flattened list of action data indexed by namespace package name, ordered by action deps
+        action_data_index = self.index_action_packages(agent_id=agent_id, action_list=action_list, jpr_api_key=jpr_api_key);
+
+        for (namespace_package_name, action_data) in action_data_index.items() {
+            # load and re-import the action
+            loaded_action_data = self.load_action_package(indexed_action_data=action_data, jpr_api_key=jpr_api_key);
+            self.import_action(loaded_action_data);
+        }
+
+        return True;
+    }
+
     def deregister_action(action_type: str="", action_label: str="") {
         # gracefully disposes of an action, calling the on_deregister on each action node before destruction
         # can perform deregistration by type or by label
