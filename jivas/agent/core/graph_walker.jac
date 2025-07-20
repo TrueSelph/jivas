@@ -66,7 +66,7 @@ walker graph_walker {
     # can be overriden to execute following a walker update
     def post_update { }
 
-    def get_app_root() -> Optional[GraphNode] {
+    def :protect get_app_root() -> Optional[GraphNode] {
         # retrieves the app root Node from graph and elevates its owner to system root for access
         node_collection = NodeAnchor.Collection.get_collection("node");
         item = node_collection.find_one({"name": "App"});
