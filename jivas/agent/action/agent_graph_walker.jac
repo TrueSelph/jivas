@@ -23,28 +23,29 @@ walker agent_graph_walker(graph_walker) {
 
     can on_agents with Agents entry {
 
-        if(self.agent_id) {
+        agent_node = None;
 
-            try {
-
-                if(agent_node := &self.agent_id) {
-
-                    if agent_node.published {
-                        visit agent_node;
-                    }
-
-                } else {
-                    Jac.get_context().status = 400;
-                    report "Invalid agent id";
-                    disengage;
-                }
-
-            } except Exception as e {
-                Jac.get_context().status = 400;
-                report "Invalid agent id";
-                disengage;
-            }
+        if not self.agent_id {
+            Jac.get_context().status = 400;
+            report "Missing Agent ID";
+            disengage;
         }
+
+        try {
+            agent_node = &self.agent_id;
+        } except Exception as e {
+            Jac.get_context().status = 400;
+            report "Invalid agent id";
+            disengage;
+        }
+
+        if not agent_node.published {
+            Jac.get_context().status = 404;
+            report "Agent is not published";
+            disengage;
+        }
+
+        visit agent_node;
     }
 
 }

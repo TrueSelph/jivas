@@ -127,7 +127,6 @@ node GraphNode {
                     if (hasattr(self, attr)) {
                         setattr(self, attr, data[attr]);
                     } else {
-                        # Note: There is no global context in nodes like in jac v1, as such we store the data in the _context attribute
                         self._context[attr] = data[attr];
                     }
                 }

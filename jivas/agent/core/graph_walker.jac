@@ -1,8 +1,11 @@
 import logging;
 import traceback;
+import from typing { Optional }
 import from logging { Logger }
-import from jivas.agent.modules.agentlib.utils { Utils }
 import from jivas.agent.core.app { App }
+import from jivas.agent.core.graph_node { GraphNode }
+import from jivas.agent.modules.agentlib.utils { Utils }
+import from jac_cloud.core.archetype { NodeAnchor }
 
 walker graph_walker {
     # base walker designed to traverse along app graph;
@@ -20,7 +23,25 @@ walker graph_walker {
     can on_root with `root entry {
         # spawn app node if not there
         visit [-->](`?App) else {
-            self.logger.error('App graph not initialized. Import an agent and try again.');
+
+            if hasattr(self.__specs__, 'auth') {
+                if self.__specs__.auth == False {
+                    # if walker has explicitly set itself to be unauthenticated, transparently load app root
+                    app_root = self.get_app_root();
+                    if not app_root {
+                        self.logger.error('Unable to load app root');
+                        disengage;
+                    }
+                    # elevate to traverse app root
+                    _.elevate_root();
+                    visit app_root;
+                } else {
+                    self.logger.error('App graph not initialized. Import an agent and try again.');
+                }
+            } else {
+                self.logger.error('App graph not initialized. Import an agent and try again.');
+            }
+
         }
     }
 
@@ -47,4 +68,13 @@ walker graph_walker {
     # can be overriden to execute following a walker update
     def post_update { }
 
+    def get_app_root() -> Optional[GraphNode] {
+        # retrieves the app root Node
+        node_collection = NodeAnchor.Collection.get_collection("node");
+        item = node_collection.find_one({"name": "App"});
+        if root_id := item.get("root") {
+            return &(f"n:root:{root_id}");
+        }
+        return None;
+    }
 }

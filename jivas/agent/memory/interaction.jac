@@ -140,9 +140,14 @@ node Interaction(GraphNode) {
 }
 
 walker _advance_to_frame {
-    # Advance until no more, then return backtrace 
+    # Advance until no more, then return backtrace
     # of Tail edge to get the Frame node
     has frame_node:GraphNode = None;
+
+    obj __specs__ {
+        # make this a private walker
+        static has private: bool = True;
+    }
 
     can on_interaction with Interaction entry {
         visit [->:Advance:->] else {

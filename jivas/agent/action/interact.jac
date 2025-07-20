@@ -1,4 +1,5 @@
 import os;
+import re;
 import pytz;
 import json;
 import logging;
@@ -39,9 +40,9 @@ walker interact(agent_graph_walker) {
     has :protect response: dict = {};
     has :protect message: InteractionMessage = None;
 
-    class __specs__ {
-        static has auth: bool = True;
-        static has private: bool = False;
+    obj __specs__ {
+        has auth: bool = False;
+        has private: bool = False;
         static has excluded: list = [
             "response",
             "message",
@@ -51,6 +52,8 @@ walker interact(agent_graph_walker) {
             "interaction_node",
         ]; # excluded from API specification
         has methods: list = ["websocket"];
+        # api path override
+        has path: str = '/interact';
     }
 
     can on_agent with Agent entry {
@@ -137,6 +140,9 @@ walker interact(agent_graph_walker) {
     }
 
     def init_interaction(agent_node:Agent) -> bool {
+
+        # sanitize utterance
+        self.utterance = Utils.clean_text(self.utterance);
 
         # validate channel specifier
         if not agent_node.has_channel(self.channel) {

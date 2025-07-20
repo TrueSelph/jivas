@@ -875,3 +875,27 @@ class Utils:
         s = re.sub(r"_{2,}", "_", s)
         s = s.strip("_")
         return s
+
+    @staticmethod
+    def clean_text(text: Optional[str], force_ascii: bool = False) -> str:
+        """
+        Sanitizes text to prevent encoding issues (e.g., UnicodeEncodeError).
+
+        Args:
+            text: Input string (or None)
+            force_ascii: If True, replaces non-ASCII chars with '?' (default: False)
+
+        Returns:
+            Cleaned string, or empty string if input is None.
+        """
+        if text is None:
+            return ""
+
+        # Remove Unicode line/paragraph separators
+        text = re.sub(r"[\u2028\u2029]", " ", text)
+
+        if force_ascii:
+            # Encode to ASCII, replacing non-ASCII chars with '?'
+            text = text.encode("ascii", errors="replace").decode("ascii")
+
+        return text.strip()  # Optional: Remove leading/trailing whitespace
