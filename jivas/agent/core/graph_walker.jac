@@ -32,8 +32,6 @@ walker graph_walker {
                         self.logger.error('Unable to load app root');
                         disengage;
                     }
-                    # elevate to traverse app root
-                    _.elevate_root();
                     visit app_root;
                 } else {
                     self.logger.error('App graph not initialized. Import an agent and try again.');
@@ -69,12 +67,18 @@ walker graph_walker {
     def post_update { }
 
     def get_app_root() -> Optional[GraphNode] {
-        # retrieves the app root Node
+        # retrieves the app root Node from graph and elevates its owner to system root for access
         node_collection = NodeAnchor.Collection.get_collection("node");
         item = node_collection.find_one({"name": "App"});
-        if root_id := item.get("root") {
-            return &(f"n:root:{root_id}");
+        if item and (root_id := item.get("root")) {
+            # now found, we need to elevate the root for access
+            root_jid = f"n:root:{root_id}";
+            jctx = _.get_context();
+            jctx.system_root = NodeAnchor.ref(root_jid);
+            jctx.root_state = jctx.system_root;
+            return &(root_jid);
         }
         return None;
     }
+
 }
