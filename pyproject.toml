@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=75.8.1", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,9 +7,47 @@ name = "jivas"
 version = "2.1.0"
 description = "JIVAS is an Agentic Framework for rapidly prototyping and deploying graph-based, AI solutions."
 readme = "README.md"
-requires-python = ">=3.12"
-license = {text = "Apache License 2.0"}
+requires-python = ">=3.12.0"
 authors = [
-    {name = "TrueSelph Inc.", email = "admin@trueselph.com"},
+  { name = "TrueSelph Inc.", email = "admin@trueselph.com" }
 ]
-keywords=["jivas"]
+keywords = ["jivas"]
+license = {text = "Apache License 2.0"} 
+dependencies = [
+  "jvcli>=2.1.0",
+  "jvclient>=0.0.2",
+  "jvserve>=2.1.0",
+  "pytz>=2024.2",
+  "types-pytz>=2024.2.0.20241003",
+  "schedule>=1.2.2",
+  "openai>=1.68.2",
+  "langchain>=0.3.21",
+  "langchain-community>=0.3.20",
+  "langchain-core>=0.3.47",
+  "langchain-experimental>=0.3.4",
+  "langchain-openai>=0.3.9",
+  "setuptools>=75.8.1",
+  "transformers>=4.49.0",
+  "ftfy>=6.2.3"
+]
+
+[project.urls]
+Homepage = "https://github.com/TrueSelph/jivas"
+
+[project.optional-dependencies]
+dev = [
+  "pre-commit",
+  "pytest",
+  "pytest-mock",
+  "pytest-cov",
+  "coverage"
+]
+
+[tool.setuptools.packages.find]
+include = ["jivas", "jivas.*"]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.poetry.plugins."jac"]
+jac = "jivas.cli:JacCmd"
