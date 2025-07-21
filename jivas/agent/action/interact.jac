@@ -40,9 +40,9 @@ walker interact(agent_graph_walker) {
     has :protect response: dict = {};
     has :protect message: InteractionMessage = None;
 
-    obj __specs__ {
-        has auth: bool = False;
-        has private: bool = False;
+    class __specs__ {
+        static has auth: bool = False;
+        static has private: bool = False;
         static has excluded: list = [
             "response",
             "message",
@@ -51,9 +51,9 @@ walker interact(agent_graph_walker) {
             "frame_node",
             "interaction_node",
         ]; # excluded from API specification
-        has methods: list = ["websocket"];
+        static has methods: list = ["websocket", "post"];
         # api path override
-        has path: str = '/interact';
+        static has path: str = '/interact';
     }
 
     can on_agent with Agent entry {

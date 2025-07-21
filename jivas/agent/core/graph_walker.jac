@@ -68,15 +68,15 @@ walker graph_walker {
 
     def :protect get_app_root() -> Optional[GraphNode] {
         # retrieves the app root Node from graph and elevates its owner to system root for access
-        node_collection = NodeAnchor.Collection.get_collection("node");
-        item = node_collection.find_one({"name": "App"});
-        if item and (root_id := item.get("root")) {
+        item = NodeAnchor.Collection.find_one({"name": "App"});
+
+        if item and (root_id := item.root) {
             # now found, we need to elevate the root for access
-            root_jid = f"n:root:{root_id}";
+            _root = &(f"n::{root_id}");
             jctx = _.get_context();
-            jctx.system_root = NodeAnchor.ref(root_jid);
+            jctx.system_root = _root.__jac__;
             jctx.root_state = jctx.system_root;
-            return &(root_jid);
+            return _root;
         }
         return None;
     }
