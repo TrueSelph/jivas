@@ -1,0 +1,1 @@
+"""Server command for the Jivas CLI."""
