@@ -158,7 +158,18 @@ node Frame(GraphNode) {
 
     def get_transcript_statements(interactions:int = 10, max_statement_length:int = 0, with_events:bool = False) -> list[dict] {
         # returns the transcript of the last specified number of interactions as a list
-        return (self spawn _get_transcript_statements(interactions, max_statement_length, with_events=with_events)).statements;
+        statements = (self spawn _get_transcript_statements(interactions, max_statement_length, with_events=with_events)).statements;
+        return statements;
+    }
+
+    def get_active_event_statements() -> list[dict] {
+        # returns a list of events to inform prompt of system-level events
+        interaction_node = self.get_last_interaction();
+        if(interaction_node) {
+            for event in interaction_node.events {
+                statements.append({"ai": f"event: {event}"});
+            }
+        }
     }
 
     def get_interactions() -> list {
