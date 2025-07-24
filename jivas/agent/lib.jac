@@ -40,3 +40,9 @@ import from jivas.agent.analytics {
     get_interactions_by_date,
     get_interaction_logs
 }
+
+import from jivas.agent.graph {
+    get_graph,
+    get_graph_users,
+    get_node_connections
+}
