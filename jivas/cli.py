@@ -1,1 +1,0 @@
-"""Jivas Command Line Interface"""
