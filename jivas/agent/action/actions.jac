@@ -272,7 +272,7 @@ node Actions(GraphNode) {
         }
     }
 
-    def install_actions(agent_id: str, action_list: list, jpr_api_key: str = None) -> bool {
+    def install_actions(agent_id: str, action_list: list, jpr_api_key: str = None, clean_actions: bool = False) -> bool {
         #*
         Installs and registers a list of actions.
 
@@ -290,7 +290,7 @@ node Actions(GraphNode) {
         }
 
         # Clean slate installation
-        self.deregister_actions();
+        self.deregister_actions(clean_actions=clean_actions);
 
         # Register all actions
         for action_data in loaded_actions_data {
@@ -351,7 +351,7 @@ node Actions(GraphNode) {
         return all_success;
     }
 
-    def deregister_action(action_type: str = "", action_label: str = "") {
+    def deregister_action(action_type: str = "", action_label: str = "", clean_action: bool=False) {
         #*
         Deregisters a specific action by type or label.
 
@@ -367,28 +367,48 @@ node Actions(GraphNode) {
 
         for action_node in targets {
             if action_node {
+                # call on_deregister
                 action_node.on_deregister();
+                # remove from graph
                 action_node spawn purge();
+                # remove package folder if clean action is set
+                if clean_action {
+                    package_path = action_node._package.get('config', {}).get('path');
+                    if package_path and os.path.exists(package_path) {
+                        try {
+                            shutil.rmtree(package_path);
+                        } except Exception as e {
+                            self.logger.error(f"Error removing action package: {e}");
+                        }
+                    }
+                }
             }
         }
     }
 
-    def deregister_actions() {
-        #* Deregisters all actions *#
-        for action_node in self.get_all() {
+    def deregister_actions(clean_actions: bool = False) {
+        #* Deregisters all actions and optionally removes the package folder if clean_actions is set *#
+        all_actions = self.get_all();
+        # call on_deregister on all actions
+        for action_node in all_actions {
             action_node.on_deregister();
-
-            # Clean up module files
-            package_path = action_node._context.get('_package', {}).get('config', {}).get('path');
-            if package_path and os.path.exists(package_path) {
-                try {
-                    shutil.rmtree(package_path);
-                } except Exception as e {
-                    self.logger.error(f"Error removing action package: {e}");
+        }
+        # purge them from the graph
+        self spawn purge(purge_spawn_node=False);
+        # finally remove their packages from filesystem if clean actions is set
+        if clean_actions {
+            for action_node in all_actions {
+                # Clean up module files
+                package_path = action_node._package.get('config', {}).get('path');
+                if package_path and os.path.exists(package_path) {
+                    try {
+                        shutil.rmtree(package_path);
+                    } except Exception as e {
+                        self.logger.error(f"Error removing action package: {e}");
+                    }
                 }
             }
         }
-        self spawn purge(purge_spawn_node=False);
     }
 
     # Utility Methods

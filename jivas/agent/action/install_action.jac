@@ -11,10 +11,11 @@ walker install_action(agent_graph_walker) {
     # installs a single action on an agent
 
     has reporting:bool = False;  # Flag to enable reporting
-    has override_action:bool = True;  # when set, will install with action defaults instead of preserving descriptor settings
-    has package_name: str = "";  # Action name
+    has package_name: str = "";  # Action package name
     has version: str = "";  # Action version
     has jpr_api_key: str = ""; # any jpr_api_key for package access
+    has override_action:bool = False;  # when set, will install with action defaults instead of preserving descriptor settings, if any
+    has clean_actions:bool = False; # when set will clean then pull fresh copies of action source from jpr
 
     static has logger:Logger = logging.getLogger(__name__);  # Logger instance
 
@@ -66,11 +67,11 @@ walker install_action(agent_graph_walker) {
                 if(action['action'] == self.package_name) {
 
                     if(self.override_action) {
-                        # if it exists and override is set, deregiter it, replace its context
-                        action['context'] = action_info['context'];
                         # deregistering it ensures the package folder is removed
-                        here.get_actions().deregister_action(action_label=action.get('context', {}).get('label', ''));
-                    } else{
+                        here.get_actions().deregister_action(action_label=action.get('context', {}).get('label', ''), clean_action=True);
+                        # if it exists and override is set, deregister it, replace its context
+                        action['context'] = action_info['context'];
+                    } else {
                         # if it exists and override is not set, update its version
                         action['context']['version'] = action_info['context']['version'];
                     }
@@ -86,7 +87,7 @@ walker install_action(agent_graph_walker) {
             }
 
             # now that the descriptor data is updated, update the agent and actions, this will reinstall actions and update descriptor
-            if ( here.update(data=descriptor_data, with_actions=True, jpr_api_key=self.jpr_api_key) ) {
+            if ( here.update(data=descriptor_data, with_actions=True, jpr_api_key=self.jpr_api_key, clean_actions=self.clean_actions) ) {
                 message = f"{self.package_name} {self.version} installed successfully";
                 self.logger.info(message);
                 Jac.get_context().status = 200;

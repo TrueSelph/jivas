@@ -171,7 +171,7 @@ node Agent(GraphNode) {
         return self.channels;
     }
 
-    def update(data: dict={}, with_actions: bool=False, jpr_api_key: str = "", with_healthcheck:bool=False) -> Agent {
+    def update(data: dict={}, with_actions: bool=False, jpr_api_key: str = "", with_healthcheck:bool=False, clean_actions:bool=False) -> Agent {
         # performs a shallow update (no action updates),
         # or deep update (re-registers all actions),
         # with or without a healtcheck report
@@ -202,7 +202,8 @@ node Agent(GraphNode) {
             self.get_actions().install_actions(
                 agent_id=self.id,
                 action_list=data.get('actions', []),
-                jpr_api_key=jpr_api_key
+                jpr_api_key=jpr_api_key,
+                clean_actions=clean_actions
             );
         }
 
