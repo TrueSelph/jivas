@@ -225,11 +225,6 @@ node Agent(GraphNode) {
         # validate the list of channels for this agent
         self.validate_channels();
 
-        # if the agent node is valid, we def update the descriptor
-        if agent_node {
-            self.dump_descriptor();
-        }
-
         return agent_node;
     }
 
@@ -300,19 +295,6 @@ node Agent(GraphNode) {
         }
 
         return daf_info;
-    }
-
-    def dump_descriptor() {
-        # exports agent and writes descriptor to .jvdata
-
-        # get agent descriptor data
-        agent_data = self.get_descriptor(clean=False);
-        # Save agent state to file in .jvdata
-        if (yaml_output := Utils.yaml_dumps(agent_data)) {
-            self.save_file(self.descriptor, yaml_output.encode("utf-8"));
-        } else {
-            self.logger.error("Unable to dump agent descriptor to file");
-        }
     }
 
     def healthcheck() -> Union[bool, dict] {

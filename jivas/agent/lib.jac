@@ -2,7 +2,6 @@
 
 import from jivas.agent.core {
     init_agents,
-    reload_agents,
     import_agent,
     export_descriptor,
     export_daf,

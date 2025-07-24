@@ -42,7 +42,6 @@ walker interact(agent_graph_walker) {
 
     class __specs__ {
         static has auth: bool = False;
-        static has private: bool = False;
         static has excluded: list = [
             "response",
             "message",
