@@ -34,10 +34,10 @@ walker graph_walker {
                     }
                     visit app_root;
                 } else {
-                    self.logger.error('App graph not initialized. Import an agent and try again.');
+                    self.logger.warning('Import an Agent to continue...');
                 }
             } else {
-                self.logger.error('App graph not initialized. Import an agent and try again.');
+                self.logger.warning('Import an Agent to continue...');
             }
 
         }
