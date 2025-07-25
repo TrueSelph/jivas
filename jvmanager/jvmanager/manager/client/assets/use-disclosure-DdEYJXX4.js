@@ -1,0 +1,1 @@
+import{a}from"./chunk-QMGIS6GS-CBZUm-7V.js";function b(s=!1,e={}){const[l,n]=a.useState(s),c=a.useCallback(()=>{n(r=>{var u;return r||((u=e.onOpen)==null||u.call(e),!0)})},[e.onOpen]),t=a.useCallback(()=>{n(r=>{var u;return r&&((u=e.onClose)==null||u.call(e),!1)})},[e.onClose]),f=a.useCallback(()=>{l?t():c()},[t,c,l]);return[l,{open:c,close:t,toggle:f}]}export{b as u};
