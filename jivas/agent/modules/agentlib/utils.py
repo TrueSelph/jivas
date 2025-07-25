@@ -899,3 +899,12 @@ class Utils:
             text = text.encode("ascii", errors="replace").decode("ascii")
 
         return text.strip()  # Optional: Remove leading/trailing whitespace
+
+    @staticmethod
+    def action_walker_path(module: str) -> str:
+        """Accepts the module string of an action walker and returns a walker path string"""
+        if not module:
+            return ""
+
+        module_parts = module.split(".")
+        return f"/walker/{module_parts[-2]}/{module_parts[-1]}"

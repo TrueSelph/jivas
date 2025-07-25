@@ -17,7 +17,7 @@ walker graph_walker {
 
     obj __specs__ {
         # all graph_walkers are private by default, unless overridden
-        static has private: bool = True;
+        has private: bool = True;
     }
 
     can on_root with `root entry {
