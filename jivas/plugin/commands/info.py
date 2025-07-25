@@ -5,8 +5,8 @@ import sys
 import click
 from pyaml import yaml
 
-from jivas.jivas.plugin.utils.api import RegistryAPI
-from jivas.jivas.plugin.utils.auth import load_token
+from jivas.plugin.utils.api import RegistryAPI
+from jivas.plugin.utils.auth import load_token
 
 
 @click.group()

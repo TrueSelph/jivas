@@ -3,7 +3,7 @@
 from click.testing import CliRunner
 from pytest_mock import MockerFixture
 
-from jivas.jivas.plugin.commands.info import get_action_info, get_agent_info
+from jivas.plugin.commands.info import get_action_info, get_agent_info
 
 
 class TestInfoCommand:
@@ -11,15 +11,15 @@ class TestInfoCommand:
 
     def test_get_action_info_success(self, mocker: MockerFixture) -> None:
         """Test getting action info successfully."""
-        mock_load_token = mocker.patch("jivas.jivas.plugin.commands.info.load_token")
+        mock_load_token = mocker.patch("jivas.plugin.commands.info.load_token")
         mock_load_token.return_value = {"token": "test-token"}
 
-        mock_registry_api = mocker.patch("jivas.jivas.plugin.commands.info.RegistryAPI")
+        mock_registry_api = mocker.patch("jivas.plugin.commands.info.RegistryAPI")
         mock_package_info = {"name": "test_action", "version": "1.0.0"}
         mock_registry_api.get_package_info.return_value = mock_package_info
 
-        mock_yaml = mocker.patch("jivas.jivas.plugin.commands.info.yaml")
-        mock_click = mocker.patch("jivas.jivas.plugin.commands.info.click")
+        mock_yaml = mocker.patch("jivas.plugin.commands.info.yaml")
+        mock_click = mocker.patch("jivas.plugin.commands.info.click")
 
         runner = CliRunner()
         result = runner.invoke(get_action_info, ["test_action", "1.0.0"])
@@ -33,11 +33,11 @@ class TestInfoCommand:
 
     def test_get_action_info_non_existent_package(self, mocker: MockerFixture) -> None:
         """Test handling non-existent action package."""
-        mock_load_token = mocker.patch("jivas.jivas.plugin.commands.info.load_token")
+        mock_load_token = mocker.patch("jivas.plugin.commands.info.load_token")
         mock_load_token.return_value = {"token": "fake-token"}
 
         mock_registry_api = mocker.patch(
-            "jivas.jivas.plugin.utils.api.RegistryAPI.get_package_info"
+            "jivas.plugin.utils.api.RegistryAPI.get_package_info"
         )
         mock_registry_api.return_value = {}
 
@@ -56,15 +56,15 @@ class TestInfoCommand:
 
     def test_get_action_info_invalid_version(self, mocker: MockerFixture) -> None:
         """Test handling invalid action package version."""
-        mock_load_token = mocker.patch("jivas.jivas.plugin.commands.info.load_token")
+        mock_load_token = mocker.patch("jivas.plugin.commands.info.load_token")
         mock_load_token.return_value = {"token": "test-token"}
 
         mock_registry_api = mocker.patch(
-            "jivas.jivas.plugin.commands.info.RegistryAPI.get_package_info"
+            "jivas.plugin.commands.info.RegistryAPI.get_package_info"
         )
         mock_registry_api.return_value = {}
 
-        mock_click_secho = mocker.patch("jivas.jivas.plugin.commands.info.click.secho")
+        mock_click_secho = mocker.patch("jivas.plugin.commands.info.click.secho")
 
         runner = CliRunner()
         result = runner.invoke(get_action_info, ["invalid_action", "invalid_version"])
@@ -81,11 +81,11 @@ class TestInfoCommand:
         self, mocker: MockerFixture
     ) -> None:
         """Test fetching the latest version when version parameter is not provided."""
-        mock_load_token = mocker.patch("jivas.jivas.plugin.commands.info.load_token")
+        mock_load_token = mocker.patch("jivas.plugin.commands.info.load_token")
         mock_load_token.return_value = {"token": "fake-token"}
 
         mock_registry_api = mocker.patch(
-            "jivas.jivas.plugin.utils.api.RegistryAPI.get_package_info"
+            "jivas.plugin.utils.api.RegistryAPI.get_package_info"
         )
         mock_registry_api.return_value = {"name": "test_action", "version": "latest"}
 
@@ -106,15 +106,15 @@ class TestInfoCommand:
 
     def test_get_action_info_exception_handling(self, mocker: MockerFixture) -> None:
         """Test handling exceptions when fetching action info."""
-        mock_load_token = mocker.patch("jivas.jivas.plugin.commands.info.load_token")
+        mock_load_token = mocker.patch("jivas.plugin.commands.info.load_token")
         mock_load_token.return_value = {"token": "test-token"}
 
         mock_registry_api = mocker.patch(
-            "jivas.jivas.plugin.commands.info.RegistryAPI.get_package_info"
+            "jivas.plugin.commands.info.RegistryAPI.get_package_info"
         )
         mock_registry_api.side_effect = Exception("Test exception")
 
-        mock_click_secho = mocker.patch("jivas.jivas.plugin.commands.info.click.secho")
+        mock_click_secho = mocker.patch("jivas.plugin.commands.info.click.secho")
 
         runner = CliRunner()
         result = runner.invoke(get_action_info, ["test_action", "1.0.0"])
@@ -126,15 +126,15 @@ class TestInfoCommand:
 
     def test_get_agent_info_success(self, mocker: MockerFixture) -> None:
         """Test getting agent info successfully."""
-        mock_load_token = mocker.patch("jivas.jivas.plugin.commands.info.load_token")
+        mock_load_token = mocker.patch("jivas.plugin.commands.info.load_token")
         mock_load_token.return_value = {"token": "test-token"}
 
-        mock_registry_api = mocker.patch("jivas.jivas.plugin.commands.info.RegistryAPI")
+        mock_registry_api = mocker.patch("jivas.plugin.commands.info.RegistryAPI")
         mock_package_info = {"name": "test_agent", "version": "1.0.0"}
         mock_registry_api.get_package_info.return_value = mock_package_info
 
-        mock_yaml = mocker.patch("jivas.jivas.plugin.commands.info.yaml")
-        mock_click = mocker.patch("jivas.jivas.plugin.commands.info.click")
+        mock_yaml = mocker.patch("jivas.plugin.commands.info.yaml")
+        mock_click = mocker.patch("jivas.plugin.commands.info.click")
 
         runner = CliRunner()
         result = runner.invoke(get_agent_info, ["test_agent", "1.0.0"])
@@ -148,7 +148,7 @@ class TestInfoCommand:
 
     def test_get_agent_info_non_existent_package(self, mocker: MockerFixture) -> None:
         """Test handling non-existent agent package."""
-        mock_load_token = mocker.patch("jivas.jivas.plugin.commands.info.load_token")
+        mock_load_token = mocker.patch("jivas.plugin.commands.info.load_token")
         mock_load_token.return_value = {"token": "fake-token"}
 
         mock_registry_api = mocker.patch(
@@ -171,7 +171,7 @@ class TestInfoCommand:
 
     def test_get_agent_info_invalid_version(self, mocker: MockerFixture) -> None:
         """Test handling invalid agent package version."""
-        mock_load_token = mocker.patch("jivas.jivas.plugin.commands.info.load_token")
+        mock_load_token = mocker.patch("jivas.plugin.commands.info.load_token")
         mock_load_token.return_value = {"token": "test-token"}
 
         mock_registry_api = mocker.patch(
@@ -179,7 +179,7 @@ class TestInfoCommand:
         )
         mock_registry_api.return_value = {}
 
-        mock_click_secho = mocker.patch("jivas.jivas.plugin.commands.info.click.secho")
+        mock_click_secho = mocker.patch("jivas.plugin.commands.info.click.secho")
 
         runner = CliRunner()
         result = runner.invoke(get_agent_info, ["invalid_agent", "invalid_version"])
@@ -194,11 +194,11 @@ class TestInfoCommand:
 
     def test_get_agent_info_fetches_latest_version(self, mocker: MockerFixture) -> None:
         """Test fetching the latest version when version parameter is not provided."""
-        mock_load_token = mocker.patch("jivas.jivas.plugin.commands.info.load_token")
+        mock_load_token = mocker.patch("jivas.plugin.commands.info.load_token")
         mock_load_token.return_value = {"token": "fake-token"}
 
         mock_registry_api = mocker.patch(
-            "jivas.jivas.plugin.utils.api.RegistryAPI.get_package_info"
+            "jivas.plugin.utils.api.RegistryAPI.get_package_info"
         )
         mock_registry_api.return_value = {"name": "test_agent", "version": "latest"}
 
@@ -219,15 +219,15 @@ class TestInfoCommand:
 
     def test_get_agent_info_exception_handling(self, mocker: MockerFixture) -> None:
         """Test handling exceptions when fetching agent info."""
-        mock_load_token = mocker.patch("jivas.jivas.plugin.commands.info.load_token")
+        mock_load_token = mocker.patch("jivas.plugin.commands.info.load_token")
         mock_load_token.return_value = {"token": "test-token"}
 
         mock_registry_api = mocker.patch(
-            "jivas.jivas.plugin.commands.info.RegistryAPI.get_package_info"
+            "jivas.plugin.commands.info.RegistryAPI.get_package_info"
         )
         mock_registry_api.side_effect = Exception("Test exception")
 
-        mock_click_secho = mocker.patch("jivas.jivas.plugin.commands.info.click.secho")
+        mock_click_secho = mocker.patch("jivas.plugin.commands.info.click.secho")
 
         runner = CliRunner()
         result = runner.invoke(get_agent_info, ["test_agent", "1.0.0"])
