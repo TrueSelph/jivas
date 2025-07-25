@@ -39,7 +39,6 @@ setup(
     package_data={"jivas": []},
     python_requires=">=3.12.0",
     install_requires=[
-        "jvcli>=2.1.0",
         "jvclient>=0.0.2",
         "jvserve>=2.1.0",
         "pytz>=2024.2",
@@ -63,5 +62,10 @@ setup(
             "pytest-cov",
             "coverage",
         ]
+    },
+    entry_points={
+        "console_scripts": [
+            "jivas=jivas.plugin.cli:jvcli",
+        ],
     },
 )
