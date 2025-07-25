@@ -40,7 +40,7 @@ setup(
     python_requires=">=3.12.0",
     install_requires=[
         "jvclient>=0.0.2",
-        "jvserve>=2.1.0",
+        "jvserve @ git+https://github.com/TrueSelph/jvserve.git@2.1.0",
         "pytz>=2024.2",
         "types-pytz>=2024.2.0.20241003",
         "schedule>=1.2.2",
