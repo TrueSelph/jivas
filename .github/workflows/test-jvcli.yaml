@@ -1,4 +1,4 @@
-name: Running jivas test cases
+name: Running jvcli test cases
 
 on:
   pull_request:
@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./jivas
+        working-directory: ./jvcli
     steps:
       - name: Check out code
         uses: actions/checkout@v2

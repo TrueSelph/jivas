@@ -1,0 +1,38 @@
+name: Sync TS Messenger dist
+
+on:
+  workflow_dispatch: # Allows you to manually trigger it from GitHub UI
+  schedule:
+    - cron: "0 3 * * *" # Runs daily at 3 AM UTC (adjust as needed)
+
+jobs:
+  sync-ts-messenger-jvmanager:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout current repository
+        uses: actions/checkout@v3
+
+      - name: Remove existing public/dist
+        working-directory: ./jvmanage
+        run: rm -rf public/dist
+
+      - name: Clone ts-messenger repo
+        working-directory: ./jvmanager
+        run: |
+          git clone --depth 1 --filter=blob:none --sparse https://github.com/TrueSelph/ts-messenger tmp-ts
+          cd tmp-ts
+          git sparse-checkout set dist
+          cp -r dist ../public/
+          cd ..
+          rm -rf tmp-ts
+
+      - name: Commit and push changes
+        working-directory: ./jvmanager
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/dist
+          git commit -m "Update ts-messenger dist from source repo" || echo "No changes to commit"
+          git push
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
