@@ -908,3 +908,12 @@ class Utils:
 
         module_parts = module.split(".")
         return f"/walker/{module_parts[-2]}/{module_parts[-1]}"
+
+    @staticmethod
+    def action_webhook_path(module: str) -> str:
+        """Accepts the module string of an action webhook walker and returns a walker path string"""
+        if not module:
+            return ""
+
+        module_parts = module.split(".")
+        return f"/webhook/{module_parts[-2]}/{module_parts[-1]}/{{agent_id}}/{{key}}"
