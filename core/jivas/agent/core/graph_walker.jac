@@ -20,6 +20,16 @@ walker graph_walker {
         has private: bool = True;
     }
 
+    def get_type() -> str {
+        # returns the string-based representation of the class name
+        return type(self).__name__;
+    }
+
+    def get_module() -> str {
+        # returns the string-based representation of the class module
+        return type(self).__module__;
+    }
+
     can on_root with `root entry {
         # spawn app node if not there
         visit [-->](`?App) else {

@@ -27,6 +27,9 @@ node Action(GraphNode) {
     # override to execute operations upon registration of action
     def on_register() { }
 
+    # override to execute operations upon the reload of action
+    def on_reload() { }
+
     # override to execute any setup code when all actions are in place
     def post_register() { }
 
@@ -54,67 +57,89 @@ node Action(GraphNode) {
     def update(data: dict = {}) -> GraphNode {
         # updates an action node; expects a dict of attribute names mapped to values for updating
         # overridden to respond to enable / disable updates
+        enabled_changed = False;
+        non_enabled_changed = False;
+
         if (data) {
-
             for attr in data.keys() {
-
                 if (attr not in self.protected_attrs) {
                     # check if attribute is a node attribute
                     if (hasattr(self, attr)) {
-
                         # handle changes in disabled/enabled status
-                        if attr == 'enabled' and ((getattr(self, attr)) != data[attr]) {
-                            if data[attr] == True {
-                                self.on_enable();
-                            } else {
-                                self.on_disable();
+                        if attr == 'enabled' {
+                            current_val = getattr(self, 'enabled');
+                            if current_val != data[attr] {
+                                enabled_changed = True;
+                                if data[attr] == True {
+                                    self.on_enable();
+                                } else {
+                                    self.on_disable();
+                                }
+                                setattr(self, attr, data[attr]);
                             }
+                        } else {
+                            current_val = getattr(self, attr);
+                            if current_val != data[attr] {
+                                non_enabled_changed = True;
+                            }
+                            setattr(self, attr, data[attr]);
                         }
-                        setattr(self, attr, data[attr]);
                     } else {
-                        # Note: There is no global context in nodes like in jac v1, as such we store the data in the _context attribute
-                        self._context[attr] = data[attr];
+                        # Handle context attributes; only mark as changed if the value is new or different
+                        if (attr in self._context) {
+                            if self._context[attr] != data[attr] {
+                                non_enabled_changed = True;
+                                self._context[attr] = data[attr];
+                            }
+                        } else {
+                            non_enabled_changed = True;
+                            self._context[attr] = data[attr];
+                        }
                     }
                 }
             }
         }
 
-        # trigger post_update
-        self.post_update();
+        # Conditionally trigger post_update only when:
+        # 1. Node is enabled AND
+        # 2. There were non-enabled changes OR no enabled changes occurred
+        if self.enabled and (non_enabled_changed or not enabled_changed) {
+            self.post_update();
+        }
 
         return self;
     }
 
-    def get_agent() {
+    def get_agent() -> GraphNode {
         # returns the agent node to which this action is attached
         return &self.agent_id;
     }
 
-    def get_namespace() {
+    def get_namespace() -> str {
         return self._package.get('config', {}).get('namespace', None);
     }
 
-    def get_module() {
+    def get_module() -> str {
         return self._package.get('config', {}).get('module', None);
     }
 
-    def get_module_root() {
+    def get_module_root() -> str {
         return self._package.get('config', {}).get('module_root', None);
     }
 
-    def get_package_path() {
+    def get_package_path() -> str {
         return self._package.get('config', {}).get('path', None);
     }
 
-    def get_version() {
+    def get_version() -> str {
         return self.version;
     }
 
-    def get_package_name() {
+    def get_package_name() -> str {
         return self._package.get('config', {}).get('package_name', None);
     }
 
-    def get_namespace_package_name() {
+    def get_namespace_package_name() -> str {
         return self._package.get('name', None);
     }
 

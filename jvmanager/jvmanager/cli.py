@@ -1,8 +1,7 @@
 """Jivas Graph CLI tool."""
 
-from jvmanager.group import jvmanager
 from jvmanager.commands.launch import launch
-
+from jvmanager.group import jvmanager
 
 # Register command groups
 jvmanager.add_command(launch)

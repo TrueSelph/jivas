@@ -1,12 +1,14 @@
 """Command group for deploying and interfacing with the Jivas Manager."""
 
 from pathlib import Path
+
 import click
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from uvicorn import run
+
 from jvmanager.group import jvmanager
 
 

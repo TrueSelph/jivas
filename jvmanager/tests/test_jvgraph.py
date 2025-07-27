@@ -5,9 +5,8 @@ from click.testing import CliRunner
 from fastapi import FastAPI
 from fastapi.security import HTTPBearer
 from fastapi.testclient import TestClient
-from pytest_mock import MockerFixture
-
 from jvgraph.commands.launch import EndpointFactory, launch
+from pytest_mock import MockerFixture
 
 
 class TestGraphLaunch:

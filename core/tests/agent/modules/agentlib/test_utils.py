@@ -11,12 +11,11 @@ import pytest
 import pytz
 import requests
 import yaml
-from pytest_mock import MockerFixture
-
 from jivas.agent.modules.agentlib.utils import (
     LongStringDumper,
     Utils,
 )
+from pytest_mock import MockerFixture
 
 
 class Dummy:

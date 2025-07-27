@@ -1,4 +1,5 @@
 import click
+
 from jvmanager import __version__
 
 

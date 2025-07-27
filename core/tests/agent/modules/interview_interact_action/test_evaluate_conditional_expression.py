@@ -3,7 +3,6 @@
 from typing import Any, Dict, List, Union
 
 import pytest
-
 from jivas.agent.modules.interview_interact_action.utils import (
     evaluate_conditional_expression,
     evaluate_single_condition,
