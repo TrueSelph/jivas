@@ -4,7 +4,7 @@ import traceback;
 import from logging { Logger }
 
 walker pulse {
-    
+
     # set up logger
     static has logger:Logger = logging.getLogger(__name__);
 
