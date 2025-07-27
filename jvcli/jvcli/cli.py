@@ -1,8 +1,8 @@
 """Jivas Package Repository CLI tool."""
 
 import click
+from __init__ import __version__
 
-from jvcli import __version__
 from jvcli.commands.auth import login, logout, signup
 from jvcli.commands.client import client
 from jvcli.commands.create import create

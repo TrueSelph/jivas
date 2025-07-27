@@ -1,6 +1,7 @@
-import click
+"""Jivas Manager CLI tool."""
 
-from jvmanager import __version__
+import click
+from __init__ import __version__
 
 
 @click.group()

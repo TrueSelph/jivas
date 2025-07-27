@@ -34,11 +34,11 @@ def launch(port: int, host: str) -> None:
     app.mount("/dist", StaticFiles(directory=client_dir / "dist"), name="dist")
 
     @app.get("/favicon.ico")
-    async def favicon():
+    async def favicon() -> FileResponse:
         return FileResponse(client_dir / "favicon.ico")
 
     @app.get("/{full_path:path}")
-    async def serve_spa(request: Request, full_path: str):
+    async def serve_spa(request: Request, full_path: str) -> FileResponse:
         """Serve the SPA for all routes."""
 
         requested_file = client_dir / full_path

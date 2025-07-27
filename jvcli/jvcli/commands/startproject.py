@@ -3,8 +3,8 @@
 import os
 
 import click
+from __init__ import __supported__jivas__versions__
 
-from jvcli import __supported__jivas__versions__
 from jvcli.utils import TEMPLATES_DIR
 
 

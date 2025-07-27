@@ -10,8 +10,8 @@ import nodesemver
 import requests
 import semver
 import yaml
+from __init__ import __supported__jivas__versions__
 
-from jvcli import __supported__jivas__versions__
 from jvcli.api import RegistryAPI
 from jvcli.auth import load_token
 

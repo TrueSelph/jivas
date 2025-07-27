@@ -3,8 +3,8 @@
 import os
 
 import click
+from __init__ import __supported__jivas__versions__
 
-from jvcli import __supported__jivas__versions__
 from jvcli.api import RegistryAPI
 from jvcli.auth import load_token, save_token
 from jvcli.utils import TEMPLATES_DIR, validate_name, validate_snake_case
