@@ -49,11 +49,11 @@ walker action_webhook_walker(agent_graph_walker) {
 
     # generates webhook key and full webhook callback url
     def get_callback_url(
-        base_url:str, 
-        agent_id:str, 
-        expiration:int=60) -> str 
+        base_url:str,
+        agent_id:str,
+        expiration:int=60) -> str
     {
-        
+
         item = NodeAnchor.Collection.find_one({"name": "App"});
         if not item {
             return "";
@@ -92,7 +92,7 @@ walker action_webhook_walker(agent_graph_walker) {
             result = generate_key(request, params);
             payload = json.loads(result.body.decode());
             webhook_key = payload.get("key");
-            
+
             if not webhook_key {
                 self.logger.error("Key generation returned empty key");
                 return "";
@@ -144,8 +144,8 @@ walker action_webhook_walker(agent_graph_walker) {
                 break;
             }
         }
-        
+
         return False;
     }
- 
+
 }

@@ -47,7 +47,7 @@ walker init_agents(graph_walker) {
             }
         } except Exception as e {
             message = f"an exception occurred, {traceback.format_exc()}";
-            if reporting {
+            if self.reporting {
                 report message;
             }
             Jac.get_context().status = 500;

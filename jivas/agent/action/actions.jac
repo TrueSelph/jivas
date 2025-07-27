@@ -345,7 +345,13 @@ node Actions(GraphNode) {
             if not self.import_action(action_data) {
                 all_success = False;
                 self.logger.error(f"Failed to import action: {action_node.label}");
+            } else {
+                # call on_load method on action to reinit
+                # (&(action_node.id)).on_register();
             }
+
+
+
         }
 
         return all_success;
