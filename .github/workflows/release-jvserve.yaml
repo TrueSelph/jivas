@@ -1,4 +1,4 @@
-name: Release JVManager Python Package
+name: Release Python Package
 
 on:
   push:
@@ -33,7 +33,7 @@ jobs:
       - name: Get current version from __init__.py
         id: check
         run: |
-          CURRENT_VERSION=$(grep -oP '__version__\s*=\s*"\K[^"]+' jvmanager/package/jvmanager/__init__.py)
+          CURRENT_VERSION=$(grep -oP '__version__\s*=\s*"\K[^"]+' jvserve/__init__.py)
           echo "Detected package version: $CURRENT_VERSION"
           echo "new_version=$CURRENT_VERSION" >> $GITHUB_ENV
           echo "new_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
@@ -61,18 +61,18 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.12" # Updated to match the required version in setup.py
+          python-version: "3.10"
 
       - name: Install build dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel twine
 
       - name: Build package
-        working-directory: ./jvmanager
+        working-directory: ./jvserve
         run: python setup.py sdist bdist_wheel
 
       - name: Publish to PyPI
-        working-directory: ./jvmanager
+        working-directory: ./jvserve
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
@@ -80,9 +80,8 @@ jobs:
           twine upload dist/*
 
       - name: Create GitHub Release
-        working-directory: ./jvmanager
+        working-directory: ./jvserve
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cd jvmanager/package
           gh release create v${{ needs.check-version.outputs.new_version }} dist/* --title "Release v${{ needs.check-version.outputs.new_version }}" --notes "Automated release for version v${{ needs.check-version.outputs.new_version }}." --generate-notes
