@@ -84,4 +84,4 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd jivas/jvcli
-          gh release create v${{ needs.check-version.outputs.new_version }} dist/* --title "Release v${{ needs.check-version.outputs.new_version }}" --notes "Automated release for version v${{ needs.check-version.outputs.new_version }}." --generate-notes
+          gh release create v${{ needs.check-version.outputs.new_version }} dist/* --title "Release JVCLI v${{ needs.check-version.outputs.new_version }}" --notes "Automated release for version v${{ needs.check-version.outputs.new_version }}." --generate-notes

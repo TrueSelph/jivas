@@ -85,4 +85,4 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd jvmanager/package
-          gh release create v${{ needs.check-version.outputs.new_version }} dist/* --title "Release v${{ needs.check-version.outputs.new_version }}" --notes "Automated release for version v${{ needs.check-version.outputs.new_version }}." --generate-notes
+          gh release create v${{ needs.check-version.outputs.new_version }} dist/* --title "Release JVManager v${{ needs.check-version.outputs.new_version }}" --notes "Automated release for version v${{ needs.check-version.outputs.new_version }}." --generate-notes
