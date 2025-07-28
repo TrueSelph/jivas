@@ -32,9 +32,6 @@ setup(
         include=["jvcli", "jvcli.*"],
     ),
     include_package_data=True,
-    package_data={
-        "jvcli": ["client/**/*"],
-    },
     install_requires=[
         "click>=8.1.8",
         "requests>=2.32.3",
@@ -43,10 +40,8 @@ setup(
         "python-dotenv>=1.0.0",
         "semver>=3.0.4",
         "node-semver>=0.9.0",
-        "jvgraph>=2.1.0",
         "jaclang",
         "pymongo",
-        "jac-cloud",
         "uvicorn",
         "fastapi",
     ],
