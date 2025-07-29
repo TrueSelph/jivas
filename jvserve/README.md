@@ -45,7 +45,7 @@ jac jvfileserve ./static
 ### Supported Arguments
 
 - **filename**: Path to your JAC file.
-- **host**: Host address to bind the server (default: `0.0.0.0`).
+- **host**: Host address to bind the server (default: `localhost`).
 - **port**: Port number to bind the server (default: `8000`).
 - **loglevel**: Logging level (default: `INFO`).
 - **workers**: Number of worker processes (optional).
