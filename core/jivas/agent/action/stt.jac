@@ -3,51 +3,16 @@ import from jivas.agent.core.agent { Agent }
 import from jivas.agent.core.agents { Agents }
 import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 import from fastapi { UploadFile }
+import from jivas.agent.action.agent_graph_walker { agent_graph_walker }
 
-walker stt {
-    
-    has file: UploadFile;
-    has agent_id:str;
+walker stt(agent_graph_walker) {
 
-    class __specs__ {
+    has file: UploadFile = None;
+
+    obj __specs__ {
         static has private: bool = False;
-        static has methods: list = ["post"];
         static has path: str = "{agent_id}";
     }
-
-    can on_app with App entry {
-        # spawn agents node if not there
-        visit [-->](`?Agents) else {
-            self.logger.warning('Import an Agent to continue...');
-        }
-    }
-
-    can on_agents with Agents entry {
-
-        agent_node = None;
-
-        if not self.agent_id {
-            Jac.get_context().status = 400;
-            report "Missing Agent ID";
-            disengage;
-        }
-
-        try {
-            agent_node = &self.agent_id;
-        } except Exception as e {
-            Jac.get_context().status = 400;
-            report "Invalid agent id";
-            disengage;
-        }
-
-        if not agent_node.published {
-            Jac.get_context().status = 404;
-            report "Agent is not published";
-            disengage;
-        }
-
-        visit agent_node;
-    }    
 
     can on_agent with Agent entry {
 
@@ -69,18 +34,24 @@ walker stt {
             Jac.get_context().status = 400;
             report "Invalid file type, must be audio";
             disengage;
-        } 
-        
+        }
+
         result = stt_action.invoke_file(
             audio_content=self.file.content,
             audio_type=self.file.type
         );
+
+        if not isinstance(result, dict) or 'duration' not in result or 'transcript' not in result {
+            Jac.get_context().status = 500;
+            report "Invalid STT response format";
+            disengage;
+        }
 
         report {
             "duration": result["duration"],
             "transcript": result["transcript"]
         };
 
-        
+
     }
 }

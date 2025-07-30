@@ -5,14 +5,11 @@ import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 walker healthcheck(agent_graph_walker) {
     # performs agent healthcheck; triggers the healthcheck ability of all actions on an agent
 
-    has agent_id: str;
-
     class __specs__ {
         static has private: bool = False;
         static has methods: list = ["get"];
         static has auth: bool = False;
         static has path: str = "{agent_id}";
-        static has excluded: list = ["reporting"];
     }
 
     can on_agent with Agent entry {

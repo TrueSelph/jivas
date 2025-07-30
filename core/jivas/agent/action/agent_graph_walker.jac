@@ -9,10 +9,16 @@ import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 walker agent_graph_walker(graph_walker) {
     # base walker designed to traverse graph specific to agent_id;
 
-    has agent_id: str = "";
+    has agent_id: str;
+    has reporting: bool = True;
 
     # set up logger
     static has logger:Logger = logging.getLogger(__name__);
+
+    class __specs__ {
+        static has private: bool = True;
+        static has path: str = "{agent_id}";
+    }
 
     can on_app with App entry {
         # spawn agents node if not there

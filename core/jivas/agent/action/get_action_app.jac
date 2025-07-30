@@ -12,9 +12,9 @@ import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 walker get_action_app(agent_graph_walker) {
     # retrieves the action app source for the named action
 
-    has agent_id: str = "";
     has action: str = "";
     has action_app: str = "";
+
     # set up logger
     static has logger: Logger = logging.getLogger(__name__);
 
@@ -63,9 +63,6 @@ walker get_action_app(agent_graph_walker) {
             return;
         }
 
-        if self.reporting {
-            report self.action_app;
-        }
-
+        report self.action_app;
     }
 }

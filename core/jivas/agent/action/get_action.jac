@@ -11,7 +11,6 @@ import from agent_graph_walker {agent_graph_walker}
 walker get_action(agent_graph_walker) {
     # retrieves a named action package and metadata
     # must be spawned on agent or actions node or supplied with agent_id
-    has agent_id: str = "";
     has action_id: str = "";
     # set up logger
     static has logger: Logger = logging.getLogger(__name__);

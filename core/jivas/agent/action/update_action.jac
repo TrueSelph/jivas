@@ -11,7 +11,7 @@ import from jivas.agent.action.agent_graph_walker { agent_graph_walker }
 walker update_action(agent_graph_walker) {
     # updates an action based on action_data
     # must be spawned on agent or actions node or supplied with agent_id, action_id
-    has agent_id: str = "";
+
     has action_id: str = "";
     has action_data: dict = {};
     # set up logger

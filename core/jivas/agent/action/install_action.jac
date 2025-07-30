@@ -10,7 +10,6 @@ import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 walker install_action(agent_graph_walker) {
     # installs a single action on an agent
 
-    has reporting:bool = False;  # Flag to enable reporting
     has package_name: str = "";  # Action package name
     has version: str = "";  # Action version
     has jpr_api_key: str = ""; # any jpr_api_key for package access

@@ -10,14 +10,12 @@ import from jac_cloud.core.archetype { NodeAnchor }
 walker graph_walker {
     # base walker designed to traverse along app graph;
 
-    has reporting: bool = True;
-
     # set up logger
     static has logger:Logger = logging.getLogger(__name__);
 
-    obj __specs__ {
+    class __specs__ {
         # all graph_walkers are private by default, unless overridden
-        has private: bool = True;
+        static has private: bool = True;
     }
 
     def get_type() -> str {
