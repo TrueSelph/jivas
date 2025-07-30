@@ -7,7 +7,7 @@ import from jivas.agent.action.agent_graph_walker { agent_graph_walker }
 
 walker stt(agent_graph_walker) {
 
-    has file: UploadFile = None;
+    has file: UploadFile;
 
     obj __specs__ {
         static has private: bool = False;

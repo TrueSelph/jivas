@@ -12,7 +12,7 @@ import from jivas.agent.action.interact_action { InteractAction }
 walker list_actions(agent_graph_walker) {
     # retrieves a list of all action package metadata
     # must be spawned on agent or actions node or supplied with agent_id
-    has agent_id: str = "";
+
     has actions: list = [];
     # set up logger
     static has logger: Logger = logging.getLogger(__name__);
