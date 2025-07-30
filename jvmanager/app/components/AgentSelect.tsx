@@ -3,6 +3,7 @@ import { Radio, Group, Stack, Text } from "@mantine/core";
 import classes from "./AgentSelect.module.css";
 import type { Agent } from "~/types";
 import { useFetcher } from "react-router";
+import { modals } from "@mantine/modals";
 
 const data = [
 	{
@@ -49,6 +50,7 @@ export function AgentSelect({ agents }: { agents: Agent[] }) {
 						{ agentId: val },
 						{ method: "POST", action: "/actions" },
 					);
+					modals.close("switch-agent");
 				}}
 				label="Select an agent"
 				description="Which agent would you like to use?"

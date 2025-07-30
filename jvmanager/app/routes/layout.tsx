@@ -18,6 +18,10 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 	const token = localStorage.getItem("jivas-token");
 	const selectedAgent = localStorage.getItem("jivas-agent");
 
+	if (!host || !token) {
+		throw redirect("/login");
+	}
+
 	const selectedAgentInfo = selectedAgent
 		? ((await fetch(`${host}/walker/get_agent`, {
 				method: "POST",
@@ -26,7 +30,18 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 					"Content-Type": "application/json",
 					Authorization: `Bearer ${token}`,
 				},
-			}).then((res) => res.json())) as { reports: Agent[] })
+			})
+				.then((res) => {
+					if (res.ok) {
+						return res.json();
+					} else {
+						throw redirect("/login");
+					}
+				})
+				.catch((err) => {
+					console.log({ err });
+					throw redirect("/login");
+				})) as { reports: Agent[] })
 		: null;
 
 	const formData = new FormData();

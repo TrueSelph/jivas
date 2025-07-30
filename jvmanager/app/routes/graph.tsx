@@ -1,6 +1,6 @@
 import { ActionIcon, Box, Card, Divider, Group, Title } from "@mantine/core";
 import { IconArrowLeft } from "@tabler/icons-react";
-import { Link } from "react-router";
+import { Link, redirect } from "react-router";
 import { UserButton } from "~/components/UserButton";
 import type { Route } from "./+types/graph";
 import type { Agent } from "~/types";
@@ -14,6 +14,10 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 	const token = localStorage.getItem("jivas-token");
 	const selectedAgent = localStorage.getItem("jivas-agent");
 
+	if (!host || !token) {
+		throw redirect("/login");
+	}
+
 	const selectedAgentInfo = selectedAgent
 		? ((await fetch(`${host}/walker/get_agent`, {
 				method: "POST",
@@ -22,7 +26,18 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 					"Content-Type": "application/json",
 					Authorization: `Bearer ${token}`,
 				},
-			}).then((res) => res.json())) as { reports: Agent[] })
+			})
+				.then((res) => {
+					if (res.ok) {
+						return res.json();
+					} else {
+						throw redirect("/login");
+					}
+				})
+				.catch((err) => {
+					console.log({ err });
+					throw redirect("/login");
+				})) as { reports: Agent[] })
 		: null;
 
 	const formData = new FormData();
@@ -68,7 +83,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 
 export default function ChatRoute({ loaderData }: Route.ComponentProps) {
 	const host = localStorage.getItem("jivas-host");
-	const token = localStorage.getItem("jivas-token");
+	const root = localStorage.getItem("jivas-root-id");
 
 	return (
 		<Box px="xl">
@@ -94,9 +109,8 @@ export default function ChatRoute({ loaderData }: Route.ComponentProps) {
 					className="min-h-[740px]"
 					key={loaderData.selectedAgentInfo.id}
 					host={host}
-					root_node="dfdf"
-					host="http://localhost:8000"
-					root_node="68791bfaaf057b330ac55e15"
+					root_node={root}
+					host={host}
 					style={{
 						width: "100%",
 						height: "100%",
