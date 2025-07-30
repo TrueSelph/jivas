@@ -2,10 +2,10 @@
 
 import os
 
-from __init__ import __supported__jivas__versions__
 from click.testing import CliRunner
 from pytest_mock import MockerFixture
 
+from jvcli import __supported__jivas__versions__  # type: ignore[attr-defined]
 from jvcli.commands.startproject import startproject
 
 
