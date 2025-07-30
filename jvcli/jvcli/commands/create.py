@@ -148,7 +148,7 @@ def create_action(
     # Create lib.jac
     lib_path = os.path.join(action_dir, "lib.jac")
     with open(lib_path, "w") as file:
-        file.write(f"include:jac {name};\n")
+        file.write(f"include {name};\n")
 
     # Create action-specific .jac file
     action_jac_path = os.path.join(action_dir, f"{name}.jac")
@@ -159,7 +159,7 @@ def create_action(
             "vector_store_action": "VectorStoreAction",
         }[type]
 
-        import_statement = f"import:jac from agent.action.{type} {{ {node_class} }}"
+        import_statement = f"import from agent.action.{type} {{ {node_class} }}"
 
         abilities = """
     #* (Abilities - Uncomment and implement as needed)
