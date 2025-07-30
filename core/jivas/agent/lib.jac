@@ -22,7 +22,8 @@ import from jivas.agent.action {
     uninstall_action,
     invoke_stt_action,
     get_action_app,
-    do_pulse
+    do_pulse,
+    stt
 }
 
 import from jivas.agent.memory {
