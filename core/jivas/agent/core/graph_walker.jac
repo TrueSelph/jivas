@@ -10,7 +10,6 @@ import from jac_cloud.core.archetype { NodeAnchor }
 walker graph_walker {
     # base walker designed to traverse along app graph;
 
-    has reporting: bool = False;
     # set up logger
     static has logger:Logger = logging.getLogger(__name__);
 
