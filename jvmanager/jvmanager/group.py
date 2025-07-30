@@ -1,7 +1,8 @@
 """Jivas Manager CLI tool."""
 
 import click
-from jvmanager import __version__
+
+from jvmanager import __version__  # type: ignore[attr-defined]
 
 
 @click.group()

@@ -3,20 +3,25 @@
 import asyncio
 import logging
 import os
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from pickle import load
 from typing import AsyncIterator, Optional
 
 import aiohttp
+import pymongo
+from bson import ObjectId
 from dotenv import load_dotenv
-from fastapi.responses import FileResponse, Response, StreamingResponse
+from fastapi import FastAPI, HTTPException, Response
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from jac_cloud.core.context import JaseciContext
-from jac_cloud.jaseci.main import FastAPI  # type: ignore
+from jac_cloud.jaseci.main import FastAPI as JaseciFastAPI  # type: ignore
 from jac_cloud.plugin.jaseci import NodeAnchor
 from jaclang import JacMachine as Jac
 from jaclang.cli.cmdreg import cmd_registry
 from jaclang.runtimelib.machine import hookimpl
-from uvicorn import run as _run
 from watchfiles import Change, run_process
 
 from jvserve.lib.agent_interface import AgentInterface
@@ -35,9 +40,65 @@ load_dotenv(".env")
 JVLogger.setup_logging(level="INFO")
 logger = logging.getLogger(__name__)
 
+# Global for MongoDB collection with thread-safe initialization
+url_proxy_collection = None
+collection_init_lock = asyncio.Lock()
+
+
+async def get_url_proxy_collection() -> pymongo.collection.Collection:
+    """Thread-safe initialization of MongoDB collection"""
+    global url_proxy_collection
+    if url_proxy_collection is None:
+        async with collection_init_lock:
+            if url_proxy_collection is None:  # Double-check locking
+                loop = asyncio.get_running_loop()
+                with ThreadPoolExecutor() as pool:
+                    url_proxy_collection = await loop.run_in_executor(
+                        pool,
+                        lambda: NodeAnchor.Collection.get_collection("url_proxies"),
+                    )
+    return url_proxy_collection
+
+
+async def serve_proxied_file(
+    file_path: str,
+) -> FileResponse | StreamingResponse | Response:
+    """Serve a proxied file from a remote or local URL (async version)"""
+    if FILE_INTERFACE == "local":
+        root_path = os.environ.get("JIVAS_FILES_ROOT_PATH", DEFAULT_FILES_ROOT)
+        full_path = os.path.join(root_path, file_path)
+        if not os.path.exists(full_path):
+            raise HTTPException(status_code=404, detail="File not found")
+        return FileResponse(full_path)
+
+    file_url = file_interface.get_file_url(file_path)
+
+    # Security check to prevent recursive calls
+    if file_url and ("localhost" in file_url or "127.0.0.1" in file_url):
+        raise HTTPException(
+            status_code=500, detail="Environment misconfiguration detected"
+        )
+
+    if not file_url:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(file_url) as response:
+                response.raise_for_status()
+
+                return StreamingResponse(
+                    response.content.iter_chunked(8192),
+                    media_type=response.headers.get(
+                        "Content-Type", "application/octet-stream"
+                    ),
+                )
+    except aiohttp.ClientError as e:
+        raise HTTPException(status_code=502, detail=f"File fetch error: {str(e)}")
+
 
 def run_jivas(filename: str, host: str = "localhost", port: int = 8000) -> None:
-    """Starts JIVAS server"""
+    """Starts JIVAS server with integrated file services"""
 
     # Create agent interface instance with configuration
     agent_interface = AgentInterface.get_instance(host=host, port=port)
@@ -46,7 +107,7 @@ def run_jivas(filename: str, host: str = "localhost", port: int = 8000) -> None:
     base = base if base else "./"
     mod = mod[:-4]
 
-    FastAPI.enable()
+    JaseciFastAPI.enable()
 
     ctx = JaseciContext.create(None)
     if filename.endswith(".jac"):
@@ -93,7 +154,8 @@ def run_jivas(filename: str, host: str = "localhost", port: int = 8000) -> None:
     async def on_shutdown() -> None:
         logger.info("JIVAS is shutting down...")
 
-    app_lifespan = FastAPI.get().router.lifespan_context
+    app = JaseciFastAPI.get()
+    app_lifespan = app.router.lifespan_context
 
     @asynccontextmanager
     async def lifespan_wrapper(app: FastAPI) -> AsyncIterator[Optional[str]]:
@@ -102,63 +164,73 @@ def run_jivas(filename: str, host: str = "localhost", port: int = 8000) -> None:
             yield maybe_state
         await on_shutdown()
 
-    FastAPI.get().router.lifespan_context = lifespan_wrapper
+    app.router.lifespan_context = lifespan_wrapper
+
+    # Add CORS middleware to main app
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    # Setup local file serving
+    if FILE_INTERFACE == "local":
+        directory = os.environ.get("JIVAS_FILES_ROOT_PATH", DEFAULT_FILES_ROOT)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        app.mount(
+            "/files",
+            StaticFiles(directory=directory),
+            name="files",
+        )
+
+    # Setup S3 proxy endpoints
+    if FILE_INTERFACE == "s3":
+
+        @app.get("/files/{file_path:path}", response_model=None)
+        async def serve_file(
+            file_path: str,
+        ) -> FileResponse | StreamingResponse | Response:
+            descriptor_path = os.environ.get("JIVAS_DESCRIPTOR_ROOT_PATH")
+            if descriptor_path and descriptor_path in file_path:
+                return Response(status_code=403)
+            return await serve_proxied_file(file_path)
+
+    # Setup URL proxy endpoint
+    @app.get("/f/{file_id:path}", response_model=None)
+    async def get_proxied_file(
+        file_id: str,
+    ) -> FileResponse | StreamingResponse | Response:
+        params = file_id.split("/")
+        object_id = params[0]
+
+        try:
+            # Get MongoDB collection (thread-safe initialization)
+            collection = await get_url_proxy_collection()
+
+            # Run blocking MongoDB operation in thread pool
+            loop = asyncio.get_running_loop()
+            file_details = await loop.run_in_executor(
+                None, lambda: collection.find_one({"_id": ObjectId(object_id)})
+            )
+
+            descriptor_path = os.environ.get("JIVAS_DESCRIPTOR_ROOT_PATH")
+
+            if file_details:
+                if descriptor_path and descriptor_path in file_details["path"]:
+                    return Response(status_code=403)
+                return await serve_proxied_file(file_details["path"])
+
+            raise HTTPException(status_code=404, detail="File not found")
+        except Exception as e:
+            logger.error(f"Proxy error: {str(e)}")
+            raise HTTPException(status_code=500, detail="Internal server error")
 
     ctx.close()
     # Run the app
-    FastAPI.start(host=host, port=port)
-
-
-def serve_proxied_file(file_path: str) -> FileResponse | StreamingResponse:
-    """Serve a proxied file from a remote or local URL."""
-    import mimetypes
-
-    import requests
-    from fastapi import HTTPException
-
-    if FILE_INTERFACE == "local":
-        return FileResponse(path=os.path.join(DEFAULT_FILES_ROOT, file_path))
-
-    file_url = file_interface.get_file_url(file_path)
-
-    if file_url and ("localhost" in file_url or "127.0.0.1" in file_url):
-        # prevent recusive calls when env vars are not detected
-        raise HTTPException(status_code=500, detail="Environment not set up correctly")
-
-    if not file_url:
-        raise HTTPException(status_code=404, detail="File not found")
-
-    file_extension = os.path.splitext(file_path)[1].lower()
-
-    # List of extensions to serve directly
-    direct_serve_extensions = [
-        ".pdf",
-        ".html",
-        ".txt",
-        ".js",
-        ".css",
-        ".json",
-        ".xml",
-        ".svg",
-        ".csv",
-        ".ico",
-    ]
-
-    if file_extension in direct_serve_extensions:
-        file_response = requests.get(file_url)
-        file_response.raise_for_status()  # Raise HTTPError for bad responses (4XX or 5XX)
-
-        mime_type = mimetypes.guess_type(file_path)[0] or "application/octet-stream"
-
-        return StreamingResponse(iter([file_response.content]), media_type=mime_type)
-
-    file_response = requests.get(file_url, stream=True)
-    file_response.raise_for_status()
-
-    return StreamingResponse(
-        file_response.iter_content(chunk_size=1024),
-        media_type="application/octet-stream",
-    )
+    JaseciFastAPI.start(host=host, port=port)
 
 
 def log_reload(changes: set[tuple[Change, str]]) -> None:
@@ -182,116 +254,13 @@ class JacCmd:
 
         @cmd_registry.register
         def jvserve(filename: str, host: str = "localhost", port: int = 8000) -> None:
-            """Launch the jac application with proper server readiness handling."""
-
-            # awching the actions folder only
+            """Launch unified JIVAS server with file services"""
             watchdir = os.path.join(
                 os.path.abspath(os.path.dirname(filename)), "actions", ""
             )
-
             run_process(
                 watchdir,
                 target=run_jivas,
                 args=(filename, host, port),
                 callback=log_reload,
             )
-            return
-            # run_jivas(filename=filename, host=host, port=port)
-
-        @cmd_registry.register
-        def jvfileserve(
-            directory: str, host: str = "localhost", port: int = 9000
-        ) -> None:
-            """Launch the file server for local files."""
-            # load FastAPI
-            from fastapi import FastAPI
-            from fastapi.middleware.cors import CORSMiddleware
-            from fastapi.staticfiles import StaticFiles
-
-            # Setup custom routes
-            app = FastAPI()
-
-            # Add CORS middleware
-            app.add_middleware(
-                CORSMiddleware,
-                allow_origins=["*"],
-                allow_credentials=True,
-                allow_methods=["*"],
-                allow_headers=["*"],
-            )
-
-            if not os.path.exists(directory):
-                os.makedirs(directory)
-
-            # Set the environment variable for the file root path
-            os.environ["JIVAS_FILES_ROOT_PATH"] = directory
-
-            # Mount the static files directory
-            app.mount(
-                "/files",
-                StaticFiles(directory=directory),
-                name="files",
-            )
-
-            # run the app
-            _run(app, host=host, port=port)
-
-        @cmd_registry.register
-        def jvproxyserve(
-            directory: str, host: str = "localhost", port: int = 9000
-        ) -> None:
-            """Launch the file proxy server for remote files."""
-            # load FastAPI
-            from fastapi import FastAPI
-            from fastapi.middleware.cors import CORSMiddleware
-
-            # Setup custom routes
-            app = FastAPI()
-
-            # Add CORS middleware
-            app.add_middleware(
-                CORSMiddleware,
-                allow_origins=["*"],
-                allow_credentials=True,
-                allow_methods=["*"],
-                allow_headers=["*"],
-            )
-
-            # Add proxy routes only if using S3
-            if FILE_INTERFACE == "s3":
-
-                @app.get("/files/{file_path:path}", response_model=None)
-                async def serve_file(
-                    file_path: str,
-                ) -> FileResponse | StreamingResponse | Response:
-                    descriptor_path = os.environ["JIVAS_DESCRIPTOR_ROOT_PATH"]
-                    if descriptor_path and descriptor_path in file_path:
-                        return Response(status_code=403)
-
-                    return serve_proxied_file(file_path)
-
-            @app.get("/f/{file_id:path}", response_model=None)
-            async def get_proxied_file(
-                file_id: str,
-            ) -> FileResponse | StreamingResponse | Response:
-                from bson import ObjectId
-                from fastapi import HTTPException
-
-                params = file_id.split("/")
-                object_id = params[0]
-
-                # mongo db collection
-                collection = NodeAnchor.Collection.get_collection("url_proxies")
-                file_details = collection.find_one({"_id": ObjectId(object_id)})
-                descriptor_path = os.environ["JIVAS_DESCRIPTOR_ROOT_PATH"]
-
-                if file_details:
-                    if descriptor_path and descriptor_path in file_details["path"]:
-                        return Response(status_code=403)
-
-                    return serve_proxied_file(file_details["path"])
-
-                raise HTTPException(status_code=404, detail="File not found")
-
-            # run the app
-            _run(app, host=host, port=port)
