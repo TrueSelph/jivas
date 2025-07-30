@@ -11,6 +11,7 @@ play/
 build/
 develop-eggs/
 dist/
+!jvmanager/jvmanager/manager/client/dist
 downloads/
 eggs/
 .eggs/
