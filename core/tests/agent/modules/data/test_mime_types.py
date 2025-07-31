@@ -1,6 +1,5 @@
 """Test cases for mime_types module"""
 
-import os
 import unittest
 from unittest.mock import Mock, patch
 from typing import Dict, Optional

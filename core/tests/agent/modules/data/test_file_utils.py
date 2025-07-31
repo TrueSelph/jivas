@@ -10,7 +10,7 @@ import importlib
 class TestFileUtilsEnvironmentVariableBasedSelection(unittest.TestCase):
     """Test file interface selection based on FILE_INTERFACE environment variable"""
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Clean up modules and environment before each test"""
         # Store original environment
         self.original_env = os.environ.get("FILE_INTERFACE")
@@ -19,14 +19,14 @@ class TestFileUtilsEnvironmentVariableBasedSelection(unittest.TestCase):
         if "jivas.agent.modules.data.file_utils" in sys.modules:
             del sys.modules["jivas.agent.modules.data.file_utils"]
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         """Restore original environment after each test"""
         if self.original_env is not None:
             os.environ["FILE_INTERFACE"] = self.original_env
         elif "FILE_INTERFACE" in os.environ:
             del os.environ["FILE_INTERFACE"]
 
-    def test_local_file_interface_selection_via_environment(self):
+    def test_local_file_interface_selection_via_environment(self) -> None:
         """Test that setting FILE_INTERFACE=local uses get_file_interface"""
         mock_interface = MagicMock(name="MockLocalInterface")
 
@@ -53,7 +53,7 @@ class TestFileUtilsEnvironmentVariableBasedSelection(unittest.TestCase):
                     "INFO: get_file_interface was not called - conditional logic may not be environment-based"
                 )
 
-    def test_remote_file_interface_selection_via_environment(self):
+    def test_remote_file_interface_selection_via_environment(self) -> None:
         """Test that setting FILE_INTERFACE=remote uses file_interface directly"""
         mock_interface = MagicMock(name="MockRemoteInterface")
 
@@ -81,7 +81,7 @@ class TestFileUtilsEnvironmentVariableBasedSelection(unittest.TestCase):
 class TestFileUtilsImportTimeInitialization(unittest.TestCase):
     """Test file interface initialization that happens at module import time"""
 
-    def test_module_already_initialized_behavior(self):
+    def test_module_already_initialized_behavior(self) -> None:
         """Test behavior when module is already imported and initialized"""
         # Import normally to see the default behavior
         from jivas.agent.modules.data.file_utils import (
@@ -107,7 +107,7 @@ class TestFileUtilsImportTimeInitialization(unittest.TestCase):
                 "INFO: jvdata_file_interface and file_interface are different objects"
             )
 
-    def test_get_file_interface_function_behavior(self):
+    def test_get_file_interface_function_behavior(self) -> None:
         """Test the get_file_interface function's actual behavior"""
         from jivas.agent.modules.data.file_utils import get_file_interface
 
@@ -140,12 +140,12 @@ class TestFileUtilsImportTimeInitialization(unittest.TestCase):
 class TestFileUtilsModuleReloadingStrategy(unittest.TestCase):
     """Test using module reloading to test different configurations"""
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Store original module state"""
         self.original_module = sys.modules.get("jivas.agent.modules.data.file_utils")
         self.original_env = os.environ.get("FILE_INTERFACE")
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         """Restore original module state"""
         # Restore environment
         if self.original_env is not None:
@@ -159,7 +159,7 @@ class TestFileUtilsModuleReloadingStrategy(unittest.TestCase):
         elif "jivas.agent.modules.data.file_utils" in sys.modules:
             del sys.modules["jivas.agent.modules.data.file_utils"]
 
-    def test_forced_module_reload_with_local_config(self):
+    def test_forced_module_reload_with_local_config(self) -> None:
         """Test forcing module reload with local configuration"""
         # Completely remove module from cache
         if "jivas.agent.modules.data.file_utils" in sys.modules:
@@ -197,7 +197,7 @@ class TestFileUtilsModuleReloadingStrategy(unittest.TestCase):
 class TestFileUtilsDeepMockingStrategy(unittest.TestCase):
     """Test using deep mocking at the jvserve library level"""
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Clean up modules for deep mocking"""
         modules_to_clean = [
             "jivas.agent.modules.data.file_utils",
@@ -210,7 +210,7 @@ class TestFileUtilsDeepMockingStrategy(unittest.TestCase):
                 self.original_modules[module] = sys.modules[module]
                 del sys.modules[module]
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         """Restore original modules"""
         for module, original in self.original_modules.items():
             if original is not None:
@@ -218,7 +218,7 @@ class TestFileUtilsDeepMockingStrategy(unittest.TestCase):
             elif module in sys.modules:
                 del sys.modules[module]
 
-    def test_mock_entire_jvserve_library(self):
+    def test_mock_entire_jvserve_library(self) -> None:
         """Test by mocking the entire jvserve.lib.file_interface module"""
         mock_get_interface = MagicMock(name="DeepMockGetInterface")
         mock_file_interface = MagicMock(name="DeepMockFileInterface")
@@ -253,7 +253,7 @@ class TestFileUtilsDeepMockingStrategy(unittest.TestCase):
 class TestFileUtilsActualBehaviorDocumentation(unittest.TestCase):
     """Document and test the actual behavior of the file_utils module"""
 
-    def test_document_current_file_interface_setup(self):
+    def test_document_current_file_interface_setup(self) -> None:
         """Document how the file interfaces are currently set up"""
         from jivas.agent.modules.data.file_utils import (
             jvdata_file_interface,
@@ -288,7 +288,7 @@ class TestFileUtilsActualBehaviorDocumentation(unittest.TestCase):
         self.assertIsNotNone(interface_empty)
         self.assertIsNotNone(interface_path)
 
-    def test_verify_file_interface_functionality(self):
+    def test_verify_file_interface_functionality(self) -> None:
         """Test that the file interfaces have expected functionality"""
         from jivas.agent.modules.data.file_utils import (
             jvdata_file_interface,
@@ -326,7 +326,7 @@ class TestFileUtilsActualBehaviorDocumentation(unittest.TestCase):
 class TestFileUtilsConfigurationDiscovery(unittest.TestCase):
     """Discover how FILE_INTERFACE configuration actually works"""
 
-    def test_discover_configuration_source(self):
+    def test_discover_configuration_source(self) -> None:
         """Try to discover where FILE_INTERFACE configuration comes from"""
         print("\n=== CONFIGURATION DISCOVERY ===")
 
