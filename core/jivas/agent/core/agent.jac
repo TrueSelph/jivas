@@ -22,7 +22,6 @@ node Agent(GraphNode) {
     has published: bool = True;
     has name: str = "";
     has description: str = "";
-    has descriptor: str = "";
     has jpr_api_key: str = "";
     has agent_logging: bool = True; # when set, agent will log interactions
     has message_limit: int = 1024;
@@ -41,7 +40,7 @@ node Agent(GraphNode) {
     def postinit {
         super.postinit();
         # node attributes which are protected from update operation
-        self.protected_attrs += ["id", "actions", "descriptor", "healthcheck_status"];
+        self.protected_attrs += ["id", "actions", "healthcheck_status"];
     }
 
     def get_memory() -> Memory {
@@ -331,14 +330,6 @@ node Agent(GraphNode) {
             trace['description'] = {
             "status": False,
             "message": "Agent description must be a non-empty string with no leading or trailing spaces.",
-            "severity": "error"
-            };
-        }
-
-        if len(self.descriptor.strip()) == 0 {
-            trace['descriptor'] = {
-            "status": False,
-            "message": "Agent descriptor path not set.",
             "severity": "error"
             };
         }

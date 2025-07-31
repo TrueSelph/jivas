@@ -150,11 +150,6 @@ walker import_agent {
         }
 
         if(agent_node) {
-            # retrieves existing descriptor root folder or creates it
-            descriptor_root = Utils.get_descriptor_root();
-            # map to agent descriptor
-            agent_node.descriptor = f"{descriptor_root}/{agent_node.id}.yaml";
-
             # Attach memory and actions node if not exists
             agent_node.get_memory();
             agent_node.get_actions();
