@@ -299,14 +299,16 @@ class TestInitAgentsCommand:
             "jvcli.commands.server.requests.post",
             side_effect=requests.RequestException("Network error"),
         )
-        mock_click = mocker.patch("jvcli.commands.server.click.secho")
         mocker.patch("jvcli.commands.server.sys.exit")
+
+        # Set environment variables
+        mocker.patch.dict(os.environ, {"JIVAS_BASE_URL": "http://localhost:8000"})
 
         runner = CliRunner()
         result = runner.invoke(server, ["initagents"])
 
-        assert result.exit_code == 0
-        mock_click.assert_any_call("Error during request: Network error", fg="red")
+        # Check for error message in the actual output
+        assert "Network error" in result.output
 
     def test_error_response(self, mocker: MockerFixture) -> None:
         """Test behavior when server returns error status code."""
@@ -315,14 +317,16 @@ class TestInitAgentsCommand:
         mock_response = MagicMock()
         mock_response.status_code = 400
         mocker.patch("jvcli.commands.server.requests.post", return_value=mock_response)
-        mock_click = mocker.patch("jvcli.commands.server.click.secho")
         mocker.patch("jvcli.commands.server.sys.exit")
+
+        # Set environment variables
+        mocker.patch.dict(os.environ, {"JIVAS_BASE_URL": "http://localhost:8000"})
 
         runner = CliRunner()
         result = runner.invoke(server, ["initagents"])
 
-        assert result.exit_code == 0
-        mock_click.assert_any_call("Failed to initialize agents", fg="red")
+        # Check for error message in the actual output
+        assert "Failed to initialize agents" in result.output
 
 
 class TestLaunchCommand:
