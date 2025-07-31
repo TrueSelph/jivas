@@ -1,18 +1,22 @@
 """Common system utilities"""
 
-import datetime
+from datetime import datetime
 from uuid import UUID
-import jivas
+
 import pytz
+
+import jivas
 
 
 def get_jivas_version() -> str:
     """Returns the current JIVAS version."""
     return jivas.__version__
 
+
 def node_obj(node_list: list) -> object | None:
     """Return the first object in the list or None if the list is empty."""
     return node_list[0] if node_list else None
+
 
 def is_valid_uuid(uuid_to_test: str, version: int = 4) -> bool:
     """
@@ -41,9 +45,8 @@ def is_valid_uuid(uuid_to_test: str, version: int = 4) -> bool:
         return False
     return str(uuid_obj) == uuid_to_test
 
-def date_now(
-    timezone: str = "US/Eastern", date_format: str = "%Y-%m-%d"
-) -> str | None:
+
+def date_now(timezone: str = "US/Eastern", date_format: str = "%Y-%m-%d") -> str | None:
     """Get the current date and time in the specified timezone and format."""
     try:
         # If a timezone is specified, apply it

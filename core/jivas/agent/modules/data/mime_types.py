@@ -1,10 +1,14 @@
+"""MIME types package"""
+
+import logging
 import mimetypes
 import os
-import requests
-import logging
 from typing import Dict, Optional
 
+import requests
+
 logger = logging.getLogger(__name__)
+
 
 def get_mime_type(
     file_path: Optional[str] = None,
@@ -28,26 +32,50 @@ def get_mime_type(
 
     # MIME type categories
     image_mime_types = [
-        "image/jpeg", "image/png", "image/gif", "image/bmp", "image/webp",
-        "image/tiff", "image/svg+xml", "image/x-icon", "image/heic",
-        "image/heif", "image/x-raw"
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/bmp",
+        "image/webp",
+        "image/tiff",
+        "image/svg+xml",
+        "image/x-icon",
+        "image/heic",
+        "image/heif",
+        "image/x-raw",
     ]
     document_mime_types = [
-        "application/pdf", "application/msword",
+        "application/pdf",
+        "application/msword",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "application/vnd.ms-excel",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "application/vnd.ms-powerpoint",
         "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-        "text/plain", "text/csv", "text/html", "application/rtf"
+        "text/plain",
+        "text/csv",
+        "text/html",
+        "application/rtf",
     ]
     audio_mime_types = [
-        "audio/mpeg", "audio/wav", "audio/ogg", "audio/flac", "audio/aac",
-        "audio/mp3", "audio/webm", "audio/amr", "audio/midi"
+        "audio/mpeg",
+        "audio/wav",
+        "audio/ogg",
+        "audio/flac",
+        "audio/aac",
+        "audio/mp3",
+        "audio/webm",
+        "audio/amr",
+        "audio/midi",
     ]
     video_mime_types = [
-        "video/mp4", "video/mpeg", "video/ogg", "video/webm",
-        "video/quicktime", "video/x-msvideo", "video/x-matroska"
+        "video/mp4",
+        "video/mpeg",
+        "video/ogg",
+        "video/webm",
+        "video/quicktime",
+        "video/x-msvideo",
+        "video/x-matroska",
     ]
 
     if detected_mime_type is None or detected_mime_type == "binary/octet-stream":

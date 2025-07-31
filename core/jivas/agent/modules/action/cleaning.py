@@ -1,16 +1,18 @@
 """Operations to clean up actions"""
 
+import logging
 import os
 import shutil
-import logging
 from typing import Dict, List
+
 from ..text.formatting import normalize_text
 
 logger = logging.getLogger(__name__)
 
+
 def clean_action(namespace_package_name: str) -> bool:
     """Completely removes a specific action folder.
-    
+
     Args:
         namespace_package_name: The namespace and package name in format 'namespace_folder/action_folder'
 
@@ -39,12 +41,10 @@ def clean_action(namespace_package_name: str) -> bool:
     else:
         logger.error(f"Actions root directory not found: {actions_root_path}")
         return False
-    
+
 
 def clean_context(
-    node_context: Dict,
-    archetype_context: Dict,
-    ignore_keys: List[str]
+    node_context: Dict, archetype_context: Dict, ignore_keys: List[str]
 ) -> Dict:
     """
     Cleans and sanitizes node_context by:

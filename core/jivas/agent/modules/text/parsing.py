@@ -1,12 +1,13 @@
 """Utils to handle parsing"""
 
+
 def extract_first_name(full_name: str) -> str:
     """
     Extract the first name from a full name.
-    
+
     Args:
         full_name: The complete name string
-        
+
     Returns:
         The extracted first name
     """

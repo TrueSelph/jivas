@@ -1,10 +1,11 @@
 """Utils to chunk text"""
 
-import re
 import logging
+import re
 from typing import List
 
 logger = logging.getLogger(__name__)
+
 
 def chunk_long_message(
     message: str, max_length: int = 1024, chunk_length: int = 1024
@@ -12,12 +13,12 @@ def chunk_long_message(
     """
     Splits a long message into smaller chunks of no more than chunk_length characters,
     ensuring no single chunk exceeds max_length.
-    
+
     Args:
         message: The text to chunk
         max_length: Maximum allowed length for any chunk
         chunk_length: Target length for chunks
-    
+
     Returns:
         List of message chunks
     """

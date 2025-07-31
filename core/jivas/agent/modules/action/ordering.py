@@ -1,16 +1,16 @@
-"""Operations to order interact actions based on dependencies"""
+"""Ordering utils package"""
 
+import logging
 from collections import defaultdict, deque
 from typing import Any, Dict, List, Optional
-import logging
 
 logger = logging.getLogger(__name__)
+
 
 def order_interact_actions(
     actions_data: List[Dict[str, Any]],
 ) -> Optional[List[Dict[str, Any]]]:
-    """Order interact actions based on dependencies, weights, and original order, 
-    respecting pre-existing weight values in context."""
+    """Order interact actions based on dependencies, weights, and original order, respecting pre-existing weight values in context."""
     if not actions_data:
         return None
 
@@ -23,10 +23,7 @@ def order_interact_actions(
     # Separate interact actions and record original positions
     for idx, action in enumerate(actions_data):
         if (
-            action.get("context", {})
-            .get("_package", {})
-            .get("meta", {})
-            .get("type")
+            action.get("context", {}).get("_package", {}).get("meta", {}).get("type")
             == "interact_action"
         ):
             name = action["context"]["_package"]["name"]
@@ -71,9 +68,7 @@ def order_interact_actions(
 
         # Handle BEFORE constraints
         if (before := config_order.get("before")) and before != "all":
-            normalized_before = (
-                f"{namespace}/{before}" if "/" not in before else before
-            )
+            normalized_before = f"{namespace}/{before}" if "/" not in before else before
             if normalized_before in action_lookup:
                 graph[action_name].append(normalized_before)
                 in_degree[normalized_before] += 1
@@ -83,8 +78,7 @@ def order_interact_actions(
     before_all = [
         name
         for name, a in action_lookup.items()
-        if a["context"]["_package"]["config"].get("order", {}).get("before")
-        == "all"
+        if a["context"]["_package"]["config"].get("order", {}).get("before") == "all"
     ]
     for name in before_all:
         for other in action_lookup:

@@ -1,10 +1,11 @@
 """Path utilities relating to actions"""
 
-import os
 import logging
+import os
 from typing import Optional, Set
 
 logger = logging.getLogger(__name__)
+
 
 def path_to_module(path: str) -> str:
     """
@@ -60,7 +61,7 @@ def find_package_folder(
     except ValueError:
         logger.error("Invalid format. Please use 'namespace/package_folder'.")
         return None
-    
+
 
 def action_walker_path(module: str) -> str:
     """Accepts the module string of an action walker and returns a walker path string"""

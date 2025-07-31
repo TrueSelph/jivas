@@ -1,7 +1,5 @@
-from .common import get_jivas_version, node_obj, is_valid_uuid
+"""System utils package"""
 
-__all__ = [
-    'get_jivas_version',
-    'node_obj',
-    'is_valid_uuid'
-]
+from .common import get_jivas_version, is_valid_uuid, node_obj
+
+__all__ = ["get_jivas_version", "node_obj", "is_valid_uuid"]

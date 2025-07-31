@@ -2,12 +2,14 @@
 
 import ast
 import json
-import yaml
 import logging
 from enum import Enum
-from typing import Any, Dict, Optional, Union, Set, List
+from typing import Any, Dict, List, Optional, Set, Union
+
+import yaml
 
 logger = logging.getLogger(__name__)
+
 
 class LongStringDumper(yaml.SafeDumper):
     """Custom YAML dumper to handle long strings."""
@@ -29,6 +31,7 @@ class LongStringDumper(yaml.SafeDumper):
 
         return super().represent_scalar(tag, value, style)
 
+
 def make_serializable(obj: Any) -> Any:
     """Recursively convert non-serializable objects in a dict/list to strings."""
     if isinstance(obj, dict):
@@ -44,7 +47,10 @@ def make_serializable(obj: Any) -> Any:
         # For sets, tuples, custom types, etc.
         return str(obj)
 
-def export_to_dict(data: object | dict, ignore_keys: Optional[List[str]] = None) -> dict:
+
+def export_to_dict(
+    data: object | dict, ignore_keys: Optional[List[str]] = None
+) -> dict:
     """Export an object to a dictionary, ignoring specified keys and handling cycles.
 
     Args:
@@ -80,9 +86,7 @@ def export_to_dict(data: object | dict, ignore_keys: Optional[List[str]] = None)
 
             # 4. Dictionaries: apply ignore_keys and recurse
             if isinstance(obj, dict):
-                return {
-                    k: _convert(v) for k, v in obj.items() if k not in ignore_keys
-                }
+                return {k: _convert(v) for k, v in obj.items() if k not in ignore_keys}
 
             # 5. Lists, tuples, sets: convert to list and recurse
             if isinstance(obj, (list, tuple, set, frozenset)):
@@ -102,6 +106,7 @@ def export_to_dict(data: object | dict, ignore_keys: Optional[List[str]] = None)
     # Ensure top-level output is a dictionary
     return result if isinstance(result, dict) else {"value": result}
 
+
 def safe_json_dump(data: dict) -> Optional[str]:
     """Safely convert a dictionary with mixed types to a JSON string for logs."""
 
@@ -110,11 +115,7 @@ def safe_json_dump(data: dict) -> Optional[str]:
 
         def wrap_content(value: object) -> object:
             # Return value wrapped in a dictionary with key 'content' if it's a str, int or float
-            return (
-                {"content": value}
-                if isinstance(value, (str, int, float))
-                else value
-            )
+            return {"content": value} if isinstance(value, (str, int, float)) else value
 
         def process_dict(d: dict) -> dict:
             for key, value in d.items():
@@ -132,6 +133,7 @@ def safe_json_dump(data: dict) -> Optional[str]:
 
         # Create a deep copy of the original dict to avoid mutation
         import copy
+
         result = copy.deepcopy(obj)
 
         return process_dict(result)
@@ -144,35 +146,48 @@ def safe_json_dump(data: dict) -> Optional[str]:
         logger.error(f"Serialization error: {str(e)}")
         return None
 
-def convert_str_to_json(text: Union[str, Dict, List]) -> Optional[Dict]:
+
+def convert_str_to_json(
+    text: Union[str, Dict[Any, Any], List[Any]]
+) -> Optional[Dict[Any, Any]]:
     """Convert a string to a JSON object."""
     if isinstance(text, str):
         text = text.replace("```json", "")
         text = text.replace("```", "")
     try:
-        if isinstance(text, (dict, list)):
+        if isinstance(text, dict):
             return text
+        elif isinstance(text, list):
+            return {"list": text}  # Convert list to dict to match return type
         else:
-            return json.loads(text)
+            result = json.loads(text)
+            return result if isinstance(result, dict) else {"data": result}
     except (json.JSONDecodeError, TypeError):
         try:
-            return ast.literal_eval(text)
+            if isinstance(text, str):
+                result = ast.literal_eval(text)
+                return result if isinstance(result, dict) else {"data": result}
+            return None
         except (SyntaxError, ValueError) as e:
-            if "'{' was never closed" in str(e):
+            if "'{' was never closed" in str(e) and isinstance(text, str):
                 text = text + "}"
-                return json.loads(text)
+                try:
+                    result = json.loads(text)
+                    return result if isinstance(result, dict) else {"data": result}
+                except json.JSONDecodeError:
+                    logger.error(e)
+                    return None
             else:
                 logger.error(e)
                 return None
-            
+
 
 def yaml_dumps(data: Optional[dict]) -> Optional[str]:
     """Converts and formats nested dict to YAML string, handling PyYAML errors."""
     if not data:
-        return "None"
+        return None
 
     try:
-        from .serialization import make_serializable
         safe_data = make_serializable(data)
         yaml_output = yaml.dump(
             safe_data,

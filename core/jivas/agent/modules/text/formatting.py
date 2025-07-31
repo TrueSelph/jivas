@@ -1,13 +1,14 @@
 """Text formatting utilities"""
 
-import re
-import ftfy
 import logging
+import re
 import unicodedata
 from typing import Any, Dict, List, Optional, Union
 
+import ftfy
 
 logger = logging.getLogger(__name__)
+
 
 def list_to_phrase(lst: List[Any]) -> str:
     """Formats a list as a phrased list, e.g. ['one', 'two', 'three'] becomes 'one, two, and three'."""
@@ -22,15 +23,16 @@ def list_to_phrase(lst: List[Any]) -> str:
 
     return ", ".join(lst[:-1]) + f", and {lst[-1]}"
 
+
 def replace_placeholders(
-    string_or_collection: Union[str, List[str]], 
-    placeholders: Dict[str, Any]
+    string_or_collection: Union[str, List[str]], placeholders: Dict[str, Any]
 ) -> Union[str, List[str], None]:
     """
     Replaces placeholders delimited by {{ and }} in a string or collection of strings with their corresponding values
     from a dictionary of key-value pairs. If a value in the dictionary is a list, it is formatted as a phrased list.
     Returns only items that have no remaining placeholders.
     """
+
     def replace_in_string(s: str, ph: Dict[str, Any]) -> Optional[str]:
         # Replace placeholders in a single string
         for key, value in ph.items():
@@ -51,6 +53,7 @@ def replace_placeholders(
     else:
         raise TypeError("Input must be a string or a list of strings.")
 
+
 def escape_string(input_string: str) -> str:
     """
     Escapes curly braces in the input string by converting them to double curly braces.
@@ -65,8 +68,8 @@ def escape_string(input_string: str) -> str:
         logger.error(f"Error expect string: {input_string}")
         return ""
     return input_string.replace("{", "{{").replace("}", "}}")
-    
-    
+
+
 def normalize_text(text: str) -> str:
     """
     Normalizes a string by:
@@ -83,14 +86,15 @@ def normalize_text(text: str) -> str:
     text = ftfy.fix_text(text)
     return re.sub(r"\W+", "", text)
 
+
 def to_snake_case(title: str, ascii_only: bool = True) -> str:
     """
     Converts a string to a safe, lowercase snake_case suitable for machine names.
-    
+
     Args:
         title: The input string/title
         ascii_only: If True, strips out non-ascii characters
-    
+
     Returns:
         A clean, lowercase, snake_case string
     """
@@ -111,6 +115,7 @@ def to_snake_case(title: str, ascii_only: bool = True) -> str:
     s = s.strip("_")
     return s
 
+
 def clean_text(text: Optional[str], force_ascii: bool = False) -> str:
     """
     Sanitizes text to prevent encoding issues (e.g., UnicodeEncodeError).
@@ -118,7 +123,7 @@ def clean_text(text: Optional[str], force_ascii: bool = False) -> str:
     Args:
         text: Input string (or None)
         force_ascii: If True, replaces non-ASCII chars with '?'
-    
+
     Returns:
         Cleaned string, or empty string if input is None
     """
