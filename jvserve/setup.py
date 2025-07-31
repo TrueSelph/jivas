@@ -39,7 +39,7 @@ setup(
     package_data={"jvserve": []},
     python_requires=">=3.12.0",
     install_requires=[
-        "jac-cloud@git+https://github.com/Jaseci-Labs/jaseci.git@enhancements/jac-cloud#subdirectory=jac-cloud&egg=jaclang",
+        "jac-cloud@git+https://github.com/Jaseci-Labs/jaseci.git@main#subdirectory=jac-cloud&egg=jaclang",
         # "jaclang@git+https://github.com/Jaseci-Labs/jaseci.git@feature/hot-reload#subdirectory=jac&egg=jaclang",
         # "jac-cloud==0.2.4",
         "jaclang==0.8.4",
