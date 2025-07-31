@@ -33,7 +33,7 @@ class JVServeCliTest(unittest.TestCase):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            cwd="./fixtures",
+            cwd=os.path.join(os.path.dirname(__file__), "fixtures"),
         )
 
         # Wait until the server is ready (max 90s)
