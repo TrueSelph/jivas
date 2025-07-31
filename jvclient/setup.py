@@ -5,13 +5,12 @@ import os
 from setuptools import find_packages, setup
 from jvclient import __version__
 
-with open("README.md", "r", encoding="utf-8") as fh:
-    long_description = fh.read()
-
 
 def get_version() -> str:
     """Get the package version from the __init__ file."""
-    version_file = os.path.join(os.path.dirname(__file__), "jvclient", "__init__.py")
+    version_file = os.path.normpath(
+        os.path.join(os.path.dirname(__file__), "..", "__init__.py")
+    )
     with open(version_file) as f:
         for line in f:
             if line.startswith("__version__"):
@@ -20,9 +19,13 @@ def get_version() -> str:
     raise RuntimeError("Version not found.")
 
 
+with open("README.md", "r", encoding="utf-8") as fh:
+    long_description = fh.read()
+
+
 setup(
     name="jvclient",
-    version=__version__,
+    version=get_version(),
     description="JIVAS client library for action development.",
     long_description=long_description,
     long_description_content_type="text/markdown",

@@ -5,13 +5,27 @@ import os
 from setuptools import find_packages, setup
 from jivas import __version__
 
+
+def get_version() -> str:
+    """Get the package version from the __init__ file."""
+    version_file = os.path.normpath(
+        os.path.join(os.path.dirname(__file__), "..", "__init__.py")
+    )
+    with open(version_file) as f:
+        for line in f:
+            if line.startswith("__version__"):
+                delim = '"' if '"' in line else "'"
+                return line.split(delim)[1]
+    raise RuntimeError("Version not found.")
+
+
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 
 setup(
     name="jivas",
-    version=__version__,
+    version=get_version(),
     description="JIVAS is an Agentic Framework for rapidly prototyping and deploying graph-based, AI solutions.",
     long_description=long_description,
     long_description_content_type="text/markdown",
