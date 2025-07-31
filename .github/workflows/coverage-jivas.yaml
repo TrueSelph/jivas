@@ -34,6 +34,6 @@ jobs:
       - name: Run Coverage Check
         uses: orgoro/coverage@v3.2
         with:
-          coverageFile: coverage.xml
+          coverageFile: ./core/coverage.xml
           token: ${{ secrets.GITHUB_TOKEN }}
           thresholdAll: 0.8
