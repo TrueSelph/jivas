@@ -1,9 +1,7 @@
 """Setup script for jvcli."""
 
 import os
-
 from setuptools import find_packages, setup
-from jvcli import __version__
 
 
 def get_version() -> str:

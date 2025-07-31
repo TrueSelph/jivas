@@ -1,9 +1,7 @@
 """Setup script for jvclient."""
 
 import os
-
 from setuptools import find_packages, setup
-from jvclient import __version__
 
 
 def get_version() -> str:

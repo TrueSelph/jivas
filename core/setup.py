@@ -1,9 +1,7 @@
 """Setup script for jivas"""
 
 import os
-
 from setuptools import find_packages, setup
-from jivas import __version__
 
 
 def get_version() -> str:

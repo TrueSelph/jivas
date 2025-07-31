@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./jivas
+        working-directory: ./core
     steps:
       - name: Check out code
         uses: actions/checkout@v2
