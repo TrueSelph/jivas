@@ -15,7 +15,9 @@ import from jac_cloud.jaseci.datasources.redis { WebhookRedis }
 import from jac_cloud.core.archetype { NodeAnchor }
 import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 import from jac_cloud.core.archetype { BulkWrite }
-import from jivas.agent.modules.agentlib.utils { Utils }
+
+import from jivas.agent.modules.action.path { action_webhook_path }
+
 import from jac_cloud.jaseci.routers.webhook { generate_key, delete }
 import from jivas.agent.action.agent_graph_walker { agent_graph_walker }
 
@@ -32,7 +34,7 @@ walker action_webhook_walker(agent_graph_walker) {
             "type": "path",
             "name": "key"
         };
-        static has path: str = Utils.action_webhook_path(__module__);
+        static has path: str = action_webhook_path(__module__);
         static has methods: list = ["get", "post"];
         static has private: bool = True; # hide endpoint in parent
     }
@@ -60,7 +62,7 @@ walker action_webhook_walker(agent_graph_walker) {
         }
 
         # get callback path template
-        path = Utils.action_webhook_path(self.get_module());
+        path = action_webhook_path(self.get_module());
         # get walker name
         walker_name = self.get_type();
 

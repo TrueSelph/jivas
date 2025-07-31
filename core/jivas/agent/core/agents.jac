@@ -1,7 +1,9 @@
 import logging;
 import traceback;
 import from logging { Logger }
-import from jivas.agent.modules.agentlib.utils { Utils }
+
+import from jivas.agent.modules.system.common { node_obj }
+
 import from jivas.agent.core.graph_node { GraphNode }
 import from jivas.agent.core.purge { purge }
 
@@ -18,12 +20,12 @@ node Agents(GraphNode) {
 
     def get_by_name(name:str) {
         # returns an agent node by name or None
-        return Utils.node_obj([-->](?name == name));
+        return node_obj([-->](?name == name));
     }
 
     def get_by_id(id:str) {
         # returns an agent node by name or None
-        return Utils.node_obj([-->](?id == id));
+        return node_obj([-->](?id == id));
     }
 
     def delete(id:str) {

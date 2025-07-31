@@ -1,7 +1,11 @@
 import from datetime { datetime, timezone }
 import from typing { Any, Optional }
 import from uuid { uuid4 }
-import from jivas.agent.modules.agentlib.utils { Utils }
+
+import from jivas.agent.modules.text.chunking { chunk_long_message }
+import from jivas.agent.modules.text.formatting { escape_string }
+import from jivas.agent.modules.text.parsing { extract_first_name }
+
 import from jivas.agent.memory.interaction { Interaction }
 import from jivas.agent.memory.interaction_response { InteractionResponse, TextInteractionMessage }
 import from jivas.agent.core.graph_node { GraphNode }
@@ -198,7 +202,7 @@ node Frame(GraphNode) {
         if(self.user_name and full) {
             return self.user_name;
         } elif(self.user_name) {
-            return Utils.extract_first_name(self.user_name);
+            return extract_first_name(self.user_name);
         } else {
             return "user";
         }
@@ -270,7 +274,7 @@ walker _get_transcript_statements {
 
             # record the user utterance
             if (interaction.utterance) {
-                human_statement = Utils.escape_string(interaction.utterance);
+                human_statement = escape_string(interaction.utterance);
                 human_statement = self.chunk_message(message=human_statement);
                 self.statements.append({"human": human_statement});
             }
@@ -303,7 +307,7 @@ walker _get_transcript_statements {
 
     def chunk_message(message:str) -> str {
         if(self.max_statement_length > 0){
-            message_chunks = Utils.chunk_long_message(message=message, max_length=self.max_statement_length, chunk_length=self.max_statement_length);
+            message_chunks = chunk_long_message(message=message, max_length=self.max_statement_length, chunk_length=self.max_statement_length);
             if (len(message_chunks) > 1) {
                 message = message_chunks[0];
             }

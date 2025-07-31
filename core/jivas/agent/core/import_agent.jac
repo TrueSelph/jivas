@@ -8,7 +8,9 @@ import logging;
 import traceback;
 import from typing { Union }
 import from logging { Logger }
-import from jivas.agent.modules.agentlib.utils { Utils }
+
+import from jivas.agent.modules.action.path { find_package_folder }
+
 import from jvcli.api { RegistryAPI }
 import from jvcli.utils { is_version_compatible }
 import from jivas.agent.core.app { App }
@@ -178,7 +180,7 @@ walker import_agent {
         (namespace, package_name) = daf_name.split('/');
 
         # attempt to find the package locally, first...
-        if (package_path := Utils.find_package_folder(package_root, daf_name) ) {
+        if (package_path := find_package_folder(package_root, daf_name) ) {
 
             info_yaml_path = os.path.join(package_path, 'info.yaml');
 
@@ -236,7 +238,7 @@ walker import_agent {
             }
         }
 
-        if(safe_to_import and (package_path := Utils.find_package_folder(package_root, daf_name) )) {
+        if(safe_to_import and (package_path := find_package_folder(package_root, daf_name) )) {
 
             info_yaml_path = os.path.join(package_path, 'info.yaml');
             descriptor_yaml_path = os.path.join(package_path, 'descriptor.yaml');

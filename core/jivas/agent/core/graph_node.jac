@@ -1,7 +1,10 @@
 import inspect;
 import logging;
 import from logging { Logger }
-import from jivas.agent.modules.agentlib.utils { Utils }
+
+import from jivas.agent.modules.action.cleaning { clean_context }
+import from jivas.agent.modules.data.serialization { export_to_dict }
+
 import from typing { Optional, Type, Union, Any }
 import from dataclasses { fields, MISSING }
 
@@ -92,7 +95,7 @@ node GraphNode {
                 }
             }
 
-            node_export = Utils.export_to_dict(self, ignore_keys);
+            node_export = export_to_dict(self, ignore_keys);
             # we have to merge contents of _context into top-level dict; _context contains injected attributes
             if (isinstance(node_export['_context'], dict)) {
                 node_export.update(node_export['_context']);
@@ -100,13 +103,13 @@ node GraphNode {
                 del node_export['_context'];
             }
 
-            return Utils.clean_context(node_context=node_export, archetype_context=archetype_context, ignore_keys=ignore_keys);
+            return clean_context(node_context=node_export, archetype_context=archetype_context, ignore_keys=ignore_keys);
 
         } else {
             # set the keys to ignore
             ignore_keys = ignore_keys + self.transient_attrs;
             # convert the object to dictionary
-            node_export = Utils.export_to_dict(self, ignore_keys);
+            node_export = export_to_dict(self, ignore_keys);
             # we have to merge contents of _context into top-level dict; _context contains injected attributes
             if (isinstance(node_export['_context'], dict)) {
                 node_export.update(node_export['_context']);

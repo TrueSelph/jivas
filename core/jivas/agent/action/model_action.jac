@@ -3,7 +3,9 @@ import traceback;
 import from typing { Optional }
 import from logging { Logger }
 import from jivas.agent.action.action { Action }
-import from jivas.agent.modules.agentlib.utils { Utils }
+
+import from jivas.agent.modules.data.serialization { convert_str_to_json }
+
 import from jivas.agent.core.graph_node { GraphNode }
 
 node ModelAction(Action) {
@@ -125,7 +127,7 @@ obj ModelActionResult(GraphNode) {
 
     def get_json_result() {
         #  convert result to json and return it
-        if (json_result := Utils.convert_str_to_json(self.result)) {
+        if (json_result := convert_str_to_json(self.result)) {
             return json_result;
         } else {
             return {};

@@ -1,5 +1,7 @@
 import from datetime { datetime, timezone }
-import from jivas.agent.modules.agentlib.utils { Utils }
+
+import from jivas.agent.modules.system.common { node_obj }
+
 import from jivas.agent.memory.advance { Advance }
 import from jivas.agent.memory.retrace { Retrace }
 import from jivas.agent.memory.tail { Tail }
@@ -152,7 +154,7 @@ walker _advance_to_frame {
     can on_interaction with Interaction entry {
         visit [->:Advance:->] else {
             # we're at the end of the convo / last interaction, return retrace of Tail
-            self.frame_node = Utils.node_obj([<-:Tail:<-]);
+            self.frame_node = node_obj([<-:Tail:<-]);
         }
     }
 

@@ -2,7 +2,11 @@ import logging;
 import traceback;
 import os;
 import from logging { Logger }
-import from jivas.agent.modules.agentlib.utils { Utils }
+
+import from jivas.agent.modules.data.serialization { yaml_dumps }
+import from jivas.agent.modules.system.common { node_obj }
+import from jivas.agent.modules.text.formatting { to_snake_case }
+
 import from jivas.agent.core { graph_node, purge }
 import from jivas.agent.core.graph_node { GraphNode }
 import from jivas.agent.action.action { Action }
@@ -46,7 +50,7 @@ node Agent(GraphNode) {
     def get_memory() -> Memory {
         # returns a reference to the agent's memory node
 
-        memory_node = Utils.node_obj([-->](`?Memory));
+        memory_node = node_obj([-->](`?Memory));
 
         # Attach memory and actions node if not exists
         if (not memory_node) {
@@ -60,7 +64,7 @@ node Agent(GraphNode) {
     def get_actions() -> Actions {
         # returns a reference to the agent's actions node
 
-        actions_node = Utils.node_obj([-->](`?Actions));
+        actions_node = node_obj([-->](`?Actions));
 
         # Attach actions node if not exists
         if (not actions_node) {
@@ -262,7 +266,7 @@ node Agent(GraphNode) {
 
             # return as YAML
             if (as_yaml) {
-                return Utils.yaml_dumps(agent_data);
+                return yaml_dumps(agent_data);
             }
 
             return agent_data;
@@ -280,7 +284,7 @@ node Agent(GraphNode) {
         # prepares daf info struct based on agent descriptor
         daf_info = {
             "package": {
-                "name": self.meta.get('namespace', f'default/{Utils.to_snake_case(self.name)}'),
+                "name": self.meta.get('namespace', f'default/{to_snake_case(self.name)}'),
                 "author": self.meta.get('author', ''),
                 "version": self.meta.get('version', '0.0.1'),
                 "meta": {

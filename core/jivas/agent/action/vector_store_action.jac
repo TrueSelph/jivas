@@ -6,7 +6,9 @@ import traceback;
 import from typing { Any, Optional, Tuple, List, Dict, Union, Iterator }
 import from logging { Logger }
 import from jivas.agent.action.action { Action }
-import from jivas.agent.modules.agentlib.utils { Utils }
+
+import from jivas.agent.modules.data.serialization { yaml_dumps }
+
 import from jivas.agent.action.agent_graph_walker {agent_graph_walker}
 import from langchain_community.document_loaders { TextLoader }
 import from langchain_text_splitters { CharacterTextSplitter }
@@ -219,7 +221,7 @@ node VectorStoreAction(Action) {
             if as_json {
                 return json.dumps(knodes, indent=2);
             } else {
-                return Utils.yaml_dumps(knodes);
+                return yaml_dumps(knodes);
             }
 
         } except Exception as e {

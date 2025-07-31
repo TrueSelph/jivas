@@ -4,7 +4,9 @@ import from jivas.agent.action.agent_graph_walker { agent_graph_walker }
 import from jivas.agent.core.agent { Agent }
 import from jivas.agent.action.action { Action }
 import from jivas.agent.action.actions { Actions }
-import from jivas.agent.modules.agentlib.utils { Utils }
+
+import from jivas.agent.modules.data.serialization { yaml_dumps }
+
 import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 
 
@@ -26,7 +28,7 @@ walker export_daf(agent_graph_walker) {
 
         daf_name = here.meta.get('namespace', 'agent_daf');
         # prepare the daf info
-        daf_info_yaml = Utils.yaml_dumps( here.get_daf_info() );
+        daf_info_yaml = yaml_dumps( here.get_daf_info() );
         # prepare the agent descriptor
         daf_descriptor_yaml = here.get_descriptor(as_yaml=True, clean=self.clean);
 
@@ -44,7 +46,7 @@ walker export_daf(agent_graph_walker) {
         if(self.with_memory) {
             # prepare memory descriptor
             daf_memory_data = here.get_memory().export_memory();
-            if( daf_memory_yaml := Utils.yaml_dumps(daf_memory_data)) {
+            if( daf_memory_yaml := yaml_dumps(daf_memory_data)) {
                 daf_contents['memory.yaml'] = daf_memory_yaml;
             } else {
                 self.logger.error("Unable to export memory. It may be blank or there may be a YAML conversion issue.");

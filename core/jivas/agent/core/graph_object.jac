@@ -1,5 +1,7 @@
 import from typing { Optional, Any }
-import from jivas.agent.modules.agentlib.utils { Utils }
+
+import from jivas.agent.modules.data.serialization { export_to_dict }
+
 
 obj GraphObject {
     # base graph object to be used in JIVAS graph.
@@ -67,6 +69,6 @@ obj GraphObject {
 
     def export(ignore_keys: list = ["__jac__"]) -> dict {
         # returns a dictionary representation of the object
-        return Utils.export_to_dict(self, ignore_keys);
+        return export_to_dict(self, ignore_keys);
     }
 }

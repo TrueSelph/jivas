@@ -7,7 +7,9 @@ import from datetime { datetime }
 import logging;
 import traceback;
 import from logging { Logger }
-import from jivas.agent.modules.agentlib.utils { Utils }
+
+import from jivas.agent.modules.system.common { node_obj }
+
 import from jivas.agent.core.graph_node { GraphNode }
 import from jivas.agent.memory.frame { Frame }
 import from jivas.agent.memory.collection { Collection }
@@ -26,7 +28,7 @@ node Memory(GraphNode) {
         # attempt to retrieve an existing session or spawn then traverse to a new one if force is on
         # if lookup is on, it operates in search mode
 
-        frame_node = Utils.node_obj( [-->](`?Frame)(?session_id == session_id) );
+        frame_node = node_obj( [-->](`?Frame)(?session_id == session_id) );
 
         if not frame_node and not lookup {
             if(force_session) {
@@ -60,7 +62,7 @@ node Memory(GraphNode) {
     def get_collection(collection_name:str) -> Collection {
         # attempt to retrieve an existing collection or spawn then traverse to a new one if it doesnt exist
 
-        collection_node = Utils.node_obj( [-->](`?Collection)(?name == collection_name) );
+        collection_node = node_obj( [-->](`?Collection)(?name == collection_name) );
 
         if not collection_node {
             collection_node = Collection(name=collection_name);
@@ -176,7 +178,7 @@ node Memory(GraphNode) {
     }
 
     def get_agent() {
-        return Utils.node_obj([<--]);
+        return node_obj([<--]);
     }
 }
 

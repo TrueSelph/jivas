@@ -4,7 +4,9 @@ import from typing { Optional }
 import from logging { Logger }
 import from jivas.agent.core.app { App }
 import from jivas.agent.core.graph_node { GraphNode }
-import from jivas.agent.modules.agentlib.utils { Utils }
+
+import from jivas.agent.modules.data.serialization { export_to_dict }
+
 import from jac_cloud.core.archetype { NodeAnchor }
 
 walker graph_walker {
@@ -53,7 +55,7 @@ walker graph_walker {
 
     def export(ignore_keys: list = ['__jac__']) {
         # convert the object to dictionary
-        node_export = Utils.export_to_dict(self, ignore_keys);
+        node_export = export_to_dict(self, ignore_keys);
         return node_export;
     }
 

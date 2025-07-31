@@ -6,7 +6,10 @@ import logging;
 import traceback;
 import from typing { Optional }
 import from logging { Logger }
-import from jivas.agent.modules.agentlib.utils { Utils }
+
+import from jivas.agent.modules.text.chunking { chunk_long_message }
+import from jivas.agent.modules.text.formatting { clean_text }
+
 import from datetime { datetime, timezone, timedelta }
 import from jivas.agent.action.actions { Actions }
 import from jivas.agent.action.interact_action { InteractAction }
@@ -141,7 +144,7 @@ walker interact(agent_graph_walker) {
     def init_interaction(agent_node:Agent) -> bool {
 
         # sanitize utterance
-        self.utterance = Utils.clean_text(self.utterance);
+        self.utterance = clean_text(self.utterance);
 
         # validate channel specifier
         if not agent_node.has_channel(self.channel) {
@@ -227,7 +230,7 @@ walker interact(agent_graph_walker) {
     def is_valid_message_length(utterance: str, max_length: int) -> bool {
         # validates the acceptable length of a message
 
-        chunks = Utils.chunk_long_message(
+        chunks = chunk_long_message(
             message=utterance,
             max_length=max_length,
             chunk_length=max_length

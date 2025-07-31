@@ -15,7 +15,12 @@ import from typing { Union, Optional }
 import from logging { Logger }
 import from packaging.version { Version, parse as parse_version }
 import from packaging.specifiers { SpecifierSet }
-import from jivas.agent.modules.agentlib.utils { Utils }
+
+import from jivas.agent.modules.action.ordering { order_interact_actions }
+import from jivas.agent.modules.action.path { find_package_folder }
+import from jivas.agent.modules.action.path { path_to_module }
+import from jivas.agent.modules.system.common { get_jivas_version }
+
 import from jvcli.api { RegistryAPI }
 import from jvcli.utils { is_version_compatible }
 import from jaclang { JacMachine }
@@ -123,7 +128,7 @@ node Actions(GraphNode) {
 
     def :priv get_local_action_info(namespace_package_name: str, version: str) -> dict {
         #* Helper to get action info from local filesystem *#
-        if not (package_path := Utils.find_package_folder(self.get_actions_root(), namespace_package_name)) {
+        if not (package_path := find_package_folder(self.get_actions_root(), namespace_package_name)) {
             return {};
         }
 
@@ -135,7 +140,7 @@ node Actions(GraphNode) {
 
                 if is_version_compatible(package_version, version) {
                     self.logger.info(f'{namespace_package_name} {package_version} loaded locally');
-                    module_root = Utils.path_to_module(package_path);
+                    module_root = path_to_module(package_path);
                     has_app = os.path.isfile(os.path.join(package_path, 'app', 'app.py'));
 
                     action_info = _info['package'];
@@ -586,7 +591,7 @@ node Actions(GraphNode) {
         namespace_package_name = package.get('name');
         package_version = context.get('version', '~0.0.1');
         required_jivas_version = package.get('dependencies', {}).get('jivas');
-        jivas_version = Utils.get_jivas_version();
+        jivas_version = get_jivas_version();
 
         # Version check
         if not is_version_compatible(jivas_version, required_jivas_version) {
@@ -709,7 +714,7 @@ node Actions(GraphNode) {
 
         # Return ordered list
         try {
-            return Utils.order_interact_actions(loaded_actions);
+            return order_interact_actions(loaded_actions);
         } except Exception as e {
             self.logger.error('Dependency conflict detected - loading unordered actions');
             return loaded_actions;
