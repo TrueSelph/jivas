@@ -22,7 +22,9 @@ jobs:
           python-version: 3.12
 
       - name: Install dependencies
-        run: pip install .[dev]
+        run: |
+          pip install ../jvcli ../jvserve ../jvclient
+          pip install .[dev]
 
       - name: Run tests
         run: pytest

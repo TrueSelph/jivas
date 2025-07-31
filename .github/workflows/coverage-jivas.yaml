@@ -22,7 +22,7 @@ jobs:
         working-directory: ./core
         run: |
           pip install --upgrade pip
-          pip install ../jvcli
+          pip install ../jvcli ../jvserve ../jvclient
           pip install -e .[dev]
 
       - name: Run Pytest with Coverage

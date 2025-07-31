@@ -69,7 +69,9 @@ jobs:
           python -m pip install --upgrade pip setuptools wheel twine
 
       - name: Install dependencies
-        run: pip install .[dev]
+        run: |
+          pip install ../jvcli ../jvserve ../jvclient
+          pip install .[dev]
 
       - name: Transpile jac code to python
         run: |
