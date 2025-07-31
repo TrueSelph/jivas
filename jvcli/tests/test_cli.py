@@ -21,7 +21,7 @@ class TestCli:
         assert "download" in result.output
         assert "publish" in result.output
         assert "info" in result.output
-        assert "graph" in result.output
+        assert "server" in result.output
         assert "signup" in result.output
         assert "login" in result.output
         assert "logout" in result.output
