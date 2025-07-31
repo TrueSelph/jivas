@@ -3,7 +3,6 @@
 import json
 from enum import Enum
 
-
 from jivas.agent.modules.data.serialization import (
     convert_str_to_json,
     export_to_dict,

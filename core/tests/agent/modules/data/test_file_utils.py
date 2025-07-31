@@ -1,10 +1,10 @@
 """Comprehensive tests for file_utils module with descriptive scenario names"""
 
-import unittest
-from unittest.mock import patch, MagicMock
-import sys
-import os
 import importlib
+import os
+import sys
+import unittest
+from unittest.mock import MagicMock, patch
 
 
 class TestFileUtilsEnvironmentVariableBasedSelection(unittest.TestCase):
@@ -85,8 +85,8 @@ class TestFileUtilsImportTimeInitialization(unittest.TestCase):
         """Test behavior when module is already imported and initialized"""
         # Import normally to see the default behavior
         from jivas.agent.modules.data.file_utils import (
-            jvdata_file_interface,
             file_interface,
+            jvdata_file_interface,
         )
 
         print(f"DEBUG: jvdata_file_interface type: {type(jvdata_file_interface)}")
@@ -256,9 +256,9 @@ class TestFileUtilsActualBehaviorDocumentation(unittest.TestCase):
     def test_document_current_file_interface_setup(self) -> None:
         """Document how the file interfaces are currently set up"""
         from jivas.agent.modules.data.file_utils import (
-            jvdata_file_interface,
             file_interface,
             get_file_interface,
+            jvdata_file_interface,
         )
 
         print("\n=== CURRENT FILE_UTILS BEHAVIOR ===")
@@ -291,8 +291,8 @@ class TestFileUtilsActualBehaviorDocumentation(unittest.TestCase):
     def test_verify_file_interface_functionality(self) -> None:
         """Test that the file interfaces have expected functionality"""
         from jivas.agent.modules.data.file_utils import (
-            jvdata_file_interface,
             get_file_interface,
+            jvdata_file_interface,
         )
 
         # Test that interfaces have common file interface methods

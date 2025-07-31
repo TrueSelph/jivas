@@ -1,8 +1,8 @@
 """Test cases for mime_types module"""
 
 import unittest
-from unittest.mock import Mock, patch
 from typing import Dict, Optional
+from unittest.mock import Mock, patch
 
 from jivas.agent.modules.data.mime_types import get_mime_type
 
