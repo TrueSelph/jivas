@@ -1,7 +1,11 @@
+"""Test utilities for jvclient."""
+
+from pathlib import Path
+
 import pytest
 
 
-def test_load_function_success(tmp_path):
+def test_load_function_success(tmp_path: Path) -> None:
     """Test successful loading of a function from a Python file."""
     from jvclient.lib.utils import load_function
 
@@ -22,7 +26,7 @@ def test_func(x, y=10):
     assert func(5, y=20) == 25
 
 
-def test_load_function_file_not_found():
+def test_load_function_file_not_found() -> None:
     """Test FileNotFoundError when file doesn't exist."""
     from jvclient.lib.utils import load_function
 
@@ -30,12 +34,14 @@ def test_load_function_file_not_found():
         load_function("nonexistent.py", "test_func")
 
 
-def test_decode_base64_image():
+def test_decode_base64_image() -> None:
     """Test decoding a base64 string into an image."""
-    from jvclient.lib.utils import decode_base64_image
     import base64
-    from PIL import Image
     from io import BytesIO
+
+    from PIL import Image
+
+    from jvclient.lib.utils import decode_base64_image
 
     # Create a simple test image
     test_image = Image.new("RGB", (10, 10), color="red")
@@ -52,7 +58,7 @@ def test_decode_base64_image():
     assert decoded_image.size == (10, 10)
 
 
-def test_jac_yaml_dumper():
+def test_jac_yaml_dumper() -> None:
     """Test YAML dumper with long strings."""
     from jvclient.lib.utils import jac_yaml_dumper
 
@@ -68,10 +74,11 @@ def test_jac_yaml_dumper():
     assert "|" in result  # Should use block style for long strings
 
 
-def test_get_user_info():
+def test_get_user_info() -> None:
     """Test getting user info from session state."""
-    from jvclient.lib.utils import get_user_info
     import streamlit as st
+
+    from jvclient.lib.utils import get_user_info
 
     # Mock session state
     st.session_state.ROOT_ID = "test_root"

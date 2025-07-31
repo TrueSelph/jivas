@@ -2,8 +2,9 @@
 
 import json
 
-from jivas.agent.modules.embeddings.jivas_embeddings import JivasEmbeddings
 from pytest_mock import MockerFixture
+
+from jivas.agent.modules.embeddings.jivas_embeddings import JivasEmbeddings
 
 
 class TestJivasEmbeddings:

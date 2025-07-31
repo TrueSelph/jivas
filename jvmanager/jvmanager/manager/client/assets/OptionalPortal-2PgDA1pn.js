@@ -15,23 +15,23 @@ import{a as o}from"./chunk-QMGIS6GS-CBZUm-7V.js";import{j as x}from"./jsx-runtim
     margin-right: `).concat(i,"px ").concat(n,`;
     `),r==="padding"&&"padding-right: ".concat(i,"px ").concat(n,";")].filter(Boolean).join(""),`
   }
-  
+
   .`).concat(B,` {
     right: `).concat(i,"px ").concat(n,`;
   }
-  
+
   .`).concat(A,` {
     margin-right: `).concat(i,"px ").concat(n,`;
   }
-  
+
   .`).concat(B," .").concat(B,` {
     right: 0 `).concat(n,`;
   }
-  
+
   .`).concat(A," .").concat(A,` {
     margin-right: 0 `).concat(n,`;
   }
-  
+
   body[`).concat(M,`] {
     `).concat(le,": ").concat(i,`px;
   }
