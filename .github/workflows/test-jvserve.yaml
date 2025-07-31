@@ -1,4 +1,4 @@
-name: Running jvcli test cases
+name: Running jvserve test cases
 
 on:
   pull_request:

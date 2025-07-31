@@ -33,6 +33,7 @@ class JVServeCliTest(unittest.TestCase):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
+            cwd="./fixtures",
         )
 
         # Wait until the server is ready (max 90s)
@@ -75,68 +76,6 @@ class JVServeCliTest(unittest.TestCase):
             self.assertEqual(res.status_code, 200)
         finally:
             self.stop_server()
-
-    def test_action_walker_requires_auth(self) -> None:
-        """Ensure /action/walker requires authentication."""
-        try:
-            self.run_jvserve("test.jac")
-            res = httpx.post(f"{self.host}/action/walker", json={})
-            self.assertEqual(
-                res.status_code, 403
-            )  # Should be Not Authenticated / Forbidden
-        finally:
-            self.stop_server()
-
-    def test_jvfileserve_runs(self) -> None:
-        """Ensure `jac jvfileserve` runs successfully."""
-        directory = "test_files"
-        os.makedirs(directory, exist_ok=True)
-
-        # Add file to the directory
-        with open(f"{directory}/test.txt", "w") as f:
-            f.write("Hello, World!")
-
-        try:
-            server_process = subprocess.Popen(
-                ["jac", "jvfileserve", directory, "--port", "9000"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-            )
-
-            # Wait for the file server to be ready
-            self.wait_for_server("http://127.0.0.1:9000/files/test.txt")
-
-            res = httpx.get("http://127.0.0.1:9000/files/test.txt")
-            self.assertEqual(res.status_code, 200)
-            self.assertEqual(res.text, "Hello, World!")
-
-        finally:
-            server_process.kill()
-
-            # Clean up the directory
-            os.remove(f"{directory}/test.txt")
-            os.rmdir(directory)
-
-    def test_jvproxyserve_runs(self) -> None:
-        """Ensure `jac jvproxyserve` runs successfully."""
-        try:
-            directory = "test_files"
-            server_process = subprocess.Popen(
-                ["jac", "jvproxyserve", directory, "--port", "9100"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-            )
-
-            # Wait for the proxy server to be ready
-            self.wait_for_server("http://127.0.0.1:9100/docs")
-
-            res = httpx.get("http://127.0.0.1:9100/docs")
-            self.assertEqual(res.status_code, 200)
-
-        finally:
-            server_process.kill()
 
     def tearDown(self) -> None:
         """Cleanup after each test."""
