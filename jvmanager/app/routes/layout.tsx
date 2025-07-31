@@ -35,11 +35,13 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 					if (res.ok) {
 						return res.json();
 					} else {
+						localStorage.removeItem("jivas-agent");
 						throw redirect("/login");
 					}
 				})
 				.catch((err) => {
 					console.log({ err });
+					localStorage.removeItem("jivas-agent");
 					throw redirect("/login");
 				})) as { reports: Agent[] })
 		: null;

@@ -3,6 +3,7 @@
 import os
 
 from setuptools import find_packages, setup
+from jvclient import __version__
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
@@ -21,7 +22,7 @@ def get_version() -> str:
 
 setup(
     name="jvclient",
-    version=get_version(),
+    version=__version__,
     description="JIVAS client library for action development.",
     long_description=long_description,
     long_description_content_type="text/markdown",

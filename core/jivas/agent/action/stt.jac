@@ -4,14 +4,15 @@ import from jivas.agent.core.agents { Agents }
 import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 import from fastapi { UploadFile }
 import from jivas.agent.action.agent_graph_walker { agent_graph_walker }
+import asyncio;
 
 walker stt(agent_graph_walker) {
-
     has file: UploadFile;
 
     obj __specs__ {
         static has private: bool = False;
         static has path: str = "{agent_id}";
+        static has auth: bool = False;
     }
 
     can on_agent with Agent entry {
@@ -30,16 +31,24 @@ walker stt(agent_graph_walker) {
             disengage;
         }
 
-        if 'audio' not in self.file.type or self.file.type != "application/octet-stream" {
+        if 'audio' not in self.file.content_type  {
             Jac.get_context().status = 400;
             report "Invalid file type, must be audio";
             disengage;
         }
 
-        result = stt_action.invoke_file(
-            audio_content=self.file.content,
-            audio_type=self.file.type
-        );
+        loop = asyncio.new_event_loop();
+
+        try {
+	        result = stt_action.invoke_file(
+	        	audio_content=loop.run_until_complete(self.file.read()),
+	            audio_type=self.file.content_type
+	        );
+        } except Exception as e {
+        	self.logger.error(f"Unable to process audio file: {str(e)}");
+        } finally {
+	        loop.close();
+		}
 
         if not isinstance(result, dict) or 'duration' not in result or 'transcript' not in result {
             Jac.get_context().status = 500;

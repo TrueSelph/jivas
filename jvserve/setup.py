@@ -3,6 +3,7 @@
 import os
 
 from setuptools import find_packages, setup
+from jvserve import __version__
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
@@ -21,7 +22,7 @@ def get_version() -> str:
 
 setup(
     name="jvserve",
-    version=get_version(),
+    version=__version__,
     description="FastAPI webserver for loading and interaction with JIVAS agents.",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -40,8 +41,6 @@ setup(
     python_requires=">=3.12.0",
     install_requires=[
         "jac-cloud@git+https://github.com/Jaseci-Labs/jaseci.git@main#subdirectory=jac-cloud&egg=jaclang",
-        # "jaclang@git+https://github.com/Jaseci-Labs/jaseci.git@feature/hot-reload#subdirectory=jac&egg=jaclang",
-        # "jac-cloud==0.2.4",
         "jaclang==0.8.4",
         "pyaml>=25.1.0",
         "requests>=2.32.3",
