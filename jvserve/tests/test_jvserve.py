@@ -1,6 +1,7 @@
 """Test case for the Jac CLI commands."""
 
 import os
+import signal
 import subprocess
 import unittest
 from contextlib import suppress
@@ -21,7 +22,7 @@ class JVServeCliTest(unittest.TestCase):
     def run_jvserve(self, filename: str, max_wait: int = 90) -> None:
         """Run jvserve in a subprocess and wait until it's available."""
         # Ensure any process running on port 8000 is terminated
-        subprocess.run(["fuser", "-k", "8000/tcp"], capture_output=True, text=True)
+        self.kill_process_on_port(8000)
 
         # Create a temporary .jac file for testing
         with open(filename, "w") as f:
@@ -47,7 +48,7 @@ class JVServeCliTest(unittest.TestCase):
     def stop_server(self) -> None:
         """Stop the running server."""
         if self.server_process:
-            self.server_process.kill()
+            self.kill_process_on_port(8000)
 
     def wait_for_server(self, url: str, max_wait: int = 90) -> None:
         """Wait for the server to be available, checking every second."""
@@ -82,6 +83,38 @@ class JVServeCliTest(unittest.TestCase):
         self.stop_server()
         with suppress(FileNotFoundError):
             os.remove("test.jac")
+
+    def kill_process_on_port(self, port: int = 8000) -> bool:
+        """Kill any process running on the specified port."""
+        try:
+            # Find the PID of the process using the port
+            result = subprocess.run(
+                ["lsof", "-i", f":{port}", "-t"], capture_output=True, text=True
+            )
+            pids = result.stdout.strip().split("\n")
+
+            if not pids or pids[0] == "":
+                print(f"No process found running on port {port}.")
+                return False
+
+            # Kill each process found
+            for pid in pids:
+                if pid:
+                    try:
+                        os.kill(int(pid), signal.SIGKILL)  # Force kill
+                        print(
+                            f"Successfully killed process {pid} running on port {port}."
+                        )
+                    except ProcessLookupError:
+                        print(f"Process {pid} not found (may have already exited).")
+                    except PermissionError:
+                        print(
+                            f"Permission denied: Cannot kill process {pid}. Try running with sudo."
+                        )
+            return True
+        except Exception as e:
+            print(f"Error killing process on port {port}: {e}")
+            return False
 
 
 if __name__ == "__main__":
