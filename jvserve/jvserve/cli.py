@@ -15,7 +15,6 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
-from fastapi.staticfiles import StaticFiles
 from jac_cloud.core.context import JaseciContext
 from jac_cloud.jaseci.main import FastAPI as JaseciFastAPI  # type: ignore
 from jac_cloud.plugin.jaseci import NodeAnchor
@@ -175,28 +174,19 @@ def run_jivas(filename: str, host: str = "localhost", port: int = 8000) -> None:
         allow_headers=["*"],
     )
 
-    # Setup local file serving
+    # Ensure the local file directory exists if that's the interface
     if FILE_INTERFACE == "local":
         directory = os.environ.get("JIVAS_FILES_ROOT_PATH", DEFAULT_FILES_ROOT)
         if not os.path.exists(directory):
-            os.makedirs(directory)
-        app.mount(
-            "/files",
-            StaticFiles(directory=directory),
-            name="files",
-        )
+            os.makedirs(directory, exist_ok=True)
 
-    # Setup S3 proxy endpoints
-    if FILE_INTERFACE == "s3":
-
-        @app.get("/files/{file_path:path}", response_model=None)
-        async def serve_file(
-            file_path: str,
-        ) -> FileResponse | StreamingResponse | Response:
-            descriptor_path = os.environ.get("JIVAS_DESCRIPTOR_ROOT_PATH")
-            if descriptor_path and descriptor_path in file_path:
-                return Response(status_code=403)
-            return await serve_proxied_file(file_path)
+    # Setup file serving endpoint for both local and S3
+    @app.get("/files/{file_path:path}", response_model=None)
+    async def serve_file(
+        file_path: str,
+    ) -> FileResponse | StreamingResponse | Response:
+        # The serve_proxied_file function already handles both local and S3 cases
+        return await serve_proxied_file(file_path)
 
     # Setup URL proxy endpoint
     @app.get("/f/{file_id:path}", response_model=None)

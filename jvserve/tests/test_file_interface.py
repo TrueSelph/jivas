@@ -39,7 +39,7 @@ class TestFileInterface(unittest.TestCase):
         self.assertIsNone(interface.get_file("nonexistent.txt"))
 
         # Test get_file_url
-        expected_url = f"http://localhost:9000/files/{self.test_filename}"
+        expected_url = f"http://localhost:8000/files/{self.test_filename}"
         self.assertEqual(interface.get_file_url(self.test_filename), expected_url)
         self.assertIsNone(interface.get_file_url("nonexistent.txt"))
 

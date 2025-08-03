@@ -15,7 +15,10 @@ class LongStringDumper(yaml.SafeDumper):
     """Custom YAML dumper to handle long strings."""
 
     def represent_scalar(
-        self, tag: str, value: str, style: Optional[str] = None
+        self,
+        tag: str,
+        value: str,
+        style: Optional[str] = None,
     ) -> yaml.nodes.ScalarNode:
         """Represent scalar values in YAML."""
         # Replace any escape sequences to format the output as desired
@@ -49,13 +52,14 @@ def make_serializable(obj: Any) -> Any:
 
 
 def export_to_dict(
-    data: object | dict, ignore_keys: Optional[List[str]] = None
+    data: object | dict,
+    ignore_keys: Optional[List[str]] = None,
 ) -> dict:
     """Export an object to a dictionary, ignoring specified keys and handling cycles.
 
     Args:
         data: The object or dictionary to serialize.
-        ignore_keys: Keys to exclude from serialization (default: ["__jac__"]).
+        ignore_keys: Keys to exclude from serialization (default: ["__jac__"])
 
     Returns:
         A dictionary representation of the input.
@@ -151,7 +155,7 @@ def safe_json_dump(data: dict) -> Optional[str]:
 
 
 def convert_str_to_json(
-    text: Union[str, Dict[Any, Any], List[Any]]
+    text: Union[str, Dict[Any, Any], List[Any]],
 ) -> Optional[Dict[Any, Any]]:
     """Convert a string to a JSON object."""
     if isinstance(text, str):

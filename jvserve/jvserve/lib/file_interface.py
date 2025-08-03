@@ -78,7 +78,7 @@ class LocalFileInterface(FileInterface):
         """Get URL for accessing local file via HTTP."""
         file_path = os.path.join(self.__root_dir, filename)
         if os.path.exists(file_path):
-            return f"{os.environ.get('JIVAS_FILES_URL', 'http://localhost:9000/files')}/{filename}"
+            return f"{os.environ.get('JIVAS_FILES_URL', 'http://localhost:8000/files')}/{filename}"
         return None
 
 
