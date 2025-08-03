@@ -141,6 +141,27 @@ class TestCleanAction(unittest.TestCase):
 
         self.assertFalse(result)
 
+    def test_clean_action_default_root_path(self) -> None:
+        """Test clean_action with the default root path."""
+        # Unset the environment variable to test the default path
+        if "JIVAS_ACTIONS_ROOT_PATH" in os.environ:
+            del os.environ["JIVAS_ACTIONS_ROOT_PATH"]
+
+        # Create a dummy actions folder in the current directory
+        default_actions_root = os.path.join(os.getcwd(), "actions")
+        os.makedirs(default_actions_root, exist_ok=True)
+
+        namespace_package = "test_namespace/test_action"
+        action_path = os.path.join(default_actions_root, namespace_package)
+        os.makedirs(action_path, exist_ok=True)
+
+        result = clean_action(namespace_package)
+        self.assertTrue(result)
+        self.assertFalse(os.path.exists(action_path))
+
+        # Clean up the dummy folder
+        shutil.rmtree(default_actions_root)
+
 
 class TestCleanContext(unittest.TestCase):
     """Test cases for the clean_context function."""

@@ -92,6 +92,11 @@ class TestParseConditionString:
         result = parse_condition_string("user.profile-name = test")
         assert result == ["user.profile-name", "=", "test"]
 
+    def test_parse_not_in_empty_list(self) -> None:
+        """Test parsing a not in empty list condition."""
+        result = parse_condition_string("status: ![]")
+        assert result == ["status", "![]", []]
+
 
 class TestEvaluateSingleCondition:
     """Test the evaluate_single_condition function."""
@@ -180,6 +185,10 @@ class TestEvaluateSingleCondition:
         condition = ["missing_field", "!=", "value"]
         assert evaluate_single_condition(condition, responses) is True
 
+        # Special case: ![] operator returns True for missing fields
+        condition = ["missing_field", "![]", ["value"]]  # type: ignore
+        assert evaluate_single_condition(condition, responses) is True
+
     def test_evaluate_invalid_condition_structure(self) -> None:
         """Test evaluating invalid condition structures."""
         responses = {"field": "value"}
@@ -200,10 +209,34 @@ class TestEvaluateSingleCondition:
     def test_evaluate_invalid_range_value(self) -> None:
         """Test handling invalid range values."""
         responses = {"field": "25"}
-        condition = ["field", "[..]", ["invalid"]]  # Wrong list length
+        condition = ["field", "[..]", ["invalid"]]  # type: ignore
         assert evaluate_single_condition(condition, responses) is False
 
-        condition = ["field", "[..]", "not_a_list"]  # Not a list
+        condition = ["field", "[..]", "not_a_list"]  # type: ignore
+        assert evaluate_single_condition(condition, responses) is False
+
+    def test_evaluate_in_list_with_non_list_value(self) -> None:
+        """Test evaluating in list with a non-list expected value."""
+        responses = {"field": "value"}
+        condition = ["field", "[]", "not_a_list"]  # type: ignore
+        assert evaluate_single_condition(condition, responses) is False
+
+    def test_evaluate_not_in_list_with_non_list_value(self) -> None:
+        """Test evaluating not in list with a non-list expected value."""
+        responses = {"field": "value"}
+        condition = ["field", "![]", "not_a_list"]  # type: ignore
+        assert evaluate_single_condition(condition, responses) is True
+
+    def test_evaluate_invalid_field_name(self) -> None:
+        """Test evaluating a condition with an invalid field name."""
+        responses = {"field": "value"}
+        condition = [123, "=", "value"]  # type: ignore
+        assert evaluate_single_condition(condition, responses) is False
+
+    def test_evaluate_unhandled_operator(self) -> None:
+        """Test evaluating a condition with an unhandled operator."""
+        responses = {"field": "value"}
+        condition = ["field", "??", "value"]
         assert evaluate_single_condition(condition, responses) is False
 
 
@@ -317,6 +350,12 @@ class TestEvaluateConditionalExpression:
         responses = {"field": "value"}
 
         expr = "invalid condition format"
+        assert evaluate_conditional_expression(expr, responses) is False
+
+    def test_evaluate_simple_condition_parse_failure(self) -> None:
+        """Test a simple condition that fails to parse."""
+        responses: Dict[str, Any] = {}
+        expr = "a b c"
         assert evaluate_conditional_expression(expr, responses) is False
 
     def test_evaluate_whitespace_handling(self) -> None:
