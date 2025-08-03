@@ -109,6 +109,9 @@ def export_to_dict(
 
 def safe_json_dump(data: dict) -> Optional[str]:
     """Safely convert a dictionary with mixed types to a JSON string for logs."""
+    if not isinstance(data, dict):
+        logger.error("Input to safe_json_dump must be a dictionary.")
+        return None
 
     def serialize(obj: dict) -> dict:
         """Recursively convert strings within complex objects."""
