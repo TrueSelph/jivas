@@ -212,6 +212,51 @@ class TestOrderInteractActions(unittest.TestCase):
         result = order_interact_actions(actions)
         self.assert_order(result, ["ns1/action2", "ns1/action1"])
 
+    def test_before_and_after_constraints(self) -> None:
+        """Test an action with both before and after constraints."""
+        actions = [
+            self.create_action("test/action1"),
+            self.create_action(
+                "test/action2",
+                order_config={"after": "action1", "before": "action3"},
+            ),
+            self.create_action("test/action3"),
+        ]
+        result = order_interact_actions(actions)
+        self.assert_order(result, ["test/action1", "test/action2", "test/action3"])
+
+    def test_multiple_before_all(self) -> None:
+        """Test multiple actions with before:all constraint."""
+        actions = [
+            self.create_action("test/action1", order_config={"before": "all"}),
+            self.create_action("test/action2"),
+            self.create_action("test/action3", order_config={"before": "all"}),
+        ]
+        result = order_interact_actions(actions)
+        # action1 and action3 should come first, in their original order.
+        self.assert_order(result, ["test/action1", "test/action3", "test/action2"])
+
+    def test_multiple_after_all(self) -> None:
+        """Test multiple actions with after:all constraint."""
+        actions = [
+            self.create_action("test/action1", order_config={"after": "all"}),
+            self.create_action("test/action2"),
+            self.create_action("test/action3", order_config={"after": "all"}),
+        ]
+        result = order_interact_actions(actions)
+        # action1 and action3 should come last, in their original order.
+        self.assert_order(result, ["test/action2", "test/action1", "test/action3"])
+
+    def test_mixed_fixed_weights_and_dependencies(self) -> None:
+        """Test a mix of fixed-weight actions and dependency constraints."""
+        actions = [
+            self.create_action("test/action1", weight=10),
+            self.create_action("test/action2", order_config={"after": "action3"}),
+            self.create_action("test/action3"),
+        ]
+        result = order_interact_actions(actions)
+        self.assert_order(result, ["test/action1", "test/action3", "test/action2"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -21,8 +21,7 @@ class TestFormatting(unittest.TestCase):
         self.assertEqual(list_to_phrase([]), "")
         self.assertEqual(list_to_phrase(["one"]), "one")
         self.assertEqual(list_to_phrase(["one", "two"]), "one, and two")
-        self.assertEqual(
-            list_to_phrase(["one", "two", "three"]), "one, two, and three")
+        self.assertEqual(list_to_phrase(["one", "two", "three"]), "one, two, and three")
         self.assertEqual(list_to_phrase([1, "two", True]), "1, two, and True")
 
     def test_replace_placeholders(self) -> None:
@@ -30,7 +29,8 @@ class TestFormatting(unittest.TestCase):
         placeholders = {"name": "John", "items": ["apples", "oranges"]}
         # Test with a single string
         self.assertEqual(
-            replace_placeholders("Hello, {{name}}!", placeholders), "Hello, John!")
+            replace_placeholders("Hello, {{name}}!", placeholders), "Hello, John!"
+        )
         # Test with a list of strings
         self.assertEqual(
             replace_placeholders(
@@ -73,12 +73,9 @@ class TestFormatting(unittest.TestCase):
         self.assertEqual(
             to_snake_case("  leading and trailing  "), "leading_and_trailing"
         )
-        self.assertEqual(
-            to_snake_case("multiple__underscores"), "multiple_underscores"
-        )
+        self.assertEqual(to_snake_case("multiple__underscores"), "multiple_underscores")
         self.assertEqual(to_snake_case("non-ascii: éàç"), "non_ascii_eac")
-        self.assertEqual(
-            to_snake_case("non-ascii: éàç", ascii_only=False), "non_ascii")
+        self.assertEqual(to_snake_case("non-ascii: éàç", ascii_only=False), "non_ascii")
 
     def test_clean_text(self) -> None:
         """Test clean_text with various inputs."""

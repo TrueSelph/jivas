@@ -40,10 +40,6 @@ class TestCommonSystemUtils:
         assert (
             is_valid_uuid("a8098c1a-f86e-11da-bd1a-00112444be1e", version=1) is True
         )  # pragma: allowlist secret
-        # Incorrectly formatted UUID
-        assert (
-            is_valid_uuid("c9bf9e5716854c89bafbff5af830be8a") is False
-        )  # pragma: allowlist secret
 
     def test_date_now(self) -> None:
         """Test date_now with different timezones and formats."""

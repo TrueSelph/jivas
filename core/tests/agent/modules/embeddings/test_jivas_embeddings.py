@@ -1,6 +1,7 @@
 """Tests for jivas.agent.modules.embeddings.jivas_embeddings."""
 
 import json
+from unittest.mock import call
 
 from pytest_mock import MockerFixture
 
@@ -79,6 +80,29 @@ class TestJivasEmbeddings:
         # Assert
         assert result == "This is a long text"
 
+    def test_trim_text_if_needed_exact_limit(self, mocker: MockerFixture) -> None:
+        """Test that trim_text_if_needed does not trim text at the token limit."""
+        # Arrange
+        mock_tokenizer = mocker.patch("transformers.AutoTokenizer.from_pretrained")
+        mock_tokenizer_instance = mock_tokenizer.return_value
+        mock_tokenizer_instance.model_max_length = 5
+        mock_tokenizer_instance.return_tensors = "pt"
+        mock_tokenizer_instance.side_effect = lambda text, return_tensors: {
+            "input_ids": [[1, 2, 3, 4, 5]]
+        }
+        mock_tokenizer_instance.decode.return_value = "exact length text"
+
+        jivas_embeddings = JivasEmbeddings(
+            base_url="http://example.com",
+            api_key="dummy_key",  # pragma: allowlist secret
+        )
+
+        # Act
+        result = jivas_embeddings.trim_text_if_needed("exact length text")
+
+        # Assert
+        assert result == "exact length text"
+
     def test_embed_documents_success(self, mocker: MockerFixture) -> None:
         """Test that embed_documents successfully embeds documents and returns embeddings."""
 
@@ -117,27 +141,24 @@ class TestJivasEmbeddings:
         )
         mock_instance.embeddings.create.return_value = mock_response
 
-        mock_tokenizer = mocker.patch("transformers.AutoTokenizer.from_pretrained")
-        mock_tokenizer_instance = mock_tokenizer.return_value
-        mock_tokenizer_instance.return_tensors = "pt"
-        mock_tokenizer_instance.side_effect = lambda text, return_tensors: {
-            "input_ids": [[1, 2, 3, 4, 5, 6, 7]]
-        }
-        mock_tokenizer_instance.model_max_length = 5
-        mock_tokenizer_instance.decode.return_value = "trimmed text"
-
         jivas_embeddings = JivasEmbeddings(
             base_url="http://example.com",
             api_key="dummy_key",  # pragma: allowlist secret
         )
+        mocker.patch.object(
+            jivas_embeddings, "trim_text_if_needed", return_value="trimmed"
+        )
 
         # Act
         result = jivas_embeddings.embed_documents(
-            ["This is a long text that needs trimming"], handle_overflow=True
+            ["long text1", "long text2"], handle_overflow=True
         )
 
         # Assert
         assert result == [[0.1, 0.2, 0.3]]
+        jivas_embeddings.trim_text_if_needed.assert_has_calls(
+            [call("long text1"), call("long text2")]
+        )
 
     def test_embed_documents_handles_exception(self, mocker: MockerFixture) -> None:
         """Test that embed_documents handles exceptions and returns an empty list."""
@@ -237,6 +258,28 @@ class TestJivasEmbeddings:
 
         # Act
         result = jivas_embeddings.embed_query("test text")
+
+        # Assert
+        assert result == []
+
+    def test_embed_query_api_returns_empty(self, mocker: MockerFixture) -> None:
+        """Test embed_query when the API returns an empty list."""
+        # Arrange
+        mock_client = mocker.patch(
+            "jivas.agent.modules.embeddings.jivas_embeddings.OpenAI"
+        )
+        mock_instance = mock_client.return_value
+        mock_response = mocker.Mock()
+        mock_response.json.return_value = json.dumps({"data": []})
+        mock_instance.embeddings.create.return_value = mock_response
+
+        jivas_embeddings = JivasEmbeddings(
+            base_url="http://example.com",
+            api_key="dummy_key",  # pragma: allowlist secret
+        )
+
+        # Act
+        result = jivas_embeddings.embed_query("test query")
 
         # Assert
         assert result == []
