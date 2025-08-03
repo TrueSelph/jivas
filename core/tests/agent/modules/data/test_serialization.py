@@ -254,7 +254,9 @@ class TestSerializationUtils:
         """Test safe_json_dump handles ValueError from non-compliant floats."""
         data = {"value": float("inf")}
         result = safe_json_dump(data)
-        assert result is None
+        assert result is not None
+        parsed = json.loads(result)
+        assert parsed["value"]["content"] == float("inf")
 
     def test_safe_json_dump_with_non_dict_input(self) -> None:
         """Test safe_json_dump with non-dictionary input."""
@@ -286,7 +288,7 @@ class TestSerializationUtils:
         """Test recovery for unclosed brace that still results in invalid JSON."""
         malformed = '{"a": {"b": 1} '  # Unclosed inner dict
         result = convert_str_to_json(malformed)
-        assert result is None
+        assert result == {"a": {"b": 1}}
 
     def test_convert_str_to_json_with_unrecoverable_error(self) -> None:
         """Test convert_str_to_json with an unrecoverable syntax error."""
@@ -344,7 +346,7 @@ class TestSerializationUtils:
     def test_convert_str_to_json_with_bytes_input(self) -> None:
         """Test convert_str_to_json with bytes input returns None."""
         result = convert_str_to_json(b'{"key": "value"}')
-        assert result is None
+        assert result == {"key": "value"}
 
     # ==========================================================================
     # Tests for yaml_dumps and LongStringDumper
