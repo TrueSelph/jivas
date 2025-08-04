@@ -28,7 +28,13 @@ class TestCreateCommand:
 
         runner = CliRunner()
         result = runner.invoke(
-            create_action, ["--name", "test_action", __supported__jivas__versions__[0]]
+            create_action,
+            [
+                "--name",
+                "test_action",
+                "--jivas_version",
+                __supported__jivas__versions__[0],
+            ],
         )
 
         assert result.exit_code == 0
