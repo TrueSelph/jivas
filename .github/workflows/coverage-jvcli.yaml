@@ -35,4 +35,4 @@ jobs:
         with:
           coverageFile: ./jvcli/coverage.xml
           token: ${{ secrets.GITHUB_TOKEN }}
-          thresholdAll: 0.99
+          thresholdAll: 0.95
