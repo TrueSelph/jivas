@@ -5,7 +5,7 @@ import json
 import os
 from importlib.util import module_from_spec, spec_from_file_location
 from io import BytesIO
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import requests
 import streamlit as st
@@ -91,6 +91,41 @@ def call_api(
             st.write(e)
 
     return None
+
+
+def get_reports_payload(
+    request: requests.Response, expect_single: bool = True
+) -> Optional[Union[Any, List[Any]]]:
+    """
+    Safely extracts the 'reports' payload from a request's JSON response.
+
+    Args:
+        request (requests.Response): The HTTP response object (assumed to have `.json()` method).
+        expect_single (bool, optional): If True, returns the first item in 'reports' (default).
+                                        If False, returns the full list (or None if empty/missing).
+
+    Returns:
+        Optional[Union[Any, List[Any]]]:
+            - If `expect_single=True`: Returns the first item in 'reports' or None.
+            - If `expect_single=False`: Returns the full list (or None if missing/empty).
+            - Returns None if JSON parsing fails or 'reports' is invalid.
+
+    Example:
+        >>> response = requests.get('https://api.example.com/data')
+        >>> get_reports_payload(response)          # Returns first item (default)
+        >>> get_reports_payload(response, False)   # Returns full list
+    """
+    try:
+        payload = request.json()
+        reports = payload.get("reports", []) if isinstance(payload, dict) else []
+
+        if isinstance(reports, list):
+            if expect_single:
+                return reports[0] if reports else None
+            return reports if reports else None
+        return None
+    except (ValueError, AttributeError, KeyError):
+        return None
 
 
 def call_action_walker_exec(
