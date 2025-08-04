@@ -23,8 +23,8 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 				},
 			})
 				.then((res) => {
-					if (res.ok) {
-						return res.json();
+					if (res?.ok) {
+						return res?.json();
 					} else {
 						localStorage.removeItem("jivas-agent");
 						throw redirect("/login");
@@ -43,12 +43,12 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 	formData.append("agent_id", selectedAgentInfo?.reports?.[0]?.id || "");
 	formData.append("walker", "get_avatar");
 
-	const avatar = (await fetchWithAuth(`${host}/action/walker`, {
-		method: "POST",
-		body: formData,
-	})
-		.then(async (res) => await res.json())
-		.catch(() => null)) as [string, string] | null;
+	// const avatar = (await fetchWithAuth(`${host}/action/walker`, {
+	// 	method: "POST",
+	// 	body: formData,
+	// })
+	// 	.then(async (res) => await res.json())
+	// 	.catch(() => null)) as [string, string] | null;
 
 	const result = (await fetchWithAuth(`${host}/walker/list_agents`, {
 		method: "POST",
@@ -65,10 +65,10 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 	return {
 		selectedAgentInfo: {
 			...(selectedAgentInfo?.reports?.[0] || {}),
-			thumbnail:
-				!avatar?.includes?.("unable") && !!avatar && typeof avatar === "string"
-					? `data:image/png;base64,${avatar}`
-					: "",
+			thumbnail: "",
+			// !avatar?.includes?.("unable") && !!avatar && typeof avatar === "string"
+			// 	? `data:image/png;base64,${avatar}`
+			// 	: "",
 		},
 		agents: result?.reports,
 	};

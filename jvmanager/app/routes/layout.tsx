@@ -18,47 +18,24 @@ export function meta({}: Route.MetaArgs) {
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 	const host = localStorage.getItem("jivas-host");
 	const token = localStorage.getItem("jivas-token");
-	const selectedAgent = localStorage.getItem("jivas-agent");
 
 	if (!host || !token) {
 		throw redirect("/login");
 	}
 
-	const selectedAgentInfo = selectedAgent
-		? ((await fetchWithAuth(`${host}/walker/get_agent`, {
-				method: "POST",
-				body: JSON.stringify({ agent_id: selectedAgent }),
-				headers: {
-					"Content-Type": "application/json",
-				},
-			})
-				.then((res) => {
-					if (res.ok) {
-						return res.json();
-					} else {
-						localStorage.removeItem("jivas-agent");
-						throw redirect("/login");
-					}
-				})
-				.catch((err) => {
-					console.log({ err });
-					localStorage.removeItem("jivas-agent");
-					throw redirect("/login");
-				})) as { reports: Agent[] })
-		: null;
+	// const formData = new FormData();
+	// formData.append("args", `{"base64_prefix": false}`);
+	// formData.append("module_root", "actions.jivas.avatar_action");
+	// formData.append("agent_id", selectedAgentInfo?.reports?.[0]?.id || "");
+	// formData.append("walker", "get_avatar");
 
-	const formData = new FormData();
-	formData.append("args", `{"base64_prefix": false}`);
-	formData.append("module_root", "actions.jivas.avatar_action");
-	formData.append("agent_id", selectedAgentInfo?.reports?.[0]?.id || "");
-	formData.append("walker", "get_avatar");
-
-	const avatar = (await fetchWithAuth(`${host}/action/walker`, {
-		method: "POST",
-		body: formData,
-	})
-		.then(async (res) => await res.json())
-		.catch(() => null)) as [string, string] | null;
+	const avatar = "";
+	// 	(await fetchWithAuth(`${host}/action/walker`, {
+	// 	method: "POST",
+	// 	body: formData,
+	// })
+	// 	.then(async (res) => await res.json())
+	// 	.catch(() => null)) as [string, string] | null;
 
 	const result = (await fetchWithAuth(`${host}/walker/list_agents`, {
 		method: "POST",
@@ -77,6 +54,36 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 			return redirect("/new-agent");
 		}
 	}
+
+	if (result?.reports?.length === 1) {
+		localStorage.setItem("jivas-agent", result.reports[0]?.id);
+	}
+
+	const selectedAgent = localStorage.getItem("jivas-agent");
+
+	const selectedAgentInfo = selectedAgent
+		? ((await fetchWithAuth(`${host}/walker/get_agent`, {
+				method: "POST",
+				body: JSON.stringify({ agent_id: selectedAgent }),
+				headers: {
+					"Content-Type": "application/json",
+				},
+			})
+				.then((res) => {
+					console.log({ res });
+					if (res?.ok) {
+						return res?.json();
+					} else {
+						localStorage.removeItem("jivas-agent");
+						throw redirect("/login");
+					}
+				})
+				.catch((err) => {
+					console.log({ err });
+					localStorage.removeItem("jivas-agent");
+					throw redirect("/login");
+				})) as { reports: Agent[] })
+		: null;
 
 	return {
 		selectedAgentInfo: {

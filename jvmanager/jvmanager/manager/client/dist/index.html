@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<link rel="icon" type="image/svg+xml" href="/vite.svg" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Vite + Preact + TS</title>
+		<script type="module" crossorigin src="/index.js"></script>
+		<link rel="stylesheet" crossorigin href="/assets/index-Sb3-eg_s.css">
+	</head>
+	<body>
+		<div style="width: 60%; margin: 0 auto">
+			<ts-messenger
+				host="http://localhost:8000"
+				agent-id="n:Agent:687925f7141180264135ab48"
+				session-id="daf19f9c-8ca5-48f0-8484-99b90df611b0"
+				header-config='{"showAvatar":false, "show": false}'
+				agent-name="Demo AI"
+				streaming="true"
+				theme="{}"
+				layout="popup"
+				with-debug="true"
+				use-local-storage-cache="true"
+			></ts-messenger>
+
+			<!-- <ts-messenger-popup
+				host="https://iris-ai-jivas.trueselph.com"
+				agent-id="n:Agent:6807091d84f0f993f38ee1db"
+				session-id="209c76ae-820e-41c8-8d98-8e71e93a7c30"
+				header-config='{"showAvatar":true, "show": true}'
+				agent-name="IRIS AI"
+				theme="{}"
+			></ts-messenger-popup> -->
+		</div>
+		<!-- <div id="app"></div> -->
+	</body>
+	<style>
+		body {
+			margin: 0;
+			background: white;
+		}
+	</style>
+</html>

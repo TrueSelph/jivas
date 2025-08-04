@@ -59,6 +59,8 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
 				}>,
 		);
 
+		console.log({ result });
+
 		if (result.token) {
 			localStorage.setItem("jivas-host", host as string);
 			localStorage.setItem("jivas-token", result.token);
@@ -83,7 +85,7 @@ export default function Login() {
 		mode: "uncontrolled",
 		initialValues: {
 			email: "",
-			host: localStorage.getItem("jivas-host") || "",
+			host: localStorage.getItem("jivas-host") || "http://localhost:8000",
 			password: "",
 		},
 

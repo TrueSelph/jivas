@@ -74,6 +74,7 @@ export default function ChatRoute({ loaderData }: Route.ComponentProps) {
 							b._package?.meta?.title || b.label,
 						),
 					)
+					.filter((action) => action.label !== "ExitInteractAction")
 					.map((action) => (
 						<ActionCard key={action.id} action={action} />
 					))}

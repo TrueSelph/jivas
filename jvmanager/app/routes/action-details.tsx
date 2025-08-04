@@ -5,6 +5,10 @@ import { IconArrowLeft } from "@tabler/icons-react";
 import { Link } from "react-router";
 import { fetchWithAuth } from "~/lib/api";
 
+export function meta({ data }: Route.MetaArgs) {
+	return [{ title: `${data?.actionTitle} | JIVAS Manager` }];
+}
+
 export async function clientAction({ request }: Route.ClientLoaderArgs) {
 	const data = await request.formData();
 	const agentId = data.get("agentId") as string;
@@ -18,9 +22,9 @@ export async function clientAction({ request }: Route.ClientLoaderArgs) {
 
 function escapeForJS(code: string): string {
 	return code
-		.replace(/\//g, "\\/") 
-		.replace(/`/g, "\\`") 
-		.replace(/\${/g, "\\${ "); 
+		.replace(/\\/g, "\\\\") // escape backslashes
+		.replace(/`/g, "\\`") // escape backticks
+		.replace(/\${/g, "\\${"); // escape JS template variables
 }
 
 export async function clientLoader({
@@ -71,7 +75,7 @@ ${escapeForJS(code.replaceAll("jvcli.client", "jvclient").replaceAll("`", "'"))}
 
 root_id = "${rootId || ""}"
 print("ROOT ID:", root_id)
-st.session_state.ROOT_ID = root_id || "000000000000000000000000"
+st.session_state.ROOT_ID = root_id or "000000000000000000000000"
 st.session_state.TOKEN = "${token}"
 st.session_state.EXPIRATION = ${tokenExp || 253387602857692}
 
@@ -89,8 +93,7 @@ if __name__ == "__main__":
     render(router, agent_id, action_id, info)
     `,
 	};
-
-	let body = `
+	const body = `
   <!DOCTYPE html>
   <html>
   <head>
@@ -119,14 +122,14 @@ if __name__ == "__main__":
                 ],
         entrypoint: "streamlit_app.py",
         files: {
-          "streamlit_app.py":
+          "streamlit_app.py": \`${files["streamlit_app.py"]}\`,
         },
       },
       document.getElementById("root"))
     </script>
   </body>
   </html>
-				`;
+					`;
 
 	// const result = (await fetch(`${host}/walker/list_actions`, {
 	// 	method: "POST",
@@ -139,6 +142,7 @@ if __name__ == "__main__":
 
 	return {
 		// loginResult,
+		actionTitle: action?.reports?.[0]?._package?.meta?.title || "Action App",
 		code: body,
 	};
 }

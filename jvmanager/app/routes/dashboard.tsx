@@ -96,21 +96,23 @@ export async function clientLoader({ request }: Route.ClientActionArgs) {
 		timezone: userTimeZone,
 	});
 
-	const logs = await fetchWithAuth(`${instance.url}/walker/get_interaction_logs`, {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-		},
-		body: JSON.stringify({
-			agent_id: agentId,
-			reporting: true,
-			start_date: startDate,
-			end_date: endDate,
-			timezone: userTimeZone,
-		}),
-	})
-		.then(async (res) => await res.json())
-		.then((res) => res.reports?.[0]);
+	const logs = agentId
+		? await fetchWithAuth(`${instance.url}/walker/get_interaction_logs`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					agent_id: agentId,
+					reporting: true,
+					start_date: startDate,
+					end_date: endDate,
+					timezone: userTimeZone,
+				}),
+			})
+				.then(async (res) => await res.json())
+				.then((res) => res.reports?.[0])
+		: [];
 
 	return {
 		defaultDateRange: [startDate, endDate],
@@ -125,16 +127,12 @@ export function meta() {
 	return [{ title: "Dashboard | JIVAS Manager" }];
 }
 
-export async function clientAction({
-	context,
-	request,
-}: Route.ClientActionArgs) {
+export async function clientAction({ request }: Route.ClientActionArgs) {
 	const reqFormData = await request.formData();
 	const _action = reqFormData.get("_action");
 
 	const formData = new FormData();
 	const agentId = reqFormData.get("agentId") || "";
-	const token = localStorage.getItem("jivas-token") || "";
 	const host = localStorage.getItem("jivas-host") || "";
 	const sessionId = reqFormData.get("sessionId");
 
@@ -148,7 +146,7 @@ export async function clientAction({
 		return await fetchWithAuth(`${host}/action/walker`, {
 			method: "POST",
 			body: formData,
-		}).then(async (res) => await res.json());
+		}).then(async (res) => await res?.json());
 	}
 }
 
@@ -160,6 +158,7 @@ export default function ChatRoute({ loaderData }: Route.ComponentProps) {
 	const navigate = useNavigate();
 	const location = useLocation();
 
+	console.log({ selectedAgentInfo });
 	if (!selectedAgentInfo) {
 		if (!location.pathname.includes("new-agent")) {
 			return navigate("/new-agent");
