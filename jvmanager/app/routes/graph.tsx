@@ -2,6 +2,7 @@ import { ActionIcon, Box, Card, Divider, Group, Title } from "@mantine/core";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { Link, redirect } from "react-router";
 import { UserButton } from "~/components/UserButton";
+import { fetchWithAuth } from "~/lib/api";
 import type { Route } from "./+types/graph";
 import type { Agent } from "~/types";
 
@@ -11,20 +12,14 @@ export function meta() {
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 	const host = localStorage.getItem("jivas-host");
-	const token = localStorage.getItem("jivas-token");
 	const selectedAgent = localStorage.getItem("jivas-agent");
 
-	if (!host || !token) {
-		throw redirect("/login");
-	}
-
 	const selectedAgentInfo = selectedAgent
-		? ((await fetch(`${host}/walker/get_agent`, {
+		? ((await fetchWithAuth(`${host}/walker/get_agent`, {
 				method: "POST",
 				body: JSON.stringify({ agent_id: selectedAgent }),
 				headers: {
 					"Content-Type": "application/json",
-					Authorization: `Bearer ${token}`,
 				},
 			})
 				.then((res) => {
@@ -48,22 +43,18 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 	formData.append("agent_id", selectedAgentInfo?.reports?.[0]?.id || "");
 	formData.append("walker", "get_avatar");
 
-	const avatar = (await fetch(`${host}/action/walker`, {
+	const avatar = (await fetchWithAuth(`${host}/action/walker`, {
 		method: "POST",
-		headers: {
-			Authorization: `Bearer ${token}`,
-		},
 		body: formData,
 	})
 		.then(async (res) => await res.json())
 		.catch(() => null)) as [string, string] | null;
 
-	const result = (await fetch(`${host}/walker/list_agents`, {
+	const result = (await fetchWithAuth(`${host}/walker/list_agents`, {
 		method: "POST",
 		body: JSON.stringify({}),
 		headers: {
 			"Content-Type": "application/json",
-			Authorization: `Bearer ${token}`,
 		},
 	})
 		.then((res) => res.json())

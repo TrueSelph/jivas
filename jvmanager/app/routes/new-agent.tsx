@@ -38,6 +38,7 @@ import {
 import type { R } from "node_modules/react-router/dist/development/route-data-D7Xbr_Ww.mjs";
 import { useDebouncedCallback } from "@mantine/hooks";
 import { modals } from "@mantine/modals";
+import { fetchWithAuth } from "~/lib/api";
 
 export function meta() {
 	return [{ title: "New Agent | JIVAS Manager" }];
@@ -78,7 +79,6 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 
 export async function clientAction({ request }: Route.ClientActionArgs) {
 	const host = localStorage.getItem("jivas-host");
-	const token = localStorage.getItem("jivas-token");
 
 	const apiKey = localStorage.getItem("jpr-key");
 
@@ -90,11 +90,10 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
 		const dafVersion = formData.get("version");
 		const packageName = formData.get("package");
 
-		const res = (await fetch(`${host}/walker/import_agent`, {
+		const res = (await fetchWithAuth(`${host}/walker/import_agent`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
-				Authorization: `Bearer ${token}`,
 			},
 			body: JSON.stringify({
 				reporting: true,

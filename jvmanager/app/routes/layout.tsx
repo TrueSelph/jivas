@@ -4,6 +4,8 @@ import { useDisclosure } from "@mantine/hooks";
 import { NavigationProgress } from "@mantine/nprogress";
 import { Outlet, redirect, useLocation, useNavigate } from "react-router";
 import { Navbar } from "~/components/Navbar";
+import useAuth from "~/hooks/useAuth";
+import { fetchWithAuth } from "~/lib/api";
 import type { Agent } from "~/types";
 
 export function meta({}: Route.MetaArgs) {
@@ -23,12 +25,11 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 	}
 
 	const selectedAgentInfo = selectedAgent
-		? ((await fetch(`${host}/walker/get_agent`, {
+		? ((await fetchWithAuth(`${host}/walker/get_agent`, {
 				method: "POST",
 				body: JSON.stringify({ agent_id: selectedAgent }),
 				headers: {
 					"Content-Type": "application/json",
-					Authorization: `Bearer ${token}`,
 				},
 			})
 				.then((res) => {
@@ -52,22 +53,18 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 	formData.append("agent_id", selectedAgentInfo?.reports?.[0]?.id || "");
 	formData.append("walker", "get_avatar");
 
-	const avatar = (await fetch(`${host}/action/walker`, {
+	const avatar = (await fetchWithAuth(`${host}/action/walker`, {
 		method: "POST",
-		headers: {
-			Authorization: `Bearer ${token}`,
-		},
 		body: formData,
 	})
 		.then(async (res) => await res.json())
 		.catch(() => null)) as [string, string] | null;
 
-	const result = (await fetch(`${host}/walker/list_agents`, {
+	const result = (await fetchWithAuth(`${host}/walker/list_agents`, {
 		method: "POST",
 		body: JSON.stringify({}),
 		headers: {
 			"Content-Type": "application/json",
-			Authorization: `Bearer ${token}`,
 		},
 	})
 		.then((res) => res.json())
@@ -94,6 +91,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 }
 
 export default function Layout({ loaderData }: Route.ComponentProps) {
+	useAuth();
 	const [opened, { toggle }] = useDisclosure();
 
 	return (

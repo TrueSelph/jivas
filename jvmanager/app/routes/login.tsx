@@ -15,6 +15,7 @@ import { useFetcher } from "react-router";
 import type { Route } from "./+types/login";
 import { redirect } from "react-router";
 import { useEffect } from "react";
+import { fetchWithAuth } from "~/lib/api";
 
 export function meta() {
 	return [
@@ -38,7 +39,7 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
 	}
 
 	try {
-		const result = await fetch(`${host}/user/login`, {
+		const result = await fetchWithAuth(`${host}/user/login`, {
 			method: "POST",
 			body: JSON.stringify({ email, host, password }),
 			headers: {

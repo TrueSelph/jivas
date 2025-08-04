@@ -5,10 +5,10 @@ import { useFetcher, useOutletContext } from "react-router";
 import { IconEraser } from "@tabler/icons-react";
 import { useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
+import { fetchWithAuth } from "~/lib/api";
 
 export async function clientLoader() {
 	try {
-		const token = localStorage.getItem("jivas-token") || "";
 		const host = localStorage.getItem("jivas-host") || "";
 		const agentId = localStorage.getItem("jivas-agent") || "";
 
@@ -20,10 +20,9 @@ export async function clientLoader() {
 
 		try {
 			// ensure session id is valid
-			await fetch(`${host}/walker/add_frame`, {
+			await fetchWithAuth(`${host}/walker/add_frame`, {
 				method: "POST",
 				headers: {
-					Authorization: `Bearer ${token}`,
 					"Content-Type": "application/json",
 				},
 				body: JSON.stringify({
@@ -61,7 +60,6 @@ export async function clientAction({
 
 	const formData = new FormData();
 	const agentId = reqFormData.get("agentId") || "";
-	const token = localStorage.getItem("jivas-token") || "";
 	const host = localStorage.getItem("jivas-host") || "";
 	const sessionId = reqFormData.get("sessionId");
 
@@ -72,11 +70,8 @@ export async function clientAction({
 		formData.append("agent_id", agentId);
 		formData.append("walker", "purge_frame_memory");
 
-		return await fetch(`${host}/action/walker`, {
+		return await fetchWithAuth(`${host}/action/walker`, {
 			method: "POST",
-			headers: {
-				Authorization: `Bearer ${token}`,
-			},
 			body: formData,
 		}).then(async (res) => await res.json());
 	}

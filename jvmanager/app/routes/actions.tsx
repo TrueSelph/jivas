@@ -2,6 +2,7 @@ import type { Action } from "~/types";
 import type { Route } from "./+types/actions";
 import { Box, Divider, SimpleGrid, Title } from "@mantine/core";
 import { ActionCard } from "~/components/ActionCard";
+import { fetchWithAuth } from "~/lib/api";
 
 // export async function loader() {
 // 	return {
@@ -41,15 +42,13 @@ export async function clientAction({ request }: Route.ClientLoaderArgs) {
 
 export async function clientLoader({ serverLoader }: Route.ClientLoaderArgs) {
 	const host = localStorage.getItem("jivas-host");
-	const token = localStorage.getItem("jivas-token");
 
 	try {
-		const result = (await fetch(`${host}/walker/list_actions`, {
+		const result = (await fetchWithAuth(`${host}/walker/list_actions`, {
 			method: "POST",
 			body: JSON.stringify({ agent_id: localStorage.getItem("jivas-agent") }),
 			headers: {
 				"Content-Type": "application/json",
-				Authorization: `Bearer ${token}`,
 			},
 		}).then((res) => res.json())) as { reports: [Action[]] };
 

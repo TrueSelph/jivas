@@ -3,6 +3,7 @@ import type { Route } from "./+types/action-details";
 import { ActionIcon, Box, Divider, Group, Title } from "@mantine/core";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { Link } from "react-router";
+import { fetchWithAuth } from "~/lib/api";
 
 export async function clientAction({ request }: Route.ClientLoaderArgs) {
 	const data = await request.formData();
@@ -17,9 +18,9 @@ export async function clientAction({ request }: Route.ClientLoaderArgs) {
 
 function escapeForJS(code: string): string {
 	return code
-		.replace(/\\/g, "\\\\") // escape backslashes
+		.replace(/\/g, "\\\\") // escape backslashes
 		.replace(/`/g, "\\`") // escape backticks
-		.replace(/\${/g, "\\${"); // escape JS template variables
+		.replace(/\${/g, "\\${ "); // escape JS template variables
 }
 
 export async function clientLoader({
@@ -32,7 +33,7 @@ export async function clientLoader({
 	const tokenExp = localStorage.getItem("jivas-token-exp");
 	const agentId = localStorage.getItem("jivas-agent");
 
-	const action = (await fetch(`${host}/walker/get_action`, {
+	const action = (await fetchWithAuth(`${host}/walker/get_action`, {
 		method: "POST",
 		body: JSON.stringify({
 			agent_id: agentId,
@@ -41,11 +42,10 @@ export async function clientLoader({
 		}),
 		headers: {
 			"Content-Type": "application/json",
-			Authorization: `Bearer ${token}`,
 		},
 	}).then((res) => res.json())) as { reports: Action[] };
 
-	const code = await fetch(`${host}/walker/get_action_app`, {
+	const code = await fetchWithAuth(`${host}/walker/get_action_app`, {
 		method: "POST",
 		body: JSON.stringify({
 			agent_id: agentId,
@@ -54,7 +54,6 @@ export async function clientLoader({
 		}),
 		headers: {
 			"Content-Type": "application/json",
-			Authorization: `Bearer ${token}`,
 		},
 	})
 		.then((res) => res.json())
@@ -72,7 +71,7 @@ ${escapeForJS(code.replaceAll("jvcli.client", "jvclient").replaceAll("`", "'"))}
 
 root_id = "${rootId || ""}"
 print("ROOT ID:", root_id)
-st.session_state.ROOT_ID = root_id or "000000000000000000000000"
+st.session_state.ROOT_ID = root_id || "000000000000000000000000"
 st.session_state.TOKEN = "${token}"
 st.session_state.EXPIRATION = ${tokenExp || 253387602857692}
 
@@ -90,7 +89,7 @@ if __name__ == "__main__":
     render(router, agent_id, action_id, info)
     `,
 	};
-	const body = `
+	the body = `
   <!DOCTYPE html>
   <html>
   <head>
@@ -119,7 +118,7 @@ if __name__ == "__main__":
                 ],
         entrypoint: "streamlit_app.py",
         files: {
-          "streamlit_app.py": \`${files["streamlit_app.py"]}\`,
+          "streamlit_app.py":
         },
       },
       document.getElementById("root"))
