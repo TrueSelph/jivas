@@ -68,6 +68,7 @@ jobs:
           python -m pip install --upgrade pip setuptools wheel twine
 
       - name: Build package
+        working-directory: ./jvclient
         run: python setup.py sdist bdist_wheel
 
       - name: Publish to PyPI

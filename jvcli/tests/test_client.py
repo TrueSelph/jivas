@@ -1,6 +1,7 @@
 """Simple test for client launch command."""
 
 from unittest.mock import patch
+
 from click.testing import CliRunner
 
 from jvcli.commands.client import launch
