@@ -68,11 +68,11 @@ jobs:
           python -m pip install --upgrade pip setuptools wheel twine
 
       - name: Build package
-        working-directory: ./jivas/jvcli
+        working-directory: ./jvcli
         run: python setup.py sdist bdist_wheel
 
       - name: Publish to PyPI
-        working-directory: ./jivas/jvcli
+        working-directory: ./jvcli
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
@@ -80,8 +80,8 @@ jobs:
           twine upload dist/*
 
       - name: Create GitHub Release
+        working-directory: ./jvcli
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cd jivas/jvcli
           gh release create v${{ needs.check-version.outputs.new_version }} dist/* --title "Release JVCLI v${{ needs.check-version.outputs.new_version }}" --notes "Automated release for version v${{ needs.check-version.outputs.new_version }}." --generate-notes

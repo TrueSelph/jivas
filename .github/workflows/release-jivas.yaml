@@ -70,7 +70,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install ../jvcli ../jvserve ../jvclient
+          pip install ./jvcli ./jvserve ./jvclient
           pip install .[dev]
 
       - name: Transpile jac code to python
@@ -92,7 +92,7 @@ jobs:
           twine upload dist/*
 
       - name: Create GitHub Release
-        working-directory: ./jivas/core
+        working-directory: ./core
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
