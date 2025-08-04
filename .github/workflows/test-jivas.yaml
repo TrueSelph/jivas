@@ -1,4 +1,4 @@
-name: Running jvcli test cases
+name: Running jivas test cases
 
 on:
   pull_request:
@@ -11,18 +11,20 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./
+        working-directory: ./core
     steps:
-    - name: Check out code
-      uses: actions/checkout@v2
+      - name: Check out code
+        uses: actions/checkout@v2
 
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.12
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.12
 
-    - name: Install dependencies
-      run: pip install .[dev]
+      - name: Install dependencies
+        run: |
+          pip install ../jvcli ../jvserve ../jvclient
+          pip install .[dev]
 
-    - name: Run tests
-      run: pytest
+      - name: Run tests
+        run: pytest

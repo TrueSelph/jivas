@@ -1,0 +1,83 @@
+import os;
+import uuid;
+import base64;
+import logging;
+import traceback;
+import from typing { Union }
+import from logging { Logger }
+import from jivas.agent.action.action { Action }
+
+node TTSAction(Action) {
+    # The Text-to-speech base action for all TTS actions.
+
+    # set up logger
+    static has logger:Logger = logging.getLogger(__name__);
+
+    has api_key:str = "";
+    has model:str = "";
+
+    def invoke(text:str, as_base64:bool=False, as_url:bool=False) {
+        # """
+        # Convert text to speech and save the audio file.
+
+        # :param text: Text to convert to speech
+        # :param as_base64: outputs audio file as base64 encoded string
+        # :param as_url: outputs URL for downloading audio file
+        # :return: Path to the saved audio file or base64 encoded string
+        # """
+
+        # override with specifics of TTS model then save in audio
+        audio = None;
+
+        # self.get_audio_file must be called in return statement
+        return self.get_audio_as(audio, as_base64, as_url);
+    }
+
+    def get_audio_as(audio:bytes, as_base64:bool=False, as_url:bool=False) {
+        # prepares the audio bytes as base64 string or url for download
+
+        if not audio {
+            return None;
+        }
+
+        try {
+
+            if(as_base64) {
+                # return a base 64 encoded representation of the audio file
+                return base64.b64encode(audio).decode('utf-8');
+            }
+
+            # Save the audio content to a file
+            output_file_name = f"{str(uuid.uuid4())}.mp3";
+            output_file_path = f"{os.environ.get('JIVAS_FILES_ROOT_PATH','.files')}/tts/{output_file_name}";
+
+            # output the file
+            self.get_agent().save_file("tts/" + output_file_name, audio);
+
+            if(as_url) {
+                # return f"{os.environ.get('JIVAS_FILES_URL','http://localhost:8000/files')}/tts/{output_file_name}";
+                return self.get_agent().get_file_url("tts/" + output_file_name);
+            }
+
+            return os.path.abspath(output_file_path);
+
+        } except Exception as e {
+            self.logger.error(f"an exception occurred, {traceback.format_exc()}");
+        }
+
+        return None;
+    }
+
+    def healthcheck() -> Union[bool, dict] {
+
+        if(not self.api_key) {
+            return {
+                "status": False,
+                "message": f"API key is not set.",
+                "severity": "error"
+            };
+        }
+
+        return True;
+    }
+}

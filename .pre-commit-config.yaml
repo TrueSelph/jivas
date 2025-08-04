@@ -53,4 +53,11 @@ repos:
         name: Detect Secrets
         args: ['scan', '.']
         files: \.(py|jac|txt|yaml|json)$
-        exclude: "^(venv|.mypy_cache|.jac_mypy_cache|__jac_gen__)/"
+        exclude: |
+          (?x)^(
+            venv/|
+            \.mypy_cache/|
+            \.jac_mypy_cache/|
+            __jac_gen__/|
+            jvmanager/pnpm-lock\.yaml
+          )

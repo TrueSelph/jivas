@@ -1,0 +1,22 @@
+import from jivas.agent.action.agent_graph_walker { agent_graph_walker }
+import from jivas.agent.core.agents { Agents }
+
+walker delete_agent(agent_graph_walker) {
+    # Walker to delete an agent node from the graph
+
+    has reporting: bool = False;
+
+    obj __specs__ {
+        # make this walker visible in API
+        static has private: bool = False;
+    }
+
+    can on_agents with Agents entry {
+        # Delete agent node
+        agent_node = here.delete(self.agent_id);
+
+        if (self.reporting) {
+            report agent_node;
+        }
+    }
+}

@@ -1,0 +1,8 @@
+.root {
+	cursor: pointer;
+}
+
+.root:hover {
+	background: var(--mantine-color-gray-0);
+	transition: ease-in-out 0.15s;
+}

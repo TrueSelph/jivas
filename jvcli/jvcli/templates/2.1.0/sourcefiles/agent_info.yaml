@@ -1,0 +1,10 @@
+package:
+  name: "{{name}}"
+  author: "{{author}}"
+  version: "{{version}}"
+  meta:
+    title: "{{title}}"
+    description: "{{description}}"
+    type: "agent"
+  dependencies:
+    jivas: "~{{jivas_version}}"
