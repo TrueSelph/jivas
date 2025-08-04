@@ -1,6 +1,6 @@
 """Command group for deploying and interfacing with the Jivas Manager."""
 
-from pathlib import Path
+from importlib import resources
 
 import click
 from fastapi import FastAPI, Request
@@ -28,25 +28,25 @@ def launch(port: int, host: str) -> None:
         allow_headers=["*"],
     )
 
-    client_dir = Path(__file__).resolve().parent.parent.joinpath("manager", "client")
+    with resources.path("jvmanager.manager", "client") as client_path:
+        client_dir = client_path
 
-    app.mount("/assets", StaticFiles(directory=client_dir / "assets"), name="assets")
-    app.mount("/dist", StaticFiles(directory=client_dir / "dist"), name="dist")
+        app.mount(
+            "/assets", StaticFiles(directory=client_dir / "assets"), name="assets"
+        )
+        app.mount("/dist", StaticFiles(directory=client_dir / "dist"), name="dist")
 
-    @app.get("/favicon.ico")
-    async def favicon() -> FileResponse:
-        return FileResponse(client_dir / "favicon.ico")
+        @app.get("/favicon.ico")
+        async def favicon() -> FileResponse:
+            return FileResponse(client_dir / "favicon.ico")
 
-    @app.get("/{full_path:path}")
-    async def serve_spa(request: Request, full_path: str) -> FileResponse:
-        """Serve the SPA for all routes."""
+        @app.get("/{full_path:path}")
+        async def serve_spa(request: Request, full_path: str) -> FileResponse:
+            """Serve the SPA for all routes."""
+            requested_file = client_dir / full_path
+            if requested_file.exists() and requested_file.is_file():
+                return FileResponse(requested_file)
+            index_file = client_dir / "index.html"
+            return FileResponse(index_file)
 
-        requested_file = client_dir / full_path
-
-        if requested_file.exists() and requested_file.is_file():
-            return FileResponse(requested_file)
-
-        index_file = client_dir / "index.html"
-        return FileResponse(index_file)
-
-    run(app, host=host, port=port)
+        run(app, host=host, port=port)
