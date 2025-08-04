@@ -6,7 +6,7 @@ from click.testing import CliRunner
 from jvcli.commands.client import launch
 
 
-def test_client_launch_runs():
+def test_client_launch_runs() -> None:
     """Test that client launch command runs without errors."""
     runner = CliRunner()
 
@@ -19,7 +19,7 @@ def test_client_launch_runs():
         mock_subprocess.assert_called_once_with(["jvmanager", "launch"])
 
 
-def test_client_launch_file_not_found():
+def test_client_launch_file_not_found() -> None:
     """Test that client launch handles jvmanager not found."""
     runner = CliRunner()
 
@@ -32,7 +32,7 @@ def test_client_launch_file_not_found():
         assert "jvmanager' command not found" in result.output
 
 
-def test_client_launch_general_error():
+def test_client_launch_general_error() -> None:
     """Test that client launch handles general errors."""
     runner = CliRunner()
 
