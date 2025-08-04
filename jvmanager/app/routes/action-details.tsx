@@ -18,9 +18,9 @@ export async function clientAction({ request }: Route.ClientLoaderArgs) {
 
 function escapeForJS(code: string): string {
 	return code
-		.replace(/\/g, "\\\\") // escape backslashes
-		.replace(/`/g, "\\`") // escape backticks
-		.replace(/\${/g, "\\${ "); // escape JS template variables
+		.replace(/\//g, "\\/") 
+		.replace(/`/g, "\\`") 
+		.replace(/\${/g, "\\${ "); 
 }
 
 export async function clientLoader({
@@ -89,7 +89,8 @@ if __name__ == "__main__":
     render(router, agent_id, action_id, info)
     `,
 	};
-	the body = `
+
+	let body = `
   <!DOCTYPE html>
   <html>
   <head>

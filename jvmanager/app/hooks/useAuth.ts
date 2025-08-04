@@ -1,6 +1,6 @@
 
 import { useEffect } from "react";
-import { redirect, useLocation } from "react-router-dom";
+import { redirect, useLocation } from "react-router";
 
 const useAuth = () => {
   const location = useLocation();

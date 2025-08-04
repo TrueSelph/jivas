@@ -103,7 +103,6 @@ export default function ChatRoute({ loaderData }: Route.ComponentProps) {
 					key={loaderData.selectedAgentInfo.id}
 					host={host}
 					root_node={root}
-					host={host}
 					style={{
 						width: "100%",
 						height: "100%",

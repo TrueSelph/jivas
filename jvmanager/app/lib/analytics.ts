@@ -1,4 +1,5 @@
 import type { Agent } from "~/types";
+import { fetchWithAuth } from "~/lib/api";
 
 interface ApiResponse<T> {
 	status: number;
@@ -22,21 +23,23 @@ export async function getChannelsByDate({
 	endDate: string;
 	timezone: string;
 }) {
-	const { instance, tokenResult } = getInstanceToken();
-	const res = (await fetch(`${instance.url}/walker/get_channels_by_date`, {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-			Authorization: `Bearer ${tokenResult.token}`,
+	const { instance } = getInstanceToken();
+	const res = (await fetchWithAuth(
+		`${instance.url}/walker/get_channels_by_date`,
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				reporting: true,
+				start_date: startDate,
+				end_date: endDate,
+				timezone,
+				agent_id: agentId,
+			}),
 		},
-		body: JSON.stringify({
-			reporting: true,
-			start_date: startDate,
-			end_date: endDate,
-			timezone,
-			agent_id: agentId,
-		}),
-	}).then(async (res) => await res.json())) as ApiResponse<Agent>;
+	).then(async (res) => await res.json())) as ApiResponse<Agent>;
 
 	return res?.reports?.[0] ?? {};
 }
@@ -52,21 +55,23 @@ export async function getInteractionsByDate({
 	endDate: string;
 	timezone: string;
 }) {
-	const { instance, tokenResult } = getInstanceToken();
-	const res = (await fetch(`${instance.url}/walker/get_interactions_by_date`, {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-			Authorization: `Bearer ${tokenResult.token}`,
+	const { instance } = getInstanceToken();
+	const res = (await fetchWithAuth(
+		`${instance.url}/walker/get_interactions_by_date`,
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				reporting: true,
+				start_date: startDate,
+				end_date: endDate,
+				timezone,
+				agent_id: agentId,
+			}),
 		},
-		body: JSON.stringify({
-			reporting: true,
-			start_date: startDate,
-			end_date: endDate,
-			timezone,
-			agent_id: agentId,
-		}),
-	})
+	)
 		.then(async (res) => await res.json())
 		.catch(() => {
 			return { reports: [{ total: 0, interactions: [] }] };
@@ -89,12 +94,11 @@ export async function getUsersByDate({
 	endDate: string;
 	timezone: string;
 }) {
-	const { instance, tokenResult } = getInstanceToken();
-	const res = (await fetch(`${instance.url}/walker/get_users_by_date`, {
+	const { instance } = getInstanceToken();
+	const res = (await fetchWithAuth(`${instance.url}/walker/get_users_by_date`, {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
-			Authorization: `Bearer ${tokenResult.token}`,
 		},
 		body: JSON.stringify({
 			reporting: true,

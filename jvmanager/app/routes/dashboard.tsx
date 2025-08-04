@@ -40,6 +40,7 @@ import {
 	getInteractionsByDate,
 	getUsersByDate,
 } from "~/lib/analytics";
+import { fetchWithAuth } from "~/lib/api";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -95,11 +96,10 @@ export async function clientLoader({ request }: Route.ClientActionArgs) {
 		timezone: userTimeZone,
 	});
 
-	const logs = await fetch(`${instance.url}/walker/get_interaction_logs`, {
+	const logs = await fetchWithAuth(`${instance.url}/walker/get_interaction_logs`, {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
-			Authorization: `Bearer ${tokenResult.token}`,
 		},
 		body: JSON.stringify({
 			agent_id: agentId,
@@ -145,11 +145,8 @@ export async function clientAction({
 		formData.append("agent_id", agentId);
 		formData.append("walker", "purge_frame_memory");
 
-		return await fetch(`${host}/action/walker`, {
+		return await fetchWithAuth(`${host}/action/walker`, {
 			method: "POST",
-			headers: {
-				Authorization: `Bearer ${token}`,
-			},
 			body: formData,
 		}).then(async (res) => await res.json());
 	}
