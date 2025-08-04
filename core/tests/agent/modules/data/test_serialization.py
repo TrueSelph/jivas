@@ -313,13 +313,13 @@ class TestSerializationUtils:
         """Test convert_str_to_json with a Python literal string that is a list."""
         py_literal_str = "['a', 1, None]"
         result = convert_str_to_json(py_literal_str)
-        assert result == {"data": ["a", 1, None]}
+        assert result == ["a", 1, None]
 
     def test_convert_str_to_json_with_string_list(self) -> None:
         """Test convert_str_to_json with a string that is a JSON list."""
         str_list = '[1, "a", {"b": 2}]'
         result = convert_str_to_json(str_list)
-        assert result == {"data": [1, "a", {"b": 2}]}
+        assert result == [1, "a", {"b": 2}]
 
     def test_convert_str_to_json_with_json_wrapped_in_markdown(self) -> None:
         """Test convert_str_to_json handles JSON wrapped in markdown code blocks."""
@@ -335,7 +335,7 @@ class TestSerializationUtils:
     def test_convert_str_to_json_with_list_input(self) -> None:
         """Test convert_str_to_json handles list input correctly."""
         result = convert_str_to_json([1, 2, 3])
-        assert result == {"list": [1, 2, 3]}
+        assert result == [1, 2, 3]
 
     def test_convert_str_to_json_with_dict_input(self) -> None:
         """Test convert_str_to_json with a dict as input."""
