@@ -4,7 +4,7 @@ import ast
 import json
 import logging
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Union
+from typing import Any, List, Optional, Set
 
 import yaml
 
@@ -154,36 +154,23 @@ def safe_json_dump(data: dict) -> Optional[str]:
         return None
 
 
-def convert_str_to_json(
-    text: Union[str, Dict[Any, Any], List[Any]],
-) -> Optional[Dict[Any, Any]]:
+def convert_str_to_json(text: str) -> dict | None:
     """Convert a string to a JSON object."""
     if isinstance(text, str):
         text = text.replace("```json", "")
         text = text.replace("```", "")
     try:
-        if isinstance(text, dict):
+        if isinstance(text, (dict, list)):
             return text
-        elif isinstance(text, list):
-            return {"list": text}  # Convert list to dict to match return type
         else:
-            result = json.loads(text)
-            return result if isinstance(result, dict) else {"data": result}
+            return json.loads(text)
     except (json.JSONDecodeError, TypeError):
         try:
-            if isinstance(text, str):
-                result = ast.literal_eval(text)
-                return result if isinstance(result, dict) else {"data": result}
-            return None
+            return ast.literal_eval(text)
         except (SyntaxError, ValueError) as e:
-            if "'{' was never closed" in str(e) and isinstance(text, str):
+            if "'{' was never closed" in str(e):
                 text = text + "}"
-                try:
-                    result = json.loads(text)
-                    return result if isinstance(result, dict) else {"data": result}
-                except json.JSONDecodeError:
-                    logger.error(e)
-                    return None
+                return json.loads(text)
             else:
                 logger.error(e)
                 return None
