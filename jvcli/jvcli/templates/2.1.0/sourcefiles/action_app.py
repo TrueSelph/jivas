@@ -1,8 +1,9 @@
-""" This module renders the streamlit app for the {{title}}. """
+"""This module renders the streamlit app for the {{title}}."""
+
+from streamlit_router import StreamlitRouter
 
 from jvcli.client.lib.widgets import app_controls, app_header, app_update_action
 
-from streamlit_router import StreamlitRouter
 
 def render(router: StreamlitRouter, agent_id: str, action_id: str, info: dict) -> None:
     """Render the Streamlit app for the {{title}}.

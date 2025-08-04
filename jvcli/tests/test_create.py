@@ -135,6 +135,7 @@ class TestCreateCommand:
             "Test Action",
             "0.0.1",
             "action",
+            max(__supported__jivas__versions__),
             "No description provided.",
         )
 
@@ -316,16 +317,21 @@ class TestCreateCommand:
         version = __supported__jivas__versions__[0]
 
         mock_open.assert_any_call(
-            os.path.join(TEMPLATES_DIR, version, "agent_info.yaml"), "r"
+            os.path.join(TEMPLATES_DIR, version, "sourcefiles", "agent_info.yaml"), "r"
         )
         mock_open.assert_any_call(
-            os.path.join(TEMPLATES_DIR, version, "agent_knowledge.yaml"), "r"
+            os.path.join(TEMPLATES_DIR, version, "sourcefiles", "agent_knowledge.yaml"),
+            "r",
         )
         mock_open.assert_any_call(
-            os.path.join(TEMPLATES_DIR, version, "agent_descriptor.yaml"), "r"
+            os.path.join(
+                TEMPLATES_DIR, version, "sourcefiles", "agent_descriptor.yaml"
+            ),
+            "r",
         )
         mock_open.assert_any_call(
-            os.path.join(TEMPLATES_DIR, version, "agent_memory.yaml"), "r"
+            os.path.join(TEMPLATES_DIR, version, "sourcefiles", "agent_memory.yaml"),
+            "r",
         )
         mock_open.assert_any_call("./daf/testuser/test_agent/info.yaml", "w")
         mock_open.assert_any_call("./daf/testuser/test_agent/descriptor.yaml", "w")

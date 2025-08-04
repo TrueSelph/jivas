@@ -326,6 +326,8 @@ def create_agent(
 ) -> None:
     """Create a new agent with its folder and associated files."""
 
+    title = name.replace("_", " ").title()
+
     # Retrieve token info
     token = load_token()
     namespace = namespace or token.get("namespaces", {}).get("default", "anonymous")
@@ -377,7 +379,7 @@ def create_agent(
         "name": f"{namespace}/{name}",
         "author": author,
         "version": version,
-        "title": name.replace("_", " ").title(),
+        "title": title,
         "description": description,
         "type": "agent",
         "jivas_version": jivas_version,
@@ -391,7 +393,7 @@ def create_agent(
             file.write(template_content)
 
     # Create documentation
-    create_docs(daf_dir, name, version, "agent", jivas_version, description)
+    create_docs(daf_dir, title, version, "agent", jivas_version, description)
 
     # Success message
     click.secho(
@@ -401,7 +403,7 @@ def create_agent(
 
 def create_docs(
     path: str,
-    name: str,
+    title: str,
     version: str,
     package_type: str,
     jivas_version: str,
@@ -418,7 +420,7 @@ def create_docs(
             readme_content = file.read()
 
         readme_content = readme_content.replace("{{version}}", version)
-        readme_content = readme_content.replace("{{name}}", name)
+        readme_content = readme_content.replace("{{title}}", title)
         readme_content = readme_content.replace("{{description}}", description)
 
         target_readme = os.path.join(path, "README.md")

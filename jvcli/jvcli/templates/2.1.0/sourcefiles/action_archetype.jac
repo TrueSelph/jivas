@@ -8,17 +8,17 @@ node {{archetype}}(Action) {
 
     # Declare your has variables to be persisted here
     # e.g has var_a : str = "string";
-    
+
     # set up logger
     static has logger:Logger = logging.getLogger(__name__);
-    
+
     def healthcheck() -> Union[bool, dict] {
         # override to implement healthcheck operation
         # optionally returns a dict of (status:bool, severity:str [error|warning], message:str) if more information is needed
         return True;
     }
-    #* 
-    
+    #*
+
     (Optional Abilities - Uncomment and implement as needed)
 
     # override to execute operations upon registration of action

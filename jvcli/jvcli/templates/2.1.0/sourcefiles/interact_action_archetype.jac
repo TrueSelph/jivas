@@ -2,20 +2,22 @@ import logging;
 import traceback;
 import from typing { Union }
 import from logging { Logger }
+import from jivas.agent.action.interact_action { InteractAction }
+import from jivas.agent.action.agent_graph_walker { agent_graph_walker }
 
 node {{archetype}}(InteractAction) {
 
     # Declare your has variables to be persisted here
     # e.g has var_a : str = "string";
-    
+
     # set up logger
     static has logger:Logger = logging.getLogger(__name__);
 
-    can touch(visitor: interact_graph_walker) -> bool {
+    can touch(visitor: agent_graph_walker) -> bool {
         # override to authorize, redirect or deny the interact walker from running execute
     }
 
-    can execute(visitor: interact_graph_walker) -> dict {
+    can execute(visitor: agent_graph_walker) -> None {
         # override to implement action execution
     }
 
@@ -25,7 +27,7 @@ node {{archetype}}(InteractAction) {
         return True;
     }
 
-    #*     
+    #*
     (Optional Abilities - Uncomment and implement as needed)
 
     # override to execute operations upon registration of action
