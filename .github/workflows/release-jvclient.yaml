@@ -33,7 +33,7 @@ jobs:
       - name: Get current version from __init__.py
         id: check
         run: |
-          CURRENT_VERSION=$(grep -oP '__version__\s*=\s*"\K[^"]+' jvclient/__init__.py)
+          CURRENT_VERSION=$(grep -oP '__version__\s*=\s*"\K[^"]+' ./__init__.py)
           echo "Detected package version: $CURRENT_VERSION"
           echo "new_version=$CURRENT_VERSION" >> $GITHUB_ENV
           echo "new_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
