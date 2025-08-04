@@ -104,7 +104,9 @@ def create_action(
         return
 
     # Prepare the template path
-    template_path = os.path.join(TEMPLATES_DIR, jivas_version, "action_info.yaml")
+    template_path = os.path.join(
+        TEMPLATES_DIR, jivas_version, "sourcefiles", "action_info.yaml"
+    )
     if not os.path.exists(template_path):
         click.secho(
             f"Template for version {jivas_version} not found in {TEMPLATES_DIR}.",
@@ -147,101 +149,89 @@ def create_action(
 
     # Create lib.jac
     lib_path = os.path.join(action_dir, "lib.jac")
+    lib_template_path = os.path.join(
+        TEMPLATES_DIR, jivas_version, "sourcefiles", "action_lib.jac"
+    )
+    if not os.path.exists(lib_template_path):
+        click.secho(
+            f"Lib template for version {jivas_version} not found in {TEMPLATES_DIR}.",
+            fg="red",
+        )
+        return
+
+    with open(lib_template_path, "r") as file:
+        lib_content = file.read()
+
+    lib_data = {
+        "namespace": namespace,
+        "name": name,
+        "imports": name,
+    }
+
+    for key, value in lib_data.items():
+        lib_content = lib_content.replace(f"{{{{{key}}}}}", str(value))
+
     with open(lib_path, "w") as file:
-        file.write(f"include {name};\n")
+        file.write(lib_content)
 
     # Create action-specific .jac file
     action_jac_path = os.path.join(action_dir, f"{name}.jac")
+    if type == "action":
+        action_template_path = os.path.join(
+            TEMPLATES_DIR, jivas_version, "sourcefiles", "action_archetype.jac"
+        )
+    elif type == "interact_action":
+        action_template_path = os.path.join(
+            TEMPLATES_DIR, jivas_version, "sourcefiles", "interact_action_archetype.jac"
+        )
+    else:
+        action_template_path = os.path.join(
+            TEMPLATES_DIR, jivas_version, "sourcefiles", "action_archetype.jac"
+        )
+
+    if not os.path.exists(action_template_path):
+        click.secho(
+            f"Action template for version {jivas_version} not found in {TEMPLATES_DIR}.",
+            fg="red",
+        )
+        return
+
+    with open(action_template_path, "r") as file:
+        node_content = file.read()
+
+    action_data = {
+        "archetype": archetype,
+    }
+
+    for key, value in action_data.items():
+        node_content = node_content.replace(f"{{{{{key}}}}}", str(value))
+
     with open(action_jac_path, "w") as file:
-        node_class = {
-            "action": "Action",
-            "interact_action": "InteractAction",
-            "vector_store_action": "VectorStoreAction",
-        }[type]
-
-        import_statement = f"import from agent.action.{type} {{ {node_class} }}"
-
-        abilities = """
-    #* (Abilities - Uncomment and implement as needed)
-    can on_register {
-        # override to execute operations upon registration of action
-    }
-
-    can post_register {
-        # override to execute any setup code when all actions are in place
-    }
-
-    can on_enable {
-        # override to execute operations upon enabling of action
-    }
-
-    can on_disable {
-        # override to execute operations upon disabling of action
-    }
-
-    can on_deregister {
-        # override to execute operations upon deregistration of action
-    }
-
-    can touch(visitor: interact_graph_walker) -> bool {
-        # override to authorize, redirect or deny the interact walker from running execute
-    }
-
-    can execute(visitor: interact_graph_walker) -> dict {
-        # override to implement action execution
-    }
-
-    can pulse() {
-        # override to implement pulse operation
-    }
-    *#
-    """
-        node_content = f"""
-# Define your custom action code here
-{import_statement}
-
-node {archetype} :{node_class}: {{
-    # Declare your has variables to be persisted here
-    # e.g has var_a : str = "string";
-
-{abilities}
-}}
-        """
         file.write(node_content.strip())
 
     # Create the 'app' folder and default 'app.py'
     app_dir = os.path.join(action_dir, "app")
     os.makedirs(app_dir, exist_ok=True)
     app_file_path = os.path.join(app_dir, "app.py")
+    app_template_path = os.path.join(
+        TEMPLATES_DIR, jivas_version, "sourcefiles", "action_app.py"
+    )
+
+    if not os.path.exists(app_template_path):
+        click.secho(
+            f"App template for version {jivas_version} not found in {TEMPLATES_DIR}.",
+            fg="red",
+        )
+        return
+
+    with open(app_template_path, "r") as file:
+        app_code = file.read()
+
+    app_code = app_code.replace("{{title}}", title)
     with open(app_file_path, "w") as app_file:
-        app_code = """
-\"\"\" This module renders the streamlit app for the {title}. \"\"\"
-
-from jvcli.client.lib.widgets import app_controls, app_header, app_update_action
-
-from streamlit_router import StreamlitRouter
-
-def render(router: StreamlitRouter, agent_id: str, action_id: str, info: dict) -> None:
-    \"\"\"Render the Streamlit app for the {title}.
-    :param router: The StreamlitRouter instance
-    :param agent_id: The agent ID
-    :param action_id: The action ID
-    :param info: The action info dict
-    \"\"\"
-
-    # Add app header controls
-    (model_key, action) = app_header(agent_id, action_id, info)
-
-    # Add app main controls
-    app_controls(agent_id, action_id)
-
-    # Add update button to apply changes
-    app_update_action(agent_id, action_id)
-        """
-        app_code = app_code.replace("{title}", title)
         app_file.write(app_code)
 
-        create_docs(action_dir, title, version, "action", description)
+    create_docs(action_dir, title, version, "action", jivas_version, description)
 
     click.secho(
         f"Action '{name}' created successfully in {action_dir}!", fg="green", bold=True
@@ -356,14 +346,18 @@ def create_agent(
 
     # Load templates
     template_paths = {
-        "info.yaml": os.path.join(TEMPLATES_DIR, jivas_version, "agent_info.yaml"),
+        "info.yaml": os.path.join(
+            TEMPLATES_DIR, jivas_version, "sourcefiles", "agent_info.yaml"
+        ),
         "descriptor.yaml": os.path.join(
-            TEMPLATES_DIR, jivas_version, "agent_descriptor.yaml"
+            TEMPLATES_DIR, jivas_version, "sourcefiles", "agent_descriptor.yaml"
         ),
         "knowledge.yaml": os.path.join(
-            TEMPLATES_DIR, jivas_version, "agent_knowledge.yaml"
+            TEMPLATES_DIR, jivas_version, "sourcefiles", "agent_knowledge.yaml"
         ),
-        "memory.yaml": os.path.join(TEMPLATES_DIR, jivas_version, "agent_memory.yaml"),
+        "memory.yaml": os.path.join(
+            TEMPLATES_DIR, jivas_version, "sourcefiles", "agent_memory.yaml"
+        ),
     }
 
     # Check if all templates exist
@@ -397,7 +391,7 @@ def create_agent(
             file.write(template_content)
 
     # Create documentation
-    create_docs(daf_dir, name, version, "agent", description)
+    create_docs(daf_dir, name, version, "agent", jivas_version, description)
 
     # Success message
     click.secho(
@@ -406,12 +400,19 @@ def create_agent(
 
 
 def create_docs(
-    path: str, name: str, version: str, package_type: str, description: str = ""
+    path: str,
+    name: str,
+    version: str,
+    package_type: str,
+    jivas_version: str,
+    description: str = "",
 ) -> None:
     """Update README.md and CHANGELOG.md templates with name and version."""
 
     # Create README
-    readme_template = os.path.join(TEMPLATES_DIR, "README.md")
+    readme_template = os.path.join(
+        TEMPLATES_DIR, jivas_version, "sourcefiles", "README.md"
+    )
     if os.path.exists(readme_template):
         with open(readme_template, "r") as file:
             readme_content = file.read()
@@ -425,7 +426,9 @@ def create_docs(
             file.write(readme_content)
 
     # Create CHANGELOG
-    changelog_template = os.path.join(TEMPLATES_DIR, "CHANGELOG.md")
+    changelog_template = os.path.join(
+        TEMPLATES_DIR, jivas_version, "sourcefiles", "CHANGELOG.md"
+    )
     if os.path.exists(changelog_template):
         with open(changelog_template, "r") as file:
             changelog_content = file.read()

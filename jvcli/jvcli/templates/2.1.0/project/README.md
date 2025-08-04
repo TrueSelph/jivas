@@ -470,31 +470,6 @@ This command:
 3. Sends a request to import the specified agent
 4. Displays the agent ID upon successful import
 
-### Studio Commands
-
-Studio commands help you manage the Jivas Studio, a web-based development environment for Jivas.
-
-#### `jvcli studio launch`
-
-Launch the Jivas Studio on a specified port. Jivas Studio provides a visual interface for building and managing agents.
-
-```sh
-# Launch with default settings
-jvcli studio launch
-
-# Launch on a custom port
-jvcli studio launch --port 9000
-
-# Launch with authentication required
-jvcli studio launch --require-auth
-```
-
-Options:
-- `--port`: Port for the studio to launch on (default: 8989)
-- `--require-auth`: Require authentication for studio API access (default: false)
-
-When launched, the Studio will be accessible via a web browser at `http://localhost:<port>`.
-
 ### Client Commands
 
 Client commands help you manage the Jivas Client, which provides a user interface for interacting with agents.
@@ -511,8 +486,9 @@ jvcli client launch
 jvcli client launch --port 9001
 
 # Launch with custom server URLs
-jvcli client launch \
-  --jivas_url http://my-server:8000 \
+# Launch with custom server URLs
+jvcli client launch
+  --jivas_url http://my-server:8000
   --studio_url http://my-studio:8989
 ```
 

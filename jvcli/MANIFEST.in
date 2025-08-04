@@ -1,3 +1,1 @@
 recursive-include jvcli/templates/ *
-recursive-include jvcli/studio/ *
-recursive-include jvcli/studio-auth/ *
