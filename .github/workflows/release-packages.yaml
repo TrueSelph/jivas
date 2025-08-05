@@ -69,8 +69,9 @@ jobs:
           python -m pip install --upgrade pip setuptools wheel twine
 
       - name: Install dependencies
+        working-directory: ./core
         run: |
-          pip install ./jvcli ./jvserve ./jvclient
+          pip install ../jvcli ../jvserve ../jvclient
           pip install .[dev]
 
       - name: Transpile jac code to python
@@ -79,24 +80,114 @@ jobs:
           jac run main.jac
         continue-on-error: false
 
-      - name: Build package
+      - name: Build core package
         working-directory: ./core
         run: python setup.py sdist bdist_wheel
 
-      - name: Publish to PyPI
+      - name: Build jvcli package
+        working-directory: ./jvcli
+        run: python setup.py sdist bdist_wheel
+
+      - name: Build jvclient package
+        working-directory: ./jvclient
+        run: python setup.py sdist bdist_wheel
+
+      - name: Build jvmanager package
+        working-directory: ./jvmanager
+        run: python setup.py sdist bdist_wheel
+
+      - name: Build jvserve package
+        working-directory: ./jvserve
+        run: python setup.py sdist bdist_wheel
+
+      - name: Publish core to PyPI
         working-directory: ./core
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         run: |
-          twine upload dist/*
+          PACKAGE_NAME=$(python setup.py --name)
+          PACKAGE_VERSION=$(python setup.py --version)
+          if curl --silent --fail "https://pypi.org/pypi/${PACKAGE_NAME}/${PACKAGE_VERSION}/json"; then
+            echo "Version ${PACKAGE_VERSION} of ${PACKAGE_NAME} already exists on PyPI. Skipping upload."
+          else
+            twine upload dist/*
+          fi
 
-      - name: Create GitHub Release
-        working-directory: ./core
+      - name: Publish jvcli to PyPI
+        working-directory: ./jvcli
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        run: |
+          PACKAGE_NAME=$(python setup.py --name)
+          PACKAGE_VERSION=$(python setup.py --version)
+          if curl --silent --fail "https://pypi.org/pypi/${PACKAGE_NAME}/${PACKAGE_VERSION}/json"; then
+            echo "Version ${PACKAGE_VERSION} of ${PACKAGE_NAME} already exists on PyPI. Skipping upload."
+          else
+            twine upload dist/*
+          fi
+
+      - name: Publish jvclient to PyPI
+        working-directory: ./jvclient
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        run: |
+          PACKAGE_NAME=$(python setup.py --name)
+          PACKAGE_VERSION=$(python setup.py --version)
+          if curl --silent --fail "https://pypi.org/pypi/${PACKAGE_NAME}/${PACKAGE_VERSION}/json"; then
+            echo "Version ${PACKAGE_VERSION} of ${PACKAGE_NAME} already exists on PyPI. Skipping upload."
+          else
+            twine upload dist/*
+          fi
+
+      - name: Publish jvmanager to PyPI
+        working-directory: ./jvmanager
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        run: |
+          PACKAGE_NAME=$(python setup.py --name)
+          PACKAGE_VERSION=$(python setup.py --version)
+          if curl --silent --fail "https://pypi.org/pypi/${PACKAGE_NAME}/${PACKAGE_VERSION}/json"; then
+            echo "Version ${PACKAGE_VERSION} of ${PACKAGE_NAME} already exists on PyPI. Skipping upload."
+          else
+            twine upload dist/*
+          fi
+
+      - name: Publish jvserve to PyPI
+        working-directory: ./jvserve
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        run: |
+          PACKAGE_NAME=$(python setup.py --name)
+          PACKAGE_VERSION=$(python setup.py --version)
+          if curl --silent --fail "https://pypi.org/pypi/${PACKAGE_NAME}/${PACKAGE_VERSION}/json"; then
+            echo "Version ${PACKAGE_VERSION} of ${PACKAGE_NAME} already exists on PyPI. Skipping upload."
+          else
+            twine upload dist/*
+          fi
+
+      - name: Upload to GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create v${{ needs.check-version.outputs.new_version }} dist/* --title "Release v${{ needs.check-version.outputs.new_version }}" --notes "Automated release for version v${{ needs.check-version.outputs.new_version }}." --generate-notes
+          TAG="v${{ needs.check-version.outputs.new_version }}"
+
+          # Create the release only if it doesn’t already exist
+          if ! gh release view "$TAG" > /dev/null 2>&1; then
+            gh release create "$TAG" \
+              --title "Release $TAG" \
+              --generate-notes
+          fi
+
+          # Upload each package’s artifacts
+          for pkg in core jvcli jvmanager jvserve jvclient; do
+            echo "Uploading $pkg/dist/* to $TAG…"
+            gh release upload "$TAG" "$pkg/dist/*" --clobber
+          done
 
   docker:
     name: Build and Push Docker Image
