@@ -27,7 +27,15 @@ class TestCreateCommand:
         mock_click = mocker.patch("click.secho")
 
         runner = CliRunner()
-        result = runner.invoke(create_action, ["--name", "test_action"])
+        result = runner.invoke(
+            create_action,
+            [
+                "--name",
+                "test_action",
+                "--jivas_version",
+                __supported__jivas__versions__[0],
+            ],
+        )
 
         assert result.exit_code == 0
         mock_makedirs.assert_has_calls(
@@ -220,12 +228,19 @@ class TestCreateCommand:
 
         runner = CliRunner()
         result = runner.invoke(
-            create_action, ["--name", "test_action", "--jivas_version", "2.1.0"]
+            create_action,
+            [
+                "--name",
+                "test_action",
+                "--jivas_version",
+                __supported__jivas__versions__[0],
+            ],
         )
 
         assert result.exit_code == 0
         mock_click.assert_called_with(
-            f"Template for version 2.1.0 not found in {TEMPLATES_DIR}.", fg="red"
+            f"Template for version {__supported__jivas__versions__[0]} not found in {TEMPLATES_DIR}.",
+            fg="red",
         )
 
     def test_create_namespace_success_with_valid_input(
@@ -362,7 +377,7 @@ class TestCreateCommand:
 
         assert result.exit_code == 0
         mock_click.assert_called_with(
-            "Jivas version 1.0.0 is not supported. Supported versions are: ['2.1.0'].",
+            f"Jivas version 1.0.0 is not supported. Supported versions are: ['{__supported__jivas__versions__[0]}'].",
             fg="red",
         )
 
