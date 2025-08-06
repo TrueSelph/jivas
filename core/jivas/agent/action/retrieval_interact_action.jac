@@ -104,7 +104,7 @@ node RetrievalInteractAction(InteractAction) {
         # update interaction node with query and context data
         interaction_context = visitor.interaction_node.data_get(key=self.get_type());
         if not interaction_context {
-            visitor.interaction_node.data_set(key=self.get_type(), value=interaction_context);
+            interaction_context = {};
         }
         interaction_context['query'] = query.get("query", visitor);
 
@@ -126,6 +126,9 @@ node RetrievalInteractAction(InteractAction) {
                 visitor.interaction_node.add_directive(directive = self.null_directive);
             }
         }
+
+        visitor.interaction_node.data_set(key=self.get_type(), value=interaction_context);
+
     }
 
     def process_query(visitor: agent_graph_walker) -> dict {

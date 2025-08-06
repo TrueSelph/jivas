@@ -169,11 +169,13 @@ node Frame(GraphNode) {
     def get_active_event_statements() -> list[dict] {
         # returns a list of events to inform prompt of system-level events
         interaction_node = self.get_last_interaction();
+        statements = [];
         if(interaction_node) {
             for event in interaction_node.events {
                 statements.append({"ai": f"event: {event}"});
             }
         }
+        return statements;
     }
 
     def get_interactions() -> list {
