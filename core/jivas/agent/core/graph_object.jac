@@ -28,7 +28,10 @@ obj GraphObject {
 
     def data_get(key:str, default:Optional[Any] = None) -> Any {
         # retrieves a named variable by key
-        return self.data.get(key, default);
+        if isinstance(self.data, dict) {
+            return self.data.get(key, default);
+        }
+        return None;
     }
 
     def data_set(key:str, value:Any) {
