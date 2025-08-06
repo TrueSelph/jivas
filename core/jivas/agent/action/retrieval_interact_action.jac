@@ -126,7 +126,7 @@ node RetrievalInteractAction(InteractAction) {
                 visitor.interaction_node.add_directive(directive = self.null_directive);
             }
         }
-        
+
         visitor.interaction_node.data_set(key=self.get_type(), value=interaction_context);
 
     }
