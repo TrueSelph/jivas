@@ -33,7 +33,6 @@ echo "--------------------------------"
 echo "JIVAS_USER: $JIVAS_USER"
 echo "JIVAS_BASE_URL: $JIVAS_BASE_URL"
 echo "JIVAS_STUDIO_URL: $JIVAS_STUDIO_URL"
-echo "JIVAS_FILES_URL: $JIVAS_FILES_URL"
 echo "JIVAS_ENVIRONMENT: $JIVAS_ENVIRONMENT"
 echo "--------------------------------"
 
@@ -41,23 +40,13 @@ echo "--------------------------------"
 set -m
 
 # Start main process in the background
-jvcli server launch &
+jac jvserve -ho '0.0.0.0' -p 8000 main.jac &
 
 # Create JIVAS_FILES_ROOT_PATH if it doesn't exist
 if [ ! -d "$JIVAS_FILES_ROOT_PATH" ]; then
     mkdir -p $JIVAS_FILES_ROOT_PATH
 fi
 
-# Launch file server if in development mode and JIVAS_FILEINTERFACE is set to local
-if [ "$JIVAS_ENVIRONMENT" == "development" ] && [ "$JIVAS_FILE_INTERFACE" == "local" ]; then
-    echo "Starting file server..."
-    jac jvfileserve $JIVAS_FILES_ROOT_PATH &
-elif [ "$JIVAS_ENVIRONMENT" == "production" ] && [ "$JIVAS_FILE_INTERFACE" == "s3" ]; then
-    echo "Starting proxy server..."
-    jac jvproxyserve .files &
-else
-    echo "File server not started. JIVAS_ENVIRONMENT: $JIVAS_ENVIRONMENT, JIVAS_FILE_INTERFACE: $JIVAS_FILE_INTERFACE"
-fi
 
 # Rest of script remains unchanged
 function initialize() {
