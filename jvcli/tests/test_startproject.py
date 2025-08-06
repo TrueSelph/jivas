@@ -84,7 +84,8 @@ class TestStartProjectCommand:
 
         assert result.exit_code == 0
         mock_click.assert_called_once_with(
-            "Template for Jivas version 2.1.0 not found.", fg="red"
+            f"Template for Jivas version {__supported__jivas__versions__[0]} not found.",
+            fg="red",
         )
 
     def test_exception_handling_during_project_creation(
@@ -95,7 +96,10 @@ class TestStartProjectCommand:
         mock_click = mocker.patch("click.secho")
 
         runner = CliRunner()
-        result = runner.invoke(startproject, ["test_project", "--version", "2.1.0"])
+        result = runner.invoke(
+            startproject,
+            ["test_project", "--version", __supported__jivas__versions__[0]],
+        )
 
         assert result.exit_code == 0
         mock_click.assert_called_once_with(
