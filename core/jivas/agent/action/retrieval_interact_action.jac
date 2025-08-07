@@ -140,6 +140,7 @@ node RetrievalInteractAction(InteractAction) {
 
             prompt_messages = [];
             prompt_messages.extend(statements);
+            prompt_messages.extend([{"human": visitor.utterance}]);
             prompt_messages.extend([{"system": self.query_completion_prompt}]);
 
             result = None;

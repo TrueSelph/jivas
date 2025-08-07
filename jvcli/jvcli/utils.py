@@ -40,10 +40,14 @@ def validate_yaml_format(info_data: dict, type: str, version: str = "latest") ->
         version = max(__supported__jivas__versions__)
 
     if type == "action" or type.endswith("action"):
-        template_path = os.path.join(TEMPLATES_DIR, version, "action_info.yaml")
+        template_path = os.path.join(
+            TEMPLATES_DIR, version, "sourcefiles", "action_info.yaml"
+        )
 
     if type == "daf" or type == "agent":
-        template_path = os.path.join(TEMPLATES_DIR, version, "agent_info.yaml")
+        template_path = os.path.join(
+            TEMPLATES_DIR, version, "sourcefiles", "agent_info.yaml"
+        )
 
     if not os.path.exists(template_path):
         click.secho(f"Template for version {version} not found.", fg="red")

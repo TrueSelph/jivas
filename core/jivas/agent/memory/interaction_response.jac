@@ -16,6 +16,8 @@ obj InteractionMessage(GraphObject) {
     # abstract base class for interaction message
     has message_type:str = None;
     has content:Any=None;
+    has mime:str = "";
+    has data:Any = None;
 
     def get_type() -> str {
         return self.message_type;

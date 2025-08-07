@@ -28,12 +28,19 @@ obj GraphObject {
 
     def data_get(key:str, default:Optional[Any] = None) -> Any {
         # retrieves a named variable by key
-        return self.data.get(key, default);
+        if isinstance(self.data, dict) {
+            return self.data.get(key, default);
+        }
+        return None;
     }
 
     def data_set(key:str, value:Any) {
         # sets a named variable by key
-        self.data[key] = value;
+        if isinstance(self.data, dict) {
+            self.data[key] = value;
+        } else {
+           self.data = {key: value};
+        }
     }
 
     def data_append(key: str, value: Any) -> None {

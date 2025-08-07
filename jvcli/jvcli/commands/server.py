@@ -27,10 +27,20 @@ def server() -> None:
     default="main.jac",
     help="Path to the JAC file to run. Defaults to main.jac in the current directory.",
 )
-def launch(jac_file: str) -> None:
+@click.option(
+    "--host",
+    default=os.environ.get("JIVAS_HOST", "localhost"),
+    help="Host address for Jivas login.",
+)
+@click.option(
+    "--port",
+    default=os.environ.get("JIVAS_PORT", 8000),
+    help="Port for Jivas login.",
+)
+def launch(jac_file: str, host: str, port: int) -> None:
     """Launch the Jivas Server by running the specified JAC file."""
     click.echo(f"Launching Jivas Server with JAC file: {jac_file}...")
-    subprocess.call(["jac", "jvserve", jac_file])
+    subprocess.call(["jac", "jvserve", jac_file, "--host", host, "--port", str(port)])
 
 
 @server.command()

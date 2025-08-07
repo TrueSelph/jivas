@@ -3,12 +3,16 @@
 import asyncio
 import logging
 import os
+import sys
+import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from pickle import load
 from typing import AsyncIterator, Optional
 
 import aiohttp
+import psutil
 import pymongo
 from bson import ObjectId
 from dotenv import load_dotenv
@@ -21,7 +25,7 @@ from jac_cloud.plugin.jaseci import NodeAnchor
 from jaclang import JacMachine as Jac
 from jaclang.cli.cmdreg import cmd_registry
 from jaclang.runtimelib.machine import hookimpl
-from watchfiles import Change, run_process
+from watchfiles import Change, watch
 
 from jvserve.lib.agent_interface import AgentInterface
 from jvserve.lib.file_interface import (
@@ -42,6 +46,10 @@ logger = logging.getLogger(__name__)
 # Global for MongoDB collection with thread-safe initialization
 url_proxy_collection = None
 collection_init_lock = asyncio.Lock()
+
+# Global state for watcher control
+WATCHER_STATE_FILE = ".jvserve_watcher_state"
+watcher_enabled = True
 
 
 async def get_url_proxy_collection() -> pymongo.collection.Collection:
@@ -94,6 +102,37 @@ async def serve_proxied_file(
                 )
     except aiohttp.ClientError as e:
         raise HTTPException(status_code=502, detail=f"File fetch error: {str(e)}")
+
+
+def start_file_watcher(
+    watchdir: str, filename: str, host: str, port: int
+) -> threading.Thread:
+    """Start the file watcher in a separate thread"""
+
+    def watcher_loop() -> None:
+        """File watcher loop that runs in a separate thread"""
+        global watcher_enabled
+
+        logger.info(f"Starting file watcher for directory: {watchdir}")
+
+        try:
+            for changes in watch(watchdir):
+                if watcher_enabled:
+                    log_reload(changes)
+                    # Kill the current server process and restart
+                    reload_server()
+                else:
+                    logger.info("Watcher disabled, ignoring changes")
+                    time.sleep(1)  # Prevent busy loop when disabled
+        except KeyboardInterrupt:
+            logger.info("File watcher stopped")
+        except Exception as e:
+            logger.error(f"File watcher error: {e}")
+
+    # Start watcher in daemon thread so it doesn't prevent program exit
+    watcher_thread = threading.Thread(target=watcher_loop, daemon=True)
+    watcher_thread.start()
+    return watcher_thread
 
 
 def run_jivas(filename: str, host: str = "localhost", port: int = 8000) -> None:
@@ -219,12 +258,32 @@ def run_jivas(filename: str, host: str = "localhost", port: int = 8000) -> None:
             raise HTTPException(status_code=500, detail="Internal server error")
 
     ctx.close()
+
+    # Start file watcher BEFORE starting the server (in development mode)
+    is_development = os.environ.get("JIVAS_ENVIRONMENT") == "development"
+    if is_development:
+        watchdir = os.path.join(
+            os.path.abspath(os.path.dirname(filename)), "actions", ""
+        )
+        logger.info("Development mode: Starting file watcher")
+        enable_watcher()
+        start_file_watcher(watchdir, filename, host, port)
+
     # Run the app
     JaseciFastAPI.start(host=host, port=port)
 
 
 def log_reload(changes: set[tuple[Change, str]]) -> None:
-    """Log changes."""
+    """Log changes and check watcher state."""
+    global watcher_enabled
+
+    logger.warning(f"Watcher is: {watcher_enabled}")
+
+    # Check if watcher is disabled
+    if not watcher_enabled:
+        logger.warning("Watcher is disabled. Ignoring changes.")
+        return
+
     num_of_changes = len(changes)
     logger.warning(
         f'Detected {num_of_changes} change{"s" if num_of_changes > 1 else ""}'
@@ -245,12 +304,60 @@ class JacCmd:
         @cmd_registry.register
         def jvserve(filename: str, host: str = "localhost", port: int = 8000) -> None:
             """Launch unified JIVAS server with file services"""
-            watchdir = os.path.join(
-                os.path.abspath(os.path.dirname(filename)), "actions", ""
-            )
-            run_process(
-                watchdir,
-                target=run_jivas,
-                args=(filename, host, port),
-                callback=log_reload,
-            )
+            run_jivas(filename, host, port)
+
+
+def disable_watcher() -> dict:
+    """Disable the watcher from auto-reloading"""
+    if os.environ.get("JIVAS_ENVIRONMENT") == "development":
+        global watcher_enabled
+        watcher_enabled = False
+        with open(WATCHER_STATE_FILE, "w") as f:
+            f.write("disabled")
+        return {"message": "Watcher disabled"}
+    else:
+        return {"message": "Watcher already disabled"}
+
+
+def enable_watcher() -> dict:
+    """Enable the watcher for auto-reloading"""
+    if os.environ.get("JIVAS_ENVIRONMENT") == "development":
+        global watcher_enabled
+        watcher_enabled = True
+        with open(WATCHER_STATE_FILE, "w") as f:
+            f.write("enabled")
+        return {"message": "Watcher enabled"}
+    else:
+        return {"message": "Watcher already enabled"}
+
+
+def reload_server() -> None:
+    """Reload the server using the exact command that started it."""
+    try:
+        # Get the command used to start the sever
+        current_process = psutil.Process(os.getpid())
+        cmdline = current_process.cmdline()
+
+        logger.info(f"Restarting with command: {' '.join(cmdline)}")
+
+        # Replace current process with the same command
+        os.execvp(cmdline[0], cmdline)
+
+    except Exception as e:
+        logger.error(f"Failed to get process command line: {e}")
+        # Fallback to sys.argv
+        reload_server_from_argv()
+    finally:
+        is_development = os.environ.get("JIVAS_ENVIRONMENT") == "development"
+
+        if is_development:
+            enable_watcher()
+
+
+def reload_server_from_argv() -> None:
+    """Reload using sys.argv (the original command line arguments)."""
+    logger.info("Reloading server using sys.argv...")
+    logger.info(f"Original command: {' '.join(sys.argv)}")
+
+    # sys.argv[0] is the script name, rest are arguments
+    os.execvp(sys.executable, [sys.executable] + sys.argv)
