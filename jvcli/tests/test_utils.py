@@ -388,7 +388,7 @@ class TestUtilsFullCoverage:
         info_data = {"name": "test", "version": "1.0.0"}
         assert validate_yaml_format(info_data, type_key, "2.0.0") is True
         mock_open.assert_called_once_with(
-            os.path.join(TEMPLATES_DIR, "2.0.0", "agent_info.yaml"), "r"
+            os.path.join(TEMPLATES_DIR, "2.0.0", "sourcefiles", "agent_info.yaml"), "r"
         )
 
     def test_load_env_if_present(self, mocker: MockerFixture) -> None:

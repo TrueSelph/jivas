@@ -344,7 +344,9 @@ class TestLaunchCommand:
         # Verify behavior
         assert result.exit_code == 0
         assert "Launching Jivas Server with JAC file: main.jac" in result.output
-        mock_subprocess.assert_called_once_with(["jac", "jvserve", "main.jac"])
+        mock_subprocess.assert_called_once_with(
+            ["jac", "jvserve", "main.jac", "--host", "localhost", "--port", "8000"]
+        )
 
     def test_launch_custom_file(self, mocker: MockerFixture) -> None:
         """Test launching the server with a custom JAC file."""
@@ -358,7 +360,9 @@ class TestLaunchCommand:
         # Verify behavior
         assert result.exit_code == 0
         assert "Launching Jivas Server with JAC file: custom.jac" in result.output
-        mock_subprocess.assert_called_once_with(["jac", "jvserve", "custom.jac"])
+        mock_subprocess.assert_called_once_with(
+            ["jac", "jvserve", "custom.jac", "--host", "localhost", "--port", "8000"]
+        )
 
 
 class TestLoginCommand:
