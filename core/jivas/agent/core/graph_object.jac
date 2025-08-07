@@ -36,7 +36,11 @@ obj GraphObject {
 
     def data_set(key:str, value:Any) {
         # sets a named variable by key
-        self.data[key] = value;
+        if isinstance(self.data, dict) {
+            self.data[key] = value;
+        } else {
+           self.data = {key: value};
+        }
     }
 
     def data_append(key: str, value: Any) -> None {

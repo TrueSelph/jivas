@@ -20,6 +20,7 @@ import from jivas.agent.modules.action.ordering { order_interact_actions }
 import from jivas.agent.modules.action.path { find_package_folder }
 import from jivas.agent.modules.action.path { path_to_module }
 import from jivas.agent.modules.system.common { get_jivas_version }
+import from jvserve.cli { reload_server }
 
 import from jvcli.api { RegistryAPI }
 import from jvcli.utils { is_version_compatible }
