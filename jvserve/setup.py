@@ -42,6 +42,7 @@ setup(
     python_requires=">=3.12.0",
     install_requires=[
         "jac-cloud",
+        "psutil>=7.0.0",
         "jaclang==0.8.4",
         "pyaml>=25.1.0",
         "requests>=2.32.3",
