@@ -1,19 +1,18 @@
 """Module for registering CLI plugins for jaseci."""
 
 import asyncio
-from importlib import reload
 import logging
-import psutil
-import sys
 import os
+import sys
+import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from pickle import load
 from typing import AsyncIterator, Optional
-import threading
-import time
 
 import aiohttp
+import psutil
 import pymongo
 from bson import ObjectId
 from dotenv import load_dotenv
@@ -26,7 +25,7 @@ from jac_cloud.plugin.jaseci import NodeAnchor
 from jaclang import JacMachine as Jac
 from jaclang.cli.cmdreg import cmd_registry
 from jaclang.runtimelib.machine import hookimpl
-from watchfiles import Change, run_process, watch
+from watchfiles import Change, watch
 
 from jvserve.lib.agent_interface import AgentInterface
 from jvserve.lib.file_interface import (
@@ -105,10 +104,12 @@ async def serve_proxied_file(
         raise HTTPException(status_code=502, detail=f"File fetch error: {str(e)}")
 
 
-def start_file_watcher(watchdir: str, filename: str, host: str, port: int) -> None:
+def start_file_watcher(
+    watchdir: str, filename: str, host: str, port: int
+) -> threading.Thread:
     """Start the file watcher in a separate thread"""
 
-    def watcher_loop():
+    def watcher_loop() -> None:
         """File watcher loop that runs in a separate thread"""
         global watcher_enabled
 
@@ -306,7 +307,7 @@ class JacCmd:
             run_jivas(filename, host, port)
 
 
-def disable_watcher():
+def disable_watcher() -> dict:
     """Disable the watcher from auto-reloading"""
     if os.environ.get("JIVAS_ENVIRONMENT") == "development":
         global watcher_enabled
@@ -318,7 +319,7 @@ def disable_watcher():
         return {"message": "Watcher already disabled"}
 
 
-def enable_watcher():
+def enable_watcher() -> dict:
     """Enable the watcher for auto-reloading"""
     if os.environ.get("JIVAS_ENVIRONMENT") == "development":
         global watcher_enabled
@@ -330,7 +331,7 @@ def enable_watcher():
         return {"message": "Watcher already enabled"}
 
 
-def reload_server():
+def reload_server() -> None:
     """Reload the server using the exact command that started it."""
     try:
         # Get the command used to start the sever
@@ -353,7 +354,7 @@ def reload_server():
             enable_watcher()
 
 
-def reload_server_from_argv():
+def reload_server_from_argv() -> None:
     """Reload using sys.argv (the original command line arguments)."""
     logger.info("Reloading server using sys.argv...")
     logger.info(f"Original command: {' '.join(sys.argv)}")

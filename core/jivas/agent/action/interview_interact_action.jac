@@ -224,7 +224,7 @@ node InterviewInteractAction(InteractAction) {
                         set_session_complete = False;
                     }
                 }
-                
+
                 if set_session_complete {
                     # update any extracted responses
                     self.update_responses(question_responses, interview_session);
