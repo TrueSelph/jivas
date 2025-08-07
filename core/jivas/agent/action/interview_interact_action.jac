@@ -218,10 +218,19 @@ node InterviewInteractAction(InteractAction) {
 
             # if we have a revised version, transition to completed and prompt again
             if question_responses {
-                # update any extracted responses
-                self.update_responses(question_responses, interview_session);
-                # now transition to completed to reconfirm
-                interview_session.set_state(SessionState.COMPLETED);
+                set_session_complete = True;
+                for (key, value) in question_responses.items() {
+                    if not value {
+                        set_session_complete = False;
+                    }
+                }
+                
+                if set_session_complete {
+                    # update any extracted responses
+                    self.update_responses(question_responses, interview_session);
+                    # now transition to completed to reconfirm
+                    interview_session.set_state(SessionState.COMPLETED);
+                }
             }
 
         }
