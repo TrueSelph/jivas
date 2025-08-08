@@ -8,8 +8,6 @@ import logging;
 import traceback;
 import from typing { Union }
 import from logging { Logger }
-import from jvserve.cli { disable_watcher }
-import from jivas.agent.core.restart_server { restart_server }
 
 import from jivas.agent.modules.action.path { find_package_folder }
 
@@ -159,16 +157,11 @@ walker import_agent {
             agent_node.get_memory();
             agent_node.get_actions();
 
-            # disable watcher when importing agent so agent updates completely before
-            disable_watcher();
-
             # import requires that agent re-install all actions
             if(agent_node := agent_node.update(
                 data=agent_data,
                 with_actions=True
             )) {
-                self.logger.info(f"Agent updated: {agent_node.name}");
-                root spawn restart_server();
                 return agent_node;
             }
         }

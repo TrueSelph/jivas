@@ -202,7 +202,8 @@ def initagents() -> None:
 @server.command()
 @click.argument("agent_name")
 @click.argument("version", required=False)
-def importagent(agent_name: str, version: str) -> None:
+@click.option("--jpr-api-key", default="")
+def importagent(agent_name: str, version: str, jpr_api_key: str) -> None:
     """
     Import an agent from a DAF package.
 
@@ -227,9 +228,17 @@ def importagent(agent_name: str, version: str) -> None:
         version = "latest"
 
     try:
+        data = {
+            "daf_name": agent_name,
+            "daf_version": version,
+        }
+
+        if jpr_api_key:
+            data["jpr_api_key"] = jpr_api_key
+
         response = requests.post(
             f"{os.environ.get('JIVAS_BASE_URL', 'http://localhost:8000')}/walker/import_agent",
-            json={"daf_name": agent_name, "daf_version": version},
+            json=data,
             headers={
                 "Content-Type": "application/json",
                 "Accept": "application/json",
