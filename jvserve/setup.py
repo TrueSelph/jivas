@@ -43,7 +43,6 @@ setup(
     install_requires=[
         "jac-cloud>=0.2.5",
         "psutil>=7.0.0",
-        "jaclang==0.8.4",
         "pyaml>=25.1.0",
         "requests>=2.32.3",
         "aiohttp>=3.10.10",
