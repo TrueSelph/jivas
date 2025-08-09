@@ -41,7 +41,7 @@ setup(
     package_data={"jvserve": []},
     python_requires=">=3.12.0",
     install_requires=[
-        "jac-cloud",
+        "jac-cloud>=0.2.5",
         "psutil>=7.0.0",
         "jaclang==0.8.4",
         "pyaml>=25.1.0",
