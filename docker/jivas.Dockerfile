@@ -15,7 +15,6 @@ RUN pip install --no-cache-dir --upgrade pip
 RUN pip install --no-cache-dir jivas==$JIVAS_VERSION
 RUN pip install --no-cache-dir jvcli==$JIVAS_VERSION
 RUN pip install --no-cache-dir jvmanager==$JIVAS_VERSION
-RUN pip install --no-cache-dir git+https://github.com/Jaseci-Labs/jaseci.git@main#subdirectory=jac-cloud&egg=jaclang
 
 # Try to find and run jvcli
 RUN jvcli startproject . --no-env
