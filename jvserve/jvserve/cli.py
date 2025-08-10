@@ -21,6 +21,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from jac_cloud.core.context import JaseciContext
 from jac_cloud.jaseci.main import FastAPI as JaseciFastAPI  # type: ignore
+from jac_cloud.jaseci.utils import logger
+from jac_cloud.jaseci.utils.logger import Level
 from jac_cloud.plugin.jaseci import NodeAnchor
 from jaclang import JacMachine as Jac
 from jaclang.cli.cmdreg import cmd_registry
@@ -35,20 +37,18 @@ from jvserve.lib.file_interface import (
 )
 from jvserve.lib.jvlogger import JVLogger
 
-# quiet the jac_cloud logger down to errors only
-# jac cloud dumps payload details to console which makes it hard to debug in JIVAS
-os.environ["LOGGER_LEVEL"] = "ERROR"
 load_dotenv(".env")
-# Set up logging
+# quiet the jac_cloud logger down to errors only
+logger.setLevel(Level.ERROR.value)
+# Set up logging for JIVAS
 JVLogger.setup_logging(level="INFO")
-logger = logging.getLogger(__name__)
+jvlogger = logging.getLogger(__name__)
 
 # Global for MongoDB collection with thread-safe initialization
 url_proxy_collection = None
 collection_init_lock = asyncio.Lock()
 
 # Global state for watcher control
-WATCHER_STATE_FILE = ".jvserve_watcher_state"
 watcher_enabled = True
 
 
@@ -113,21 +113,21 @@ def start_file_watcher(
         """File watcher loop that runs in a separate thread"""
         global watcher_enabled
 
-        logger.info(f"Starting file watcher for directory: {watchdir}")
+        jvlogger.info(f"Starting file watcher for directory: {watchdir}")
 
         try:
             for changes in watch(watchdir):
                 if watcher_enabled:
                     log_reload(changes)
                     # Kill the current server process and restart
-                    reload_server()
+                    reload_jivas()
                 else:
-                    logger.info("Watcher disabled, ignoring changes")
+                    jvlogger.info("Watcher disabled, ignoring changes")
                     time.sleep(1)  # Prevent busy loop when disabled
         except KeyboardInterrupt:
-            logger.info("File watcher stopped")
+            jvlogger.info("File watcher stopped")
         except Exception as e:
-            logger.error(f"File watcher error: {e}")
+            jvlogger.error(f"File watcher error: {e}")
 
     # Start watcher in daemon thread so it doesn't prevent program exit
     watcher_thread = threading.Thread(target=watcher_loop, daemon=True)
@@ -169,28 +169,28 @@ def run_jivas(filename: str, host: str = "localhost", port: int = 8000) -> None:
                 async with aiohttp.ClientSession() as session:
                     async with session.get(health_url, timeout=1) as response:
                         if response.status == 200:
-                            logger.info("Server is ready, initializing agents...")
+                            jvlogger.info("Server is ready, initializing agents...")
                             await agent_interface.init_agents()
                             return
             except (aiohttp.ClientConnectorError, asyncio.TimeoutError) as e:
-                logger.warning(
+                jvlogger.warning(
                     f"Server not ready yet (attempt {attempt + 1} / {max_retries}): {e}"
                 )
                 await asyncio.sleep(retry_delay)
                 retry_delay *= 1.5  # Exponential backoff
 
-        logger.error(
+        jvlogger.error(
             "Server did not become ready in time. Agent initialization skipped."
         )
 
     # set up lifespan events
     async def on_startup() -> None:
-        logger.info("JIVAS is starting up...")
+        jvlogger.info("JIVAS is starting up...")
         # Start initialization in background without blocking
         asyncio.create_task(post_startup())
 
     async def on_shutdown() -> None:
-        logger.info("JIVAS is shutting down...")
+        jvlogger.info("JIVAS is shutting down...")
 
     app = JaseciFastAPI.get()
     app_lifespan = app.router.lifespan_context
@@ -254,7 +254,7 @@ def run_jivas(filename: str, host: str = "localhost", port: int = 8000) -> None:
 
             raise HTTPException(status_code=404, detail="File not found")
         except Exception as e:
-            logger.error(f"Proxy error: {str(e)}")
+            jvlogger.error(f"Proxy error: {str(e)}")
             raise HTTPException(status_code=500, detail="Internal server error")
 
     ctx.close()
@@ -265,8 +265,7 @@ def run_jivas(filename: str, host: str = "localhost", port: int = 8000) -> None:
         watchdir = os.path.join(
             os.path.abspath(os.path.dirname(filename)), "actions", ""
         )
-        logger.info("Development mode: Starting file watcher")
-        enable_watcher()
+        jvlogger.info("Development mode: Starting file watcher")
         start_file_watcher(watchdir, filename, host, port)
 
     # Run the app
@@ -277,20 +276,72 @@ def log_reload(changes: set[tuple[Change, str]]) -> None:
     """Log changes and check watcher state."""
     global watcher_enabled
 
-    logger.warning(f"Watcher is: {watcher_enabled}")
+    jvlogger.warning(f"Watcher is: {watcher_enabled}")
 
     # Check if watcher is disabled
     if not watcher_enabled:
-        logger.warning("Watcher is disabled. Ignoring changes.")
+        jvlogger.warning("Watcher is disabled. Ignoring changes.")
         return
 
     num_of_changes = len(changes)
-    logger.warning(
+    jvlogger.warning(
         f'Detected {num_of_changes} change{"s" if num_of_changes > 1 else ""}'
     )
     for change in changes:
-        logger.warning(f"{change[1]} ({change[0].name})")
-    logger.warning("Reloading ...")
+        jvlogger.warning(f"{change[1]} ({change[0].name})")
+    jvlogger.warning("Reloading ...")
+
+
+def disable_watcher() -> dict:
+    """Disable the watcher from auto-reloading"""
+    if os.environ.get("JIVAS_ENVIRONMENT") == "development":
+        global watcher_enabled
+        watcher_enabled = False
+        return {"message": "Watcher disabled"}
+    else:
+        return {"message": "Watcher already disabled"}
+
+
+def enable_watcher() -> dict:
+    """Enable the watcher for auto-reloading"""
+    if os.environ.get("JIVAS_ENVIRONMENT") == "development":
+        global watcher_enabled
+        watcher_enabled = True
+        return {"message": "Watcher enabled"}
+    else:
+        return {"message": "Watcher already enabled"}
+
+
+def reload_jivas() -> None:
+    """Reload the server, handling virtual environments robustly."""
+    try:
+        # Use sys.executable to ensure correct Python interpreter (handles venv)
+        current_process = psutil.Process(os.getpid())
+        cmdline = current_process.cmdline()
+        if cmdline:
+            # Replace executable with sys.executable if different (for venv safety)
+            exec_path = sys.executable
+            if os.path.exists(exec_path):
+                cmdline[0] = exec_path
+                jvlogger.info(f"Restarting with command: {' '.join(cmdline)}")
+                os.execvp(exec_path, cmdline)
+            else:
+                raise RuntimeError("sys.executable does not exist")
+        else:
+            raise RuntimeError("Invalid cmdline from psutil")
+    except Exception as e:
+        jvlogger.error(f"Failed to reload using psutil cmdline: {e}")
+        # Fallback to sys.argv if psutil fails or cmdline is not usable
+        reload_jivas_from_argv()
+
+
+def reload_jivas_from_argv() -> None:
+    """Reload using sys.argv (the original command line arguments)."""
+    jvlogger.info("Reloading server using sys.argv...")
+    jvlogger.info(f"Original command: {' '.join(sys.argv)}")
+
+    # sys.argv[0] is the script name, rest are arguments
+    os.execvp(sys.executable, [sys.executable] + sys.argv)
 
 
 class JacCmd:
@@ -305,59 +356,3 @@ class JacCmd:
         def jvserve(filename: str, host: str = "localhost", port: int = 8000) -> None:
             """Launch unified JIVAS server with file services"""
             run_jivas(filename, host, port)
-
-
-def disable_watcher() -> dict:
-    """Disable the watcher from auto-reloading"""
-    if os.environ.get("JIVAS_ENVIRONMENT") == "development":
-        global watcher_enabled
-        watcher_enabled = False
-        with open(WATCHER_STATE_FILE, "w") as f:
-            f.write("disabled")
-        return {"message": "Watcher disabled"}
-    else:
-        return {"message": "Watcher already disabled"}
-
-
-def enable_watcher() -> dict:
-    """Enable the watcher for auto-reloading"""
-    if os.environ.get("JIVAS_ENVIRONMENT") == "development":
-        global watcher_enabled
-        watcher_enabled = True
-        with open(WATCHER_STATE_FILE, "w") as f:
-            f.write("enabled")
-        return {"message": "Watcher enabled"}
-    else:
-        return {"message": "Watcher already enabled"}
-
-
-def reload_server() -> None:
-    """Reload the server using the exact command that started it."""
-    try:
-        # Get the command used to start the sever
-        current_process = psutil.Process(os.getpid())
-        cmdline = current_process.cmdline()
-
-        logger.info(f"Restarting with command: {' '.join(cmdline)}")
-
-        # Replace current process with the same command
-        os.execvp(cmdline[0], cmdline)
-
-    except Exception as e:
-        logger.error(f"Failed to get process command line: {e}")
-        # Fallback to sys.argv
-        reload_server_from_argv()
-    finally:
-        is_development = os.environ.get("JIVAS_ENVIRONMENT") == "development"
-
-        if is_development:
-            enable_watcher()
-
-
-def reload_server_from_argv() -> None:
-    """Reload using sys.argv (the original command line arguments)."""
-    logger.info("Reloading server using sys.argv...")
-    logger.info(f"Original command: {' '.join(sys.argv)}")
-
-    # sys.argv[0] is the script name, rest are arguments
-    os.execvp(sys.executable, [sys.executable] + sys.argv)

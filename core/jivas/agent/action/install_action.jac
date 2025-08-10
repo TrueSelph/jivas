@@ -7,7 +7,7 @@ import from jivas.agent.core.agent { Agent }
 import from jivas.agent.action.agent_graph_walker {agent_graph_walker}
 import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 import from jvserve.cli { disable_watcher, enable_watcher }
-import from jivas.agent.core.restart_server { restart_server }
+import from jivas.agent.core.exec_reload { exec_reload }
 
 walker install_action(agent_graph_walker) {
     # installs a single action on an agent
@@ -92,7 +92,7 @@ walker install_action(agent_graph_walker) {
             if ( here.update(data=descriptor_data, with_actions=True, jpr_api_key=self.jpr_api_key, clean_actions=self.clean_actions) ) {
                 message = f"{self.package_name} {self.version} installed successfully";
                 self.logger.info(message);
-                root spawn restart_server();
+                root spawn exec_reload();
                 Jac.get_context().status = 200;
                 report message;
                 return True;

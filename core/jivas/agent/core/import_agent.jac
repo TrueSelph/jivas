@@ -19,6 +19,8 @@ import from jivas.agent.core.agents { Agents }
 import from jivas.agent.memory.memory { Memory }
 import from jivas.agent.action.action { Action }
 import from jivas.agent.action.actions { Actions }
+import from jivas.agent.core.exec_reload { exec_reload }
+import from jvserve.cli { disable_watcher, enable_watcher }
 
 walker import_agent {
     # creates or refreshes an agent via json data or yaml source
@@ -58,20 +60,20 @@ walker import_agent {
     }
 
     can on_agents with Agents entry {
+        agent_node = None;
 
-        # routine to import a JIVAS agent by descriptor
         if(self.descriptor) {
-            if(agent_node := self.import_from_descriptor(here, self.descriptor)) {
-                if(self.reporting) {
-                    report agent_node.export();
-                }
-            }
+            agent_node = self.import_from_descriptor(here, self.descriptor);
         } elif (self.daf_name) {
-            if(agent_node := self.import_from_daf(here, self.daf_name, self.daf_version, self.jpr_api_key)) {
-                if(self.reporting) {
-                    report agent_node.export();
-                }
+            agent_node = self.import_from_daf(here, self.daf_name, self.daf_version, self.jpr_api_key);
+        }
+
+        if(agent_node) {
+            disable_watcher();
+            if(self.reporting) {
+                report agent_node.export();
             }
+            root spawn exec_reload();
         }
     }
 
