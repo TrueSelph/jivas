@@ -8,9 +8,8 @@
 | JIVAS_PASSWORD | password | Admin user password |
 | JIVAS_PORT | 8000 | Port for the main Jivas service |
 | JIVAS_BASE_URL | http://localhost:8000 | Base URL for API |
-| JIVAS_STUDIO_URL | http://localhost:8989 | URL for Studio UI |
 | JIVAS_FILES_URL | http://localhost:8000/files | URL for file server |
-| JIVAS_DESCRIPTOR_ROOT_PATH | .jvdata | Path for descriptor data |
+| JIVAS_FILES_SHORT_URL | http://localhost:8000/f | Short URL for file server |
 | JIVAS_ACTIONS_ROOT_PATH | actions | Path for actions |
 | JIVAS_DAF_ROOT_PATH | daf | Path for DAF (Digital Agent File) |
 | JIVAS_FILES_ROOT_PATH | .files | Path for files storage |
