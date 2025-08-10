@@ -32,6 +32,7 @@ walker import_agent {
     has daf_name: str = "";
     has daf_version: str = "";
     has jpr_api_key: str = "";
+    has reload_after: bool = False;
     has reporting: bool = True;
 
     obj __specs__ {
@@ -62,6 +63,9 @@ walker import_agent {
     can on_agents with Agents entry {
         agent_node = None;
 
+        # ensure watcher is disabled during import
+        disable_watcher();
+
         if(self.descriptor) {
             agent_node = self.import_from_descriptor(here, self.descriptor);
         } elif (self.daf_name) {
@@ -69,10 +73,17 @@ walker import_agent {
         }
 
         if(agent_node) {
-            disable_watcher();
             if(self.reporting) {
                 report agent_node.export();
             }
+        }
+    }
+
+    can on_exit with exit {
+        # enable the watcher
+        enable_watcher();
+        # reload jivas after import if reload flag is set..
+        if self.reload_after {
             root spawn exec_reload();
         }
     }

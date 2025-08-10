@@ -10,7 +10,8 @@ import from jivas.agent.core {
     update_agent,
     list_agents,
     delete_agent,
-    healthcheck
+    healthcheck,
+    exec_reload
 }
 
 import from jivas.agent.action {

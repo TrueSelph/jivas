@@ -7,7 +7,6 @@ import from jivas.agent.core.agent { Agent }
 import from jivas.agent.action.agent_graph_walker {agent_graph_walker}
 import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 import from jvserve.cli { disable_watcher, enable_watcher }
-import from jivas.agent.core.exec_reload { exec_reload }
 
 walker install_action(agent_graph_walker) {
     # installs a single action on an agent
@@ -27,6 +26,7 @@ walker install_action(agent_graph_walker) {
     can on_agent with Agent entry {
         # updates the agent descriptor with the action to be installed; returns the updated descriptor data
 
+        success = False;
         action_exists = False;
         descriptor_data = here.get_descriptor();
 
@@ -92,27 +92,28 @@ walker install_action(agent_graph_walker) {
             if ( here.update(data=descriptor_data, with_actions=True, jpr_api_key=self.jpr_api_key, clean_actions=self.clean_actions) ) {
                 message = f"{self.package_name} {self.version} installed successfully";
                 self.logger.info(message);
-                root spawn exec_reload();
                 Jac.get_context().status = 200;
                 report message;
-                return True;
+                success = True;
             } else {
                 message = f"unable to install action {self.package_name} {self.version}";
                 self.logger.error(message);
                 Jac.get_context().status = 500;
                 report message;
-                return False;
+                success = False;
             }
 
         } except Exception as e {
-            enable_watcher();
             message = f"unable to complete operation, {traceback.format_exc()}";
             self.logger.error(message);
             Jac.get_context().status = 500;
             report message;
             return False;
+        } finally {
+            enable_watcher();
         }
 
+        return success;
     }
 
 }

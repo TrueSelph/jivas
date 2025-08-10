@@ -54,7 +54,7 @@ walker uninstall_action(agent_graph_walker) {
                 # if the action was removed, update actions
                 descriptor_data['actions'] = updated_actions;
             } else {
-                message = f"unable to find action for uninstall: {self.package_name} {self.version}";
+                message = f"unable to find action for uninstall: {self.package_name}";
                 self.logger.error(message);
                 Jac.get_context().status = 500;
                 report message;
@@ -63,13 +63,13 @@ walker uninstall_action(agent_graph_walker) {
 
             # now that the descriptor data is updated, update the agent and actions, this will reinstall actions and update descriptor
             if ( here.update(data=descriptor_data, with_actions=True) ) {
-                message = f"{self.package_name} {self.version} uninstalled successfully";
+                message = f"{self.package_name} uninstalled successfully";
                 self.logger.info(message);
                 Jac.get_context().status = 200;
                 report message;
                 return True;
             } else {
-                message = f"unable to update agent after uninstall of {self.package_name} {self.version}";
+                message = f"unable to update agent after uninstall of {self.package_name}";
                 self.logger.error(message);
                 Jac.get_context().status = 500;
                 report message;

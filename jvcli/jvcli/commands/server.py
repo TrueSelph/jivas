@@ -202,13 +202,19 @@ def initagents() -> None:
 @server.command()
 @click.argument("agent_name")
 @click.argument("version", required=False)
-@click.option("--jpr-api-key", default="")
-def importagent(agent_name: str, version: str, jpr_api_key: str) -> None:
+@click.option(
+    "--reload", is_flag=True, default=False, help="Reload agent after import."
+)
+@click.option("--jpr-api-key", default="", help="JPR API key for authentication.")
+def importagent(agent_name: str, version: str, reload: bool, jpr_api_key: str) -> None:
     """
     Import an agent from a DAF package.
 
     Usage:
-        jvcli server importagent <agent_name> [--version <jivas_version>]
+        jvcli server importagent <agent_name> [version] [--reload/--no-reload] [--jpr-api-key <key>]
+
+    Example:
+        jvcli server importagent jivas/my_agent 1.2.3 --reload --jpr-api-key ABC123XYZ
     """
 
     # Check if server is running
@@ -232,6 +238,9 @@ def importagent(agent_name: str, version: str, jpr_api_key: str) -> None:
             "daf_name": agent_name,
             "daf_version": version,
         }
+
+        if reload:
+            data["reload_after"] = "true"
 
         if jpr_api_key:
             data["jpr_api_key"] = jpr_api_key

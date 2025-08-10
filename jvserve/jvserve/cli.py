@@ -280,7 +280,6 @@ def log_reload(changes: set[tuple[Change, str]]) -> None:
 
     # Check if watcher is disabled
     if not watcher_enabled:
-        jvlogger.warning("Watcher is disabled. Ignoring changes.")
         return
 
     num_of_changes = len(changes)
