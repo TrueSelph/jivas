@@ -80,6 +80,8 @@ walker import_agent {
     }
 
     can on_exit with exit {
+        # enable the watcher
+        enable_watcher();
         # reload jivas after import if reload flag is set..
         if self.reload_after {
             root spawn exec_reload();
