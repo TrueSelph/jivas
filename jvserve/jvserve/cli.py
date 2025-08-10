@@ -8,7 +8,6 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
-from os import getenv
 from pickle import load
 from typing import AsyncIterator, Optional
 
@@ -40,7 +39,7 @@ from jvserve.lib.jvlogger import JVLogger
 
 load_dotenv(".env")
 # quiet the jac_cloud logger down to errors only
-logger.setLevel(Level[getenv("LOGGER_LEVEL", "ERROR")].value)
+logger.setLevel(Level.ERROR.value)
 # Set up logging for JIVAS
 JVLogger.setup_logging(level="INFO")
 jvlogger = logging.getLogger(__name__)
