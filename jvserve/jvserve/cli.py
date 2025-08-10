@@ -5,7 +5,6 @@ import logging
 import os
 import sys
 import threading
-import time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from pickle import load
@@ -49,7 +48,7 @@ url_proxy_collection = None
 collection_init_lock = asyncio.Lock()
 
 # Global state for watcher control
-watcher_enabled = True
+watcher_enabled = False
 
 
 async def get_url_proxy_collection() -> pymongo.collection.Collection:
@@ -115,19 +114,27 @@ def start_file_watcher(
 
         jvlogger.info(f"Starting file watcher for directory: {watchdir}")
 
-        try:
-            for changes in watch(watchdir):
-                if watcher_enabled:
+        while True:
+            if not watcher_enabled:
+                jvlogger.info("Watcher disabled, stopping watcher thread.")
+                break  # Exit the thread if watcher is disabled
+
+            try:
+                for changes in watch(watchdir):
+                    if not watcher_enabled:
+                        jvlogger.info(
+                            "Watcher disabled during watch, stopping watcher thread."
+                        )
+                        return  # Exit the thread if watcher is disabled during watch
                     log_reload(changes)
                     # Kill the current server process and restart
                     reload_jivas()
-                else:
-                    jvlogger.info("Watcher disabled, ignoring changes")
-                    time.sleep(1)  # Prevent busy loop when disabled
-        except KeyboardInterrupt:
-            jvlogger.info("File watcher stopped")
-        except Exception as e:
-            jvlogger.error(f"File watcher error: {e}")
+            except KeyboardInterrupt:
+                jvlogger.info("File watcher stopped")
+                break
+            except Exception as e:
+                jvlogger.error(f"File watcher error: {e}")
+                break
 
     # Start watcher in daemon thread so it doesn't prevent program exit
     watcher_thread = threading.Thread(target=watcher_loop, daemon=True)
@@ -280,7 +287,6 @@ def log_reload(changes: set[tuple[Change, str]]) -> None:
 
     # Check if watcher is disabled
     if not watcher_enabled:
-        jvlogger.warning("Watcher is disabled. Ignoring changes.")
         return
 
     num_of_changes = len(changes)
