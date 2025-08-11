@@ -1,6 +1,8 @@
 """Module for registering CLI plugins for jaseci."""
 
 import asyncio
+import mimetypes
+import requests
 import logging
 import os
 import sys
@@ -67,10 +69,9 @@ async def get_url_proxy_collection() -> pymongo.collection.Collection:
     return url_proxy_collection
 
 
-async def serve_proxied_file(
-    file_path: str,
-) -> FileResponse | StreamingResponse | Response:
-    """Serve a proxied file from a remote or local URL (async version)"""
+async def serve_proxied_file(file_path: str) -> FileResponse | StreamingResponse:
+    """Serve a proxied file from a remote or local URL (non-blocking)"""
+
     if FILE_INTERFACE == "local":
         root_path = os.environ.get("JIVAS_FILES_ROOT_PATH", DEFAULT_FILES_ROOT)
         full_path = os.path.join(root_path, file_path)
@@ -79,29 +80,57 @@ async def serve_proxied_file(
         return FileResponse(full_path)
 
     file_url = file_interface.get_file_url(file_path)
-
-    # Security check to prevent recursive calls
     if file_url and ("localhost" in file_url or "127.0.0.1" in file_url):
-        raise HTTPException(
-            status_code=500, detail="Environment misconfiguration detected"
-        )
+        # prevent recursive calls when env vars are not detected
+        raise HTTPException(status_code=500, detail="Environment not set up correctly")
 
     if not file_url:
         raise HTTPException(status_code=404, detail="File not found")
 
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(file_url) as response:
-                response.raise_for_status()
+    file_extension = os.path.splitext(file_path)[1].lower()
 
-                return StreamingResponse(
-                    response.content.iter_chunked(8192),
-                    media_type=response.headers.get(
-                        "Content-Type", "application/octet-stream"
-                    ),
-                )
-    except aiohttp.ClientError as e:
-        raise HTTPException(status_code=502, detail=f"File fetch error: {str(e)}")
+    # List of extensions to serve directly
+    direct_serve_extensions = [
+        ".pdf",
+        ".html",
+        ".txt",
+        ".js",
+        ".css",
+        ".json",
+        ".xml",
+        ".svg",
+        ".csv",
+        ".ico",
+    ]
+
+    if file_extension in direct_serve_extensions:
+        # Run the blocking request in a thread pool
+        file_response = await asyncio.to_thread(requests.get, file_url)
+        file_response.raise_for_status()  # Raise HTTPError for bad responses (4XX or 5XX)
+
+        mime_type = mimetypes.guess_type(file_path)[0] or "application/octet-stream"
+        return StreamingResponse(iter([file_response.content]), media_type=mime_type)
+
+    # For streaming responses, we need to handle it differently
+    # Get the response headers first to check if request is valid
+    file_response = await asyncio.to_thread(requests.get, file_url, stream=True)
+    file_response.raise_for_status()
+
+    # Create an async generator that reads chunks in thread pool
+    async def generate_chunks():
+        try:
+            # Read chunks in thread pool to avoid blocking
+            for chunk in file_response.iter_content(chunk_size=1024):
+                if chunk:  # filter out keep-alive chunks
+                    yield chunk
+        finally:
+            # Ensure the response is closed
+            file_response.close()
+
+    return StreamingResponse(
+        generate_chunks(),
+        media_type="application/octet-stream",
+    )
 
 
 def start_file_watcher(
