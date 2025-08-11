@@ -55,7 +55,6 @@ node TTSAction(Action) {
             self.get_agent().save_file("tts/" + output_file_name, audio);
 
             if(as_url) {
-                # return f"{os.environ.get('JIVAS_FILES_URL','http://localhost:8000/files')}/tts/{output_file_name}";
                 return self.get_agent().get_file_url("tts/" + output_file_name);
             }
 
