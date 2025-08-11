@@ -1,5 +1,7 @@
 """NodePager class for paginating node collections in Jivas."""
 
+from jac_cloud.jaseci.datasources.collection import Collection
+
 """
 # Initialize pager
 pager = Pager(NodeAnchor.Collection, page_size=10, current_page=2)
@@ -12,14 +14,12 @@ pagination_info = pager.to_dict()
 
 """
 
-from jac_cloud.jaseci.datasources.collection import Collection
 
 class NodePager:
+    """A class to handle pagination of nodes in a collection."""
+
     def __init__(
-        self,
-        collection: Collection,
-        page_size: int = 10,
-        current_page: int = 1
+        self, collection: Collection, page_size: int = 10, current_page: int = 1
     ) -> None:
         """Initialize the NodePager with a collection, page size, and current page."""
         self.collection = collection
@@ -58,7 +58,7 @@ class NodePager:
             skip=skip,
             limit=self.page_size,
         )
-        
+
         if items:
             nodes = [n.archetype for n in items]
             return nodes
