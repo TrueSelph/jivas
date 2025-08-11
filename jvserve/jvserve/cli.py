@@ -2,6 +2,7 @@
 
 import asyncio
 import mimetypes
+from typing_extensions import Any
 import requests
 import logging
 import os
@@ -117,7 +118,7 @@ async def serve_proxied_file(file_path: str) -> FileResponse | StreamingResponse
     file_response.raise_for_status()
 
     # Create an async generator that reads chunks in thread pool
-    async def generate_chunks():
+    async def generate_chunks() -> Any:
         try:
             # Read chunks in thread pool to avoid blocking
             for chunk in file_response.iter_content(chunk_size=1024):
