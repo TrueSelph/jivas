@@ -152,7 +152,6 @@ def start_file_watcher(
                     # Kill the current server process and restart
                     reload_jivas()
                 else:
-                    jvlogger.info("Watcher disabled, ignoring changes")
                     time.sleep(1)  # Prevent busy loop when disabled
         except KeyboardInterrupt:
             jvlogger.info("File watcher stopped")

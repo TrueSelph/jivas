@@ -9,6 +9,7 @@ import from jivas.agent.core.agent { Agent }
 import from jivas.agent.core.agents { Agents }
 import from jivas.agent.core.graph_walker { graph_walker }
 import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
+import from jvserve.cli { disable_watcher, enable_watcher }
 
 walker init_agents(graph_walker) {
     # reloads actions for all agents on the graph using the graph in the DB
@@ -35,8 +36,11 @@ walker init_agents(graph_walker) {
     }
 
     can on_agent with Agent entry {
+
+        disable_watcher();
+
         try {
-            reloaded = here.get_actions().reload_actions();
+            reloaded = here.get_actions().reload_actions(here.jpr_api_key);
             message = f'loaded {here.name}' if reloaded else f'failed to load {here.name}';
             self.logger.info(message);
             if not reloaded {
@@ -52,6 +56,8 @@ walker init_agents(graph_walker) {
             }
             Jac.get_context().status = 500;
             self.logger.error(message);
+        } finally {
+            enable_watcher();
         }
     }
 
