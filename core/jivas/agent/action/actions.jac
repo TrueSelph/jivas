@@ -140,7 +140,7 @@ node Actions(GraphNode) {
                 package_version = _info.get('package', {}).get('version', '~0.0.1');
 
                 if is_version_compatible(package_version, version) {
-                    self.logger.info(f'{namespace_package_name} {package_version} loaded locally');
+                    self.logger.info(f'{namespace_package_name} {package_version} found locally');
                     module_root = path_to_module(package_path);
                     has_app = os.path.isfile(os.path.join(package_path, 'app', 'app.py'));
 
@@ -314,7 +314,7 @@ node Actions(GraphNode) {
         return True;
     }
 
-    def reload_actions() -> bool {
+    def reload_actions(jpr_api_key:str='') -> bool {
         #*
         Reloads all registered actions from the database.
 
@@ -336,15 +336,27 @@ node Actions(GraphNode) {
         for action_node in action_nodes {
 
             action_data = {"context": action_node.__dict__};
+            namespace_package_name = action_data.get('context', {}).get('_package', {}).get('name', '');
+            package_version = action_data.get('context', {}).get('version', '~0.0.1');
+            pip_deps = action_data.get('context', {}).get('_package', {}).get('dependencies', {}).get('pip', {});
+
             # skip over ExitInteractAction
             if action_data.get('context', {}).get('label', '') == 'ExitInteractAction' {
                 continue;
             }
-            pip_deps = action_data.get('context', {}).get('_package', {}).get('dependencies', {}).get('pip', {});
 
             # Install dependencies if they exist and have not been installed
             if pip_deps and not self.has_pip_packages(pip_deps) {
                 self.batch_pip_package_install(pip_deps);
+            }
+
+            # ensure that the action package is downloaded
+            if not self.get_local_action_info(namespace_package_name, package_version)
+                and not self.download_action_package(namespace_package_name, package_version, jpr_api_key) {
+
+                self.logger.error(f"Failed to download action package for {action_node.label}");
+                all_success = False;
+                continue;
             }
 
             # Attempt import and track success
@@ -355,8 +367,6 @@ node Actions(GraphNode) {
                 # call on_load method on action to reinit
                 # (&(action_node.id)).on_register();
             }
-
-
 
         }
 
@@ -590,7 +600,7 @@ node Actions(GraphNode) {
         config = package.get('config', {});
 
         namespace_package_name = package.get('name');
-        package_version = context.get('version', '~0.0.1');
+        package_version = context.get('version', '>=0.0.1');
         required_jivas_version = package.get('dependencies', {}).get('jivas');
         jivas_version = get_jivas_version();
 
@@ -604,7 +614,8 @@ node Actions(GraphNode) {
         }
 
         # Download package if not local
-        if not config.get('path') and not self.download_action_package(namespace_package_name, package_version, jpr_api_key) {
+        local_action_info = self.get_local_action_info(namespace_package_name, package_version);
+        if not local_action_info and not self.download_action_package(namespace_package_name, package_version, jpr_api_key) {
             return {};
         }
 
@@ -618,6 +629,7 @@ node Actions(GraphNode) {
     }
 
     def :priv download_action_package(namespace_package_name: str, version: str, jpr_api_key: str) -> bool {
+
         #* Downloads and extracts action package from registry *#
         if not (package_data := RegistryAPI.download_package(namespace_package_name, version, api_key=jpr_api_key)) {
             return False;

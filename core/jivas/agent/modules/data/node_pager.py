@@ -1,10 +1,12 @@
 """NodePager class for paginating node collections in Jivas."""
 
+from bson import ObjectId
 from jac_cloud.jaseci.datasources.collection import Collection
+from jaclang.runtimelib.archetype import NodeAnchor
 
 """
 # Initialize pager
-pager = Pager(NodeAnchor.Collection, page_size=10, current_page=2)
+pager = Pager(NodeAnchor.Collection, root, page_size=10, current_page=2)
 
 # Get a page of results
 doc_entries = pager.get_page({"name": "DocFileEntry"})
@@ -19,9 +21,13 @@ class NodePager:
     """A class to handle pagination of nodes in a collection."""
 
     def __init__(
-        self, collection: Collection, page_size: int = 10, current_page: int = 1
+        self,
+        collection: Collection,
+        root: NodeAnchor = None,
+        page_size: int = 10,
+        current_page: int = 1,
     ) -> None:
-        """Initialize the NodePager with a collection, page size, and current page."""
+        """Initialize the NodePager with a collection, optional root, page size, and current page."""
         self.collection = collection
         self.page_size = page_size
         self.current_page = current_page
@@ -29,11 +35,23 @@ class NodePager:
         self.total_pages = 1
         self.has_previous = False
         self.has_next = False
+        self.root = root
 
     def get_page(self, query_filter: dict | None = None) -> list:
         """Retrieve a paginated list of nodes based on the query filter."""
-        if query_filter is None:
+
+        jid: ObjectId = None
+        if self.root and isinstance(self.root, NodeAnchor):
+            # If root is a NodeAnchor, convert it to its ID
+            jid = ObjectId(jid(self.root))
+
+        if query_filter is None and jid is None:
             query_filter = {}
+        elif query_filter is None and jid is not None:
+            query_filter = {"root": jid}
+        elif "root" not in query_filter:
+            query_filter["root"] = jid
+
         # Get total count of items matching the filter
         self.total_items = self.collection.count(query_filter)
 
