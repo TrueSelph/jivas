@@ -76,14 +76,22 @@ node Actions(GraphNode) {
     }
 
     def get_all(only_interact_actions: bool = False, only_enabled: bool = False) -> list {
-        #* Returns all actions, optionally filtered by type and enabled status *#
-        if(only_interact_actions) {
-           walker_obj = _get_interact_actions(filter_enabled=only_enabled);
-        } else {
-           walker_obj = _get_actions(filter_enabled=only_enabled);
-        }
 
-        return (self spawn walker_obj).action_nodes;
+        try {
+
+            #* Returns all actions, optionally filtered by type and enabled status *#
+            if(only_interact_actions) {
+            walker_obj = _get_interact_actions(filter_enabled=only_enabled);
+            } else {
+            walker_obj = _get_actions(filter_enabled=only_enabled);
+            }
+
+            return (self spawn walker_obj).action_nodes;
+
+        } except ImportError as e {
+            self.logger.error(f"Error importing InteractAction: {e}");
+            return [];
+        }
     }
 
     def queue_interact_actions(actions: list) -> list {

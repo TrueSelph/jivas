@@ -467,7 +467,10 @@ node Agent(GraphNode) {
 
         if (url := file_interface.get_file_url(f"{self.id}/{path}")) {
             if (url_proxy := collection.insert_one({ "agent_id": self.id, "path": f"{self.id}/{path}" })) {
-                base_url = os.environ.get('JIVAS_FILES_SHORT_URL','http://localhost:8000/f');
+                base_url = os.environ.get(
+                    'JIVAS_FILES_SHORT_URL',
+                    f"{os.environ.get('JIVAS_BASE_URL', 'http://127.0.0.1:8000')}/f"
+                );
 
                 if (not with_filename) {
                     return f"{base_url}/{url_proxy.inserted_id}";

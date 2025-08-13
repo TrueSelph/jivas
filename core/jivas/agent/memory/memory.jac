@@ -7,9 +7,8 @@ import from datetime { datetime }
 import logging;
 import traceback;
 import from logging { Logger }
-
+import from typing { Optional }
 import from jivas.agent.modules.system.common { node_obj }
-
 import from jivas.agent.core.graph_node { GraphNode }
 import from jivas.agent.memory.frame { Frame }
 import from jivas.agent.memory.collection { Collection }
@@ -157,9 +156,14 @@ node Memory(GraphNode) {
         };
     }
 
-    def purge_frame_memory(session_id:str=None) {
+    def purge_frame_memory(session_id:str=None) -> Optional[list] {
         # removes all frames and interactions (or by session_id)
-        return (self spawn _purge_frames(session_id=session_id)).removed;
+        try {
+            return (self spawn _purge_frames(session_id=session_id)).removed;
+        } except Exception as e {
+            self.logger.error(f"Failed to purge frame memory: {e}");
+            return None;
+        }
     }
 
     def purge_collection_memory(collection_name:str=None) -> list {
