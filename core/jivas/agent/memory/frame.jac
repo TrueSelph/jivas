@@ -188,9 +188,15 @@ node Frame(GraphNode) {
     }
 
     def prune_interactions(frame_size:int) {
-        # prunes the given frame of interaction nodes by the specified amount.
-        # operation will leave 'frame_size' nodes or less in the frame and remove all older nodes
-        self spawn _prune_interactions(frame_size=frame_size);
+
+        try {
+            # prunes the given frame of interaction nodes by the specified amount.
+            # operation will leave 'frame_size' nodes or less in the frame and remove all older nodes
+            self spawn _prune_interactions(frame_size=frame_size);
+        } except Exception as e {
+            # if we fail to prune, log the error
+            self.logger.error(f"Failed to prune interactions in frame {self.id}: {e}");
+        }
     }
 
     def refresh_interactions() {
@@ -379,19 +385,14 @@ walker _prune_interactions {
     }
 
     can on_frame with Frame entry {
-        # if we're here, we'need to connect the advance edge to the new top of the interaction chain
+        # if we're here, we need to connect the advance edge to the new top of the interaction chain
         self.frame_node = here;
 
         if (self.frame_size <= 0)  {
         	disengage;
         }
-
-        if (self.interaction_head) {
-            here +>:Advance:+> self.interaction_head;
-        } else {
-            # take to last interaction node
-            visit here.get_last_interaction();
-        }
+        # take to last interaction node
+        visit [->:Tail:->](`?Interaction);
     }
 
     can on_interaction with Interaction entry {
@@ -400,26 +401,26 @@ walker _prune_interactions {
         # until frame node is met
 
         self.retraces += 1;
+        # set a course to continue upwards in the chain, deleting old interactions as we go..
+        visit [->:Retrace:->](`?Interaction);
+
         # once we get to the interaction node numbering frame_size and it had nodes before it, it becomes our new interaction_head
-        if ((self.retraces == self.frame_size) and ([->:Retrace:->](`?Interaction))) {
+        if ((self.retraces == self.frame_size)) {
             # make a note of the new interaction head node
             self.interaction_head = here;
-            # set a course to continue upwards in the chain, deleting old interactions as we go..
-            visit [->:Retrace:->](`?Interaction);
+
             # now, remove the retrace edge to the node before it
             here del --> [->:Retrace:->](`?Interaction);
             # add a new retrace edge to the frame node from here so it doesnt orphan the rest of the chain..
             if (not [->:Retrace:->](`?Frame)) {
                 here +>:Retrace:+> self.frame_node;
             }
-
-        } elif (self.retraces > self.frame_size) {
-            # if we're here, it means we are in pruning mode
-            visit [->:Retrace:->](`?Interaction) else {
-                Jac.destroy(here);
+            # add advance edge to the frame node
+            if (not [<-:Advance:<-](`?Frame)) {
+                here <+:Advance:<+ self.frame_node;
             }
-        } else {
-            visit [->:Retrace:->](`?Interaction);
+        } elif (self.retraces > self.frame_size) {
+            Jac.destroy(here);
         }
     }
 
