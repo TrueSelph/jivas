@@ -4,7 +4,7 @@ import classes from "./UserButton.module.css";
 import { modals } from "@mantine/modals";
 import type { Agent } from "~/types";
 import { AgentSelect } from "./AgentSelect";
-import { Link } from "react-router";
+import { Link, useLocation, useParams, useSearchParams } from "react-router";
 import { useEffect } from "react";
 
 export const avatarUrl =
@@ -17,8 +17,9 @@ export function UserButton({
 	agents: Agent[];
 	selectedAgentInfo: Agent | null;
 }) {
+	const location = useLocation();
 	useEffect(() => {
-		if (!selectedAgentInfo?.id) {
+		if (!selectedAgentInfo?.id && !location.pathname?.includes("new-agent")) {
 			modals.open({
 				modalId: "switch-agent",
 				title: "Switch Agent",
