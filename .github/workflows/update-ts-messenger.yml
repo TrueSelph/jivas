@@ -31,7 +31,7 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/dist
+          git add public/dist -f
           git commit -m "Update ts-messenger dist from source repo" || echo "No changes to commit"
           git push
         env:
