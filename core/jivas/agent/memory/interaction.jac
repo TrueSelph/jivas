@@ -11,6 +11,7 @@ import from jivas.agent.memory.interaction_response { InteractionMessage, Intera
 node Interaction(GraphNode) {
 
     has :priv agent_id: str = "";
+    has :priv frame_id: str = "";
     has :priv channel: str = "";
     has :priv utterance: str = "";
     has :priv tokens: int = 0;
