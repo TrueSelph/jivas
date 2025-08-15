@@ -2,6 +2,7 @@
 
 from jac_cloud.core.archetype import NodeAnchor
 
+
 def node_get(query_filter: dict | None = None) -> list:
     """Retrieve a list of nodes from the 'node' collection based on the query filter."""
 
