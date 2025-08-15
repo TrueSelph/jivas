@@ -76,6 +76,7 @@ node Frame(GraphNode) {
 
         interaction_node = Interaction(
             agent_id=self.agent_id,
+            frame_id=self.id,
             channel=channel,
             utterance=utterance,
             response = InteractionResponse(session_id=self.session_id)
@@ -94,6 +95,7 @@ node Frame(GraphNode) {
 
         interaction_node = Interaction(
             agent_id=self.agent_id,
+            frame_id=self.id,
             channel=channel,
             response=InteractionResponse(
                 session_id=self.session_id,

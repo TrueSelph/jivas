@@ -9,6 +9,7 @@ import traceback;
 import from logging { Logger }
 import from typing { Optional }
 import from jivas.agent.modules.system.common { node_obj }
+import from jivas.agent.modules.data.node_get { node_get }
 import from jivas.agent.core.graph_node { GraphNode }
 import from jivas.agent.memory.frame { Frame }
 import from jivas.agent.memory.collection { Collection }
@@ -16,6 +17,7 @@ import from jivas.agent.memory.retrace { Retrace }
 import from jivas.agent.memory.tail { Tail }
 import from jivas.agent.memory.interaction { Interaction }
 import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
+import from jac_cloud.core.archetype { NodeAnchor }
 
 node Memory(GraphNode) {
     # represents the root memory node for an agent
@@ -26,6 +28,13 @@ node Memory(GraphNode) {
     def get_frame(agent_id:str, session_id:str, label:str="", user_name:str="", force_session:bool=False, lookup:bool=False) -> Frame {
         # attempt to retrieve an existing session or spawn then traverse to a new one if force is on
         # if lookup is on, it operates in search mode
+
+        # TODO: Use node_get to retrieve the frame node
+        # frame_node = node_obj(node_get({
+        #     "name": "Frame",
+        #     "archetype.agent_id": agent_id,
+        #     "archetype.session_id": session_id
+        # }));
 
         frame_node = node_obj( [-->](`?Frame)(?session_id == session_id) );
 
@@ -104,7 +113,7 @@ node Memory(GraphNode) {
                         # get last interaction node
                         last_interaction_node = frame_node.get_last_interaction();
                         # create the interaction node
-                        interaction_node = Interaction(agent_id = agent_node.id);
+                        interaction_node = Interaction(agent_id = agent_node.id, frame_id = frame_node.id);
                         # if session_id is not in interaction data, add it (for legacy)
                         if( not (interaction_data.get('interaction', {}).get('context',{}).get('response',{}).get('session_id')) ) {
                             interaction_data['interaction']['context']['response']['session_id'] = frame_node.session_id;
@@ -159,7 +168,51 @@ node Memory(GraphNode) {
     def purge_frame_memory(session_id:str=None) -> Optional[list] {
         # removes all frames and interactions (or by session_id)
         try {
-            return (self spawn _purge_frames(session_id=session_id)).removed;
+            agent_node = self.get_agent();
+
+            if not agent_node {
+                self.logger.error("No agent node found, cannot purge frame memory.");
+                return None;
+            }
+
+            if session_id {
+                removed = [];
+                # if session_id is supplied, filter frames
+                if (frame_cursor := NodeAnchor.Collection.find({"$and": [{"name": "Frame"}, {"archetype.agent_id": agent_node.id}, {"archetype.session_id": session_id}]}) ) {
+                    frame_nodes = [n.archetype for n in frame_cursor];
+                    for frame_node in frame_nodes {
+                        # now, get all interaction nodes under this frame
+                        if (interaction_cursor := NodeAnchor.Collection.find({"$and": [{"name": "Interaction"}, {"archetype.frame_id": frame_node.id}]})) {
+                            interaction_nodes = [n.archetype for n in interaction_cursor];
+                            for interaction_node in interaction_nodes {
+                                removed.append(interaction_node);
+                                Jac.destroy(interaction_node);
+                            }
+                        }
+                        removed.append(frame_node);
+                        Jac.destroy(frame_node);
+                    }
+                }
+
+                return removed;
+            }
+
+            filter_query = {
+                "$or": [
+                    {"$and": [{"name": "Frame"}, {"archetype.agent_id": agent_node.id}]},
+                    {"$and": [{"name": "Interaction"}, {"archetype.agent_id": agent_node.id}]}
+                ]
+            };
+
+            if (cursor := NodeAnchor.Collection.find(filter_query)) {
+                nodes = [n.archetype for n in cursor];
+                for node_obj in nodes {
+                    Jac.destroy(node_obj);
+                }
+                return nodes;
+            }
+
+            return None;
         } except Exception as e {
             self.logger.error(f"Failed to purge frame memory: {e}");
             return None;
