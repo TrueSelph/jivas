@@ -309,7 +309,7 @@ walker _get_transcript_statements {
             # add events to the transcript
             if (interaction.events and self.with_events) {
                 for event in interaction.events {
-                    self.statements.append({"ai": f"event: {event}"});
+                    self.statements.insert(-1, {"ai": f"event: {event}"});
                 }
             }
         }
