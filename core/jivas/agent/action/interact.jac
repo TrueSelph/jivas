@@ -74,8 +74,8 @@ walker interact(agent_graph_walker) {
         # the interact walk, sorts the interact actions by weight to preserve execution order before walk
 
         if (
-            (previous_interaction := self.frame_node.get_previous_interaction()) and
-            (resume_action_label := previous_interaction.get_resume_action())
+            (last_interaction := self.frame_node.get_last_interaction()) and
+            (resume_action_label := last_interaction.get_resume_action())
             ) {
             # add any resumption directives from the last interaction node of the frame...
             resume_action_node = self.get_agent().get_action(action_label = resume_action_label);
@@ -149,17 +149,7 @@ walker interact(agent_graph_walker) {
             return self.interaction_node;
         }
 
-        interaction = Interaction(
-            agent_id=self.agent_id,
-            frame_id=self.frame_node.id,
-            channel=self.channel,
-            utterance=self.utterance,
-            response = InteractionResponse(session_id=self.session_id)
-        );
-        if not self.frame_node.interactions {
-            # this is a first-time interaction, add the new_user flag
-            interaction.data_set(key="new_user", value=True);
-        }
+        interaction = self.frame_node.create_interaction(self.utterance, self.channel);
         return interaction;
     }
 
@@ -432,7 +422,6 @@ walker interact(agent_graph_walker) {
             }
 
             # dequeue the action if it already exists in walk path
-
             self.dequeue_interact_action(interact_action);
 
             # add the next action at the end of walk path (without exit)
@@ -501,7 +490,6 @@ walker interact(agent_graph_walker) {
 
     def has_access(action_node: Action) -> bool {
         # implements access control routine if access_control_action is in play, then executes touch if permitted
-
         access = True;
         if (action_node.get_type() in ['AccessControlAction', 'ExitInteractAction']) {
             return True;
@@ -563,27 +551,22 @@ walker interact(agent_graph_walker) {
     }
 
     def respond() {
-
+        # prepares and returns the response from the interaction node
         agent_node = self.get_agent();
 
         if (agent_node and self.interaction_node) {
 
+            interaction_data = {};
             # close the interaction
             self.interaction_node.close();
-
             # add the interaction to the frame
             self.frame_node.insert_interaction(self.interaction_node);
-
-            # init var
-            interaction_data = {};
 
             # lets return the generated response, if we have one...
             has_response = self.interaction_node.has_response();
 
             if (has_response) {
-
                 try  {
-
                     # set the message obj
                     self.message = self.interaction_node.get_message();
                     # prepare the response payload
@@ -629,10 +612,9 @@ walker interact(agent_graph_walker) {
         # handle text-to-speech if enabled
         if (self.tts) {
             if (tts_action := agent_node.get_tts_action()) {
-
+                # grab phoneme content if available
                 content = self.message.data_get('phoneme_content')
                     or self.message.get_content();
-
                 # perform TTS
                 audio = tts_action.invoke(text=content, as_url=True);
                 if (audio) {
@@ -640,6 +622,7 @@ walker interact(agent_graph_walker) {
                 }
             }
         }
+
         if (self.reporting) {
             report self.response;
         }

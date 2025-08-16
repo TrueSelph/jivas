@@ -31,24 +31,30 @@ node Frame(GraphNode) {
         self.protected_attrs += ['agent_id'];
     }
 
-    def get_current_interaction() -> Interaction {
+    def get_last_interaction() -> Optional[Interaction] {
         # retrieves the current interaction in this frame, i.e. the interaction which was last added;
         return self.get_interactions()[0] if self.get_interactions() else None;
     }
 
-    def get_previous_interaction() -> Interaction {
-        # retrieves the interaction before last interaction in this frame, if any
-        return self.get_interactions()[1] if len(self.get_interactions()) > 1 else None;
-    }
-
-    def is_first_interaction -> bool {
-        # denotes the very first interaction of this frame
-        current_interaction = self.get_current_interaction();
-        return (current_interaction.data_get("new_user") is not None);
-    }
-
     def set_label(label:str) {
         self.label = label;
+    }
+
+    def create_interaction(utterance:str, channel:str='default') -> Interaction {
+        # creates a new interaction object and returns it
+
+        interaction = Interaction(
+            agent_id=self.agent_id,
+            frame_id=self.id,
+            channel=channel,
+            utterance=utterance,
+            response = InteractionResponse(session_id=self.session_id)
+        );
+        if not self.interactions {
+            # this is a first-time interaction, add the new_user flag
+            interaction.data_set(key="new_user", value=True);
+        }
+        return interaction;
     }
 
     def add_unprompted_interaction(message:str, channel:str='default') -> Interaction {
@@ -166,7 +172,7 @@ node Frame(GraphNode) {
 
     def get_active_event_statements() -> list[dict] {
         # returns a list of events to inform prompt of system-level events
-        interaction = self.get_current_interaction();
+        interaction = self.get_last_interaction();
         statements = [];
         if(interaction) {
             for event in interaction.events {
