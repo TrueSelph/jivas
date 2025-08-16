@@ -73,12 +73,12 @@ walker interact(agent_graph_walker) {
         # current interaction node for the benefit of action handlers
         # the interact walk, sorts the interact actions by weight to preserve execution order before walk
 
-        # since we have a fresh interaction node at this point, we have to up the depth of retraces to get the last one
-        last_interaction_node = self.frame_node.get_last_interaction(retraces=2);
-
-        if (resume_action_node := self.frame_node.get_resume_action(last_interaction_node)) {
+        if (
+            (previous_interaction := self.frame_node.get_previous_interaction()) and
+            (resume_action_label := previous_interaction.get_resume_action())
+            ) {
             # add any resumption directives from the last interaction node of the frame...
-
+            resume_action_node = self.get_agent().get_action(action_label = resume_action_label);
             queued_interact_actions = here.queue_interact_actions(
                 [-->](`?InteractAction)(?enabled == True)
             );
@@ -104,8 +104,10 @@ walker interact(agent_graph_walker) {
             queued_actions = here.queue_interact_actions(
                 [-->](`?InteractAction)(?enabled == True)
             );
+
             visit queued_actions;
         }
+
     }
 
     can on_action with InteractAction entry {
@@ -139,6 +141,26 @@ walker interact(agent_graph_walker) {
         }
 
         return (&self.agent_id);
+    }
+
+    def get_interaction() -> Interaction {
+        # creates a new interaction object for this interaction or returns an existing open one
+        if self.interaction_node and not self.interaction_node.is_closed() {
+            return self.interaction_node;
+        }
+
+        interaction = Interaction(
+            agent_id=self.agent_id,
+            frame_id=self.frame_node.id,
+            channel=self.channel,
+            utterance=self.utterance,
+            response = InteractionResponse(session_id=self.session_id)
+        );
+        if not self.frame_node.interactions {
+            # this is a first-time interaction, add the new_user flag
+            interaction.data_set(key="new_user", value=True);
+        }
+        return interaction;
     }
 
     def init_interaction(agent_node:Agent) -> bool {
@@ -188,23 +210,7 @@ walker interact(agent_graph_walker) {
         }
 
         # add new interaction node to the frame, or assume one which is open and already added
-        # interaction nodes may be programmatically added and initialized in webhook type actions before interact is called
-
-        add_interaction = False;
-        self.interaction_node = self.frame_node.get_last_interaction();
-
-        if self.interaction_node is None {
-            add_interaction = True;
-        } elif self.interaction_node.is_closed() {
-            add_interaction = True;
-        }
-        if (add_interaction) {
-            self.interaction_node = self.frame_node.add_interaction(
-                utterance=self.utterance,
-                channel=self.channel
-            );
-        }
-
+        self.interaction_node = self.get_interaction();
         if (not self.interaction_node) {
             return False;
         }
@@ -375,7 +381,7 @@ walker interact(agent_graph_walker) {
             resume_action_label = action_node.label;
         }
         if (resume_action_label) {
-            self.frame_node.set_resume_action(
+            self.interaction_node.set_resume_action(
                 action_label=resume_action_label
             );
         }
@@ -564,6 +570,9 @@ walker interact(agent_graph_walker) {
 
             # close the interaction
             self.interaction_node.close();
+
+            # add the interaction to the frame
+            self.frame_node.insert_interaction(self.interaction_node);
 
             # init var
             interaction_data = {};

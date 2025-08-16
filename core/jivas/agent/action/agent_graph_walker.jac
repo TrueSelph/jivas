@@ -38,15 +38,14 @@ walker agent_graph_walker(graph_walker) {
 
         try {
             agent_node = &self.agent_id;
+            if not agent_node.published {
+                Jac.get_context().status = 404;
+                report "Agent is not published";
+                disengage;
+            }
         } except Exception as e {
             Jac.get_context().status = 400;
             report "Invalid agent id";
-            disengage;
-        }
-
-        if not agent_node.published {
-            Jac.get_context().status = 404;
-            report "Agent is not published";
             disengage;
         }
 

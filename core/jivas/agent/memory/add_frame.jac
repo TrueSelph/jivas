@@ -18,21 +18,28 @@ walker add_frame(memory_frame_walker) {
 
     can on_memory with Memory entry {
 
-        frame_node = here.get_frame(
-            agent_id=self.agent_id,
-            user_name=self.user_name,
-            label=self.label,
-            session_id=self.session_id,
-            force_session=self.force_session
-        );
+        try {
+            frame_node = here.get_frame(
+                agent_id=self.agent_id,
+                user_name=self.user_name,
+                label=self.label,
+                session_id=self.session_id,
+                force_session=self.force_session
+            );
 
-        if(not frame_node) {
+            if(not frame_node) {
+                Jac.get_context().status = 500;
+                report f'unable to add frame node - no frame node returned';
+                return;
+            }
+
+            report frame_node.export();
+        } except Exception as e {
             Jac.get_context().status = 500;
-            report f'unable to add frame node';
+            report f'unable to add frame node - {e}';
             return;
         }
 
-        report frame_node.export();
     }
 
 }

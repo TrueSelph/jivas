@@ -175,34 +175,12 @@ node Memory(GraphNode) {
                 return None;
             }
 
+            filter_query = {"$and": [{"name": "Frame"}, {"archetype.agent_id": agent_node.id}]};
+
             if session_id {
-                removed = [];
                 # if session_id is supplied, filter frames
-                if (frame_cursor := NodeAnchor.Collection.find({"$and": [{"name": "Frame"}, {"archetype.agent_id": agent_node.id}, {"archetype.session_id": session_id}]}) ) {
-                    frame_nodes = [n.archetype for n in frame_cursor];
-                    for frame_node in frame_nodes {
-                        # now, get all interaction nodes under this frame
-                        if (interaction_cursor := NodeAnchor.Collection.find({"$and": [{"name": "Interaction"}, {"archetype.frame_id": frame_node.id}]})) {
-                            interaction_nodes = [n.archetype for n in interaction_cursor];
-                            for interaction_node in interaction_nodes {
-                                removed.append(interaction_node);
-                                Jac.destroy(interaction_node);
-                            }
-                        }
-                        removed.append(frame_node);
-                        Jac.destroy(frame_node);
-                    }
-                }
-
-                return removed;
+                filter_query["$and"].append({"archetype.session_id": session_id});
             }
-
-            filter_query = {
-                "$or": [
-                    {"$and": [{"name": "Frame"}, {"archetype.agent_id": agent_node.id}]},
-                    {"$and": [{"name": "Interaction"}, {"archetype.agent_id": agent_node.id}]}
-                ]
-            };
 
             if (cursor := NodeAnchor.Collection.find(filter_query)) {
                 nodes = [n.archetype for n in cursor];
@@ -236,39 +214,6 @@ node Memory(GraphNode) {
 
     def get_agent() {
         return node_obj([<--]);
-    }
-}
-
-walker _purge_frames {
-    # walker which carries out the traversal and purging of frames and related interactions
-
-    has session_id:str = "";
-    has removed:list = [];
-
-    obj __specs__ {
-        # make this a private walker
-        static has private: bool = True;
-    }
-
-    can on_memory with Memory entry {
-        if(self.session_id) {
-            visit [-->](`?Frame)(?session_id == self.session_id);
-        } else {
-            visit [-->](`?Frame);
-        }
-    }
-
-    can on_frame with Frame entry {
-        visit [->:Tail:->] else {
-            self.removed.append(here);
-            Jac.destroy(here);
-        }
-    }
-
-    can on_interaction with Interaction entry {
-        visit [->:Retrace:->];
-        self.removed.append(here);
-        Jac.destroy(here);
     }
 }
 
