@@ -29,14 +29,12 @@ node Memory(GraphNode) {
         # attempt to retrieve an existing session or spawn then traverse to a new one if force is on
         # if lookup is on, it operates in search mode
 
-        # TODO: Use node_get to retrieve the frame node
-        # frame_node = node_obj(node_get({
-        #     "name": "Frame",
-        #     "archetype.agent_id": agent_id,
-        #     "archetype.session_id": session_id
-        # }));
-
-        frame_node = node_obj( [-->](`?Frame)(?session_id == session_id) );
+        # Use node_get to retrieve the frame node faster and more directly
+        frame_node = node_obj(node_get({
+            "name": "Frame",
+            "archetype.agent_id": agent_id,
+            "archetype.session_id": session_id
+        }));
 
         if not frame_node and not lookup {
             if(force_session) {
@@ -54,17 +52,24 @@ node Memory(GraphNode) {
     def get_frames(session_id:str="") -> list[Frame] {
         # returns a list of all frame nodes attached to memory or specific ones by session_id if supplied
 
+        query_filter = {
+            "name": "Frame",
+            "archetype.agent_id": self.get_agent().id
+        };
+
         if session_id {
-            return [-->](`?Frame)(?session_id == session_id);
+            # if session_id is supplied, filter frames
+            query_filter["archetype.session_id"] = session_id;
         }
 
-        frames = [-->](`?Frame);
+        frames = node_get(query_filter);
+
         # sort frames by 'created_on' ISO datetime string
-        def get_frame(frame: Frame) -> str {
+        def _get_frame(frame: Frame) -> str {
             return frame.created_on if hasattr(frame, 'created_on') and frame.created_on else "";
         }
 
-        return sorted(frames, key=get_frame, reverse=True);
+        return sorted(frames, key=_get_frame, reverse=True);
     }
 
     def get_collection(collection_name:str) -> Collection {
@@ -92,37 +97,19 @@ node Memory(GraphNode) {
 
             if overwrite {
                 # first purge memory
-                self.purge();
+                self.purge_frame_memory();
             }
 
             # grab agent node
             agent_node = self.get_agent();
 
             for frame_data in data.get('memory') {
-
                 # add the session id if we can grab it
                 if(session_id := frame_data.get('frame', {}).get('context', {}).get('session_id', None)) {
-
                     # add the frame node
                     frame_node = self.get_frame(agent_id=agent_node.id, session_id=session_id, force_session=True);
                     # add the properties under context
                     frame_node.update(frame_data.get('frame', {}).get('context', {}));
-
-                    interactions = frame_data.get('frame', {}).get('interactions', []);
-                    for interaction_data in interactions {
-                        # get last interaction node
-                        last_interaction_node = frame_node.get_last_interaction();
-                        # create the interaction node
-                        interaction_node = Interaction(agent_id = agent_node.id, frame_id = frame_node.id);
-                        # if session_id is not in interaction data, add it (for legacy)
-                        if( not (interaction_data.get('interaction', {}).get('context',{}).get('response',{}).get('session_id')) ) {
-                            interaction_data['interaction']['context']['response']['session_id'] = frame_node.session_id;
-                        }
-                        interaction_node.update(interaction_data.get('interaction', {}).get('context', {}));
-                        # insert the interaction node
-                        frame_node.insert_interaction(interaction_node, last_interaction_node);
-                    }
-
                     self.logger.info(f"uploaded memory of: {frame_node.session_id}");
                 } else {
                     self.logger.error(f"invalid session ID on frame, skipping...");
@@ -276,22 +263,11 @@ walker _export_memory {
     can on_frame with Frame entry {
 
         interaction_data = [];
-
-        # grab interactions
-        interactions = here.get_interactions();
-
-        # fix interaction object by exporting what we
-        for interaction_node in interactions {
-            # add to interactions
-            interaction_data.append({"interaction": {"context": interaction_node.export()}});
-        }
-
         # grab interactions and add to frame data
         self.frame_data["memory"].append(
             {
                 "frame": {
-                    "context": here.export(),
-                    "interactions": interaction_data
+                    "context": here.export()
                 }
             }
         );
