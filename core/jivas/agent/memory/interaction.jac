@@ -1,10 +1,5 @@
 import from datetime { datetime, timezone }
-
 import from jivas.agent.modules.system.common { node_obj }
-
-import from jivas.agent.memory.advance { Advance }
-import from jivas.agent.memory.retrace { Retrace }
-import from jivas.agent.memory.tail { Tail }
 import from jivas.agent.core.graph_object { GraphObject }
 import from jivas.agent.memory.interaction_response { InteractionMessage, InteractionResponse, TextInteractionMessage }
 
@@ -26,11 +21,6 @@ obj Interaction(GraphObject) {
     has :priv data: dict = {}; # holds data items which are not part of the response, but are relevant to the interaction
     has :priv closed: bool = False; # flag to determine whether interaction is complete / closed or not
 
-    def attach_interaction(interaction_node: Interaction) {
-        # attaches a new interaction node to this one
-        self +>:Advance:+> interaction_node;
-        self <+:Retrace:<+ interaction_node;
-    }
 
     def is_new_user() -> bool {
         return (self.data_get('new_user') is not None);

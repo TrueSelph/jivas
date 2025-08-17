@@ -1,18 +1,13 @@
 import from datetime { datetime, timezone }
 import from typing { Any, Optional }
 import from uuid { uuid4 }
-
 import from jivas.agent.modules.text.chunking { chunk_long_message }
 import from jivas.agent.modules.text.formatting { escape_string }
 import from jivas.agent.modules.text.parsing { extract_first_name }
-
 import from jivas.agent.memory.interaction { Interaction }
 import from jivas.agent.memory.interaction_response { InteractionResponse, TextInteractionMessage }
 import from jivas.agent.core.graph_node { GraphNode }
 import from jivas.agent.action.interact_action { InteractAction }
-import from jivas.agent.memory.tail { Tail }
-import from jivas.agent.memory.advance { Advance }
-import from jivas.agent.memory.retrace { Retrace }
 import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 
 node Frame(GraphNode) {
@@ -158,7 +153,7 @@ node Frame(GraphNode) {
             }
 
             # add events to the transcript
-            if (interaction.events and self.with_events) {
+            if (interaction.events and with_events) {
                 for event in interaction.events {
                     statements.insert(-1, {"ai": f"event: {event}"});
                 }

@@ -13,8 +13,6 @@ import from jivas.agent.modules.data.node_get { node_get }
 import from jivas.agent.core.graph_node { GraphNode }
 import from jivas.agent.memory.frame { Frame }
 import from jivas.agent.memory.collection { Collection }
-import from jivas.agent.memory.retrace { Retrace }
-import from jivas.agent.memory.tail { Tail }
 import from jivas.agent.memory.interaction { Interaction }
 import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 import from jac_cloud.core.archetype { NodeAnchor }
