@@ -1,14 +1,10 @@
 import from datetime { datetime, timezone }
-
 import from jivas.agent.modules.system.common { node_obj }
-
-import from jivas.agent.memory.advance { Advance }
-import from jivas.agent.memory.retrace { Retrace }
-import from jivas.agent.memory.tail { Tail }
-import from jivas.agent.core.graph_node { GraphNode }
+import from jivas.agent.core.graph_object { GraphObject }
 import from jivas.agent.memory.interaction_response { InteractionMessage, InteractionResponse, TextInteractionMessage }
 
-node Interaction(GraphNode) {
+obj Interaction(GraphObject) {
+    # represents a single interaction with the agent
 
     has :priv agent_id: str = "";
     has :priv frame_id: str = "";
@@ -25,17 +21,6 @@ node Interaction(GraphNode) {
     has :priv data: dict = {}; # holds data items which are not part of the response, but are relevant to the interaction
     has :priv closed: bool = False; # flag to determine whether interaction is complete / closed or not
 
-    def postinit {
-        super.postinit();
-        # add of node attributes which are protected from update operation
-        self.protected_attrs += ['agent_id'];
-    }
-
-    def attach_interaction(interaction_node: Interaction) {
-        # attaches a new interaction node to this one
-        self +>:Advance:+> interaction_node;
-        self <+:Retrace:<+ interaction_node;
-    }
 
     def is_new_user() -> bool {
         return (self.data_get('new_user') is not None);
@@ -48,6 +33,11 @@ node Interaction(GraphNode) {
     def set_message(message: InteractionMessage) {
         # set the interaction response message object
         self.get_response().set_message(message);
+    }
+
+    def get_utterance() -> str {
+        # returns the utterance of the interaction
+        return self.utterance;
     }
 
     def get_message() -> InteractionMessage {
@@ -66,7 +56,7 @@ node Interaction(GraphNode) {
         return self.response;
     }
 
-    def has_response -> bool {
+    def has_response() -> bool {
         # evaluates whether the interaction holds a valid response
         if (self.get_message()) {
             return True;
@@ -124,12 +114,22 @@ node Interaction(GraphNode) {
 
     }
 
+    def set_resume_action(action_label:str) {
+        # adds a named resume action node name to the context_data of the interaction
+        self.data_set(key="resume_action", value=action_label);
+    }
+
+    def get_resume_action() -> str {
+        # gets the name of the resume action node from the context_data of the interaction
+        return self.data_get("resume_action", None);
+    }
+
     def get_functions(action_label: str) -> list {
         return self.functions.get(action_label, []);
     }
 
     def get_frame() -> GraphNode {
-        return (self spawn _advance_to_frame()).frame_node;
+        return &self.frame_id;
     }
 
     def is_closed() -> bool {
@@ -138,25 +138,6 @@ node Interaction(GraphNode) {
 
     def close() {
         self.closed = True;
-    }
-
-}
-
-walker _advance_to_frame {
-    # Advance until no more, then return backtrace
-    # of Tail edge to get the Frame node
-    has frame_node:GraphNode = None;
-
-    obj __specs__ {
-        # make this a private walker
-        static has private: bool = True;
-    }
-
-    can on_interaction with Interaction entry {
-        visit [->:Advance:->] else {
-            # we're at the end of the convo / last interaction, return retrace of Tail
-            self.frame_node = node_obj([<-:Tail:<-]);
-        }
     }
 
 }

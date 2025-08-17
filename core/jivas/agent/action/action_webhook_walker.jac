@@ -67,7 +67,7 @@ walker action_webhook_walker(agent_graph_walker) {
         walker_name = self.get_type();
 
         # remove any existing webhook keys for this walker
-        self.delete_webhook_key(walker_name);
+        self.delete_webhook_key(f"{walker_name}_{agent_id}");
 
         # Create mock request with user context
         request = SimpleNamespace();
@@ -76,7 +76,7 @@ walker action_webhook_walker(agent_graph_walker) {
         # Construct and validate the GenerateKey DTO
         try {
             params = GenerateKey.model_validate({
-                "name": walker_name,
+                "name": f"{walker_name}_{agent_id}",
                 "walkers": [walker_name],
                 "nodes": ["root"],
                 "expiration": {
