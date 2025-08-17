@@ -10,6 +10,7 @@ import from logging { Logger }
 import from typing { Optional }
 import from jivas.agent.modules.system.common { node_obj }
 import from jivas.agent.modules.data.node_get { node_get }
+import from jivas.agent.modules.data.commit { commit }
 import from jivas.agent.core.graph_node { GraphNode }
 import from jivas.agent.memory.frame { Frame }
 import from jivas.agent.memory.collection { Collection }
@@ -42,6 +43,8 @@ node Memory(GraphNode) {
             }
             # attach new frame to memory graph
             self ++> frame_node;
+            # effect a bulk write commit to ensure the frame is saved
+            commit(self);
         }
 
         return frame_node;
