@@ -113,30 +113,30 @@ node Frame(GraphNode) {
         return transcript;
     }
 
-    def chunk_message(message:str, max_statement_length:int) -> str {
-        if(max_statement_length > 0) {
-            message_chunks = chunk_long_message(message=message, max_length=max_statement_length, chunk_length=max_statement_length);
-            if (len(message_chunks) > 1) {
-                message = message_chunks[0];
-            }
-        }
-        return message;
-    }
-
     def get_transcript_statements(interactions:int = 10, max_statement_length:int = 0, with_events:bool = False) -> list[dict] {
         # returns the transcript of the last n interactions in this frame in chronological order
         # if n interactions is not specified, returns all interactions
         statements = [];
-        interactions = self.get_interaction_history(interactions=interactions);
+        interaction_nodes = self.get_interaction_history(interactions=interactions);
 
-        for interaction in interactions {
+        def chunk_message(message:str) -> str {
+            if(max_statement_length > 0) {
+                message_chunks = chunk_long_message(message=message, max_length=max_statement_length, chunk_length=max_statement_length);
+                if (len(message_chunks) > 1) {
+                    message = message_chunks[0];
+                }
+            }
+            return message;
+        }
+
+        for interaction in interaction_nodes {
             ai_statement = "";
             human_statement = "";
 
             # record the user utterance
             if (interaction.get_utterance()) {
                 human_statement = escape_string(interaction.get_utterance());
-                human_statement = self.chunk_message(message=human_statement, max_statement_length=max_statement_length);
+                human_statement = chunk_message(message=human_statement);
                 statements.append({"human": human_statement});
             }
 
@@ -152,7 +152,7 @@ node Frame(GraphNode) {
                         }
                     }
                 }else{
-                    ai_statement = self.chunk_message(message=content, max_statement_length=max_statement_length);
+                    ai_statement = chunk_message(message=content);
                     statements.append({"ai": ai_statement});
                 }
             }
@@ -166,7 +166,6 @@ node Frame(GraphNode) {
         }
 
         return statements;
-
     }
 
 
