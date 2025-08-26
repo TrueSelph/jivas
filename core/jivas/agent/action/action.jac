@@ -55,6 +55,12 @@ node Action(GraphNode) {
         return True;
     }
 
+    # export the collection for the action
+    def export_collection() -> dict {}
+    
+    # import the collection for the action
+    def import_collection(collection_info:dict, purge_collection:bool=True) -> dict {}
+
     def update(data: dict = {}) -> GraphNode {
         # updates an action node; expects a dict of attribute names mapped to values for updating
         # overridden to respond to enable / disable updates
