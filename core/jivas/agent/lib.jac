@@ -1,7 +1,6 @@
 # import exposed walkers for FastAPI access
 
 import from jivas.agent.core {
-    pulse,
     init_agents,
     import_agent,
     export_descriptor,

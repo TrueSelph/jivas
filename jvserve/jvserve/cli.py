@@ -33,6 +33,7 @@ from typing_extensions import Any
 from watchfiles import Change, watch
 
 from jvserve.lib.agent_interface import AgentInterface
+from jvserve.lib.agent_pulse import AgentPulse
 from jvserve.lib.file_interface import (
     DEFAULT_FILES_ROOT,
     FILE_INTERFACE,
@@ -220,6 +221,7 @@ def run_jivas(filename: str, host: str = "localhost", port: int = 8000) -> None:
 
     async def on_shutdown() -> None:
         jvlogger.info("JIVAS is shutting down...")
+        AgentPulse.stop()
 
     app = JaseciFastAPI.get()
     app_lifespan = app.router.lifespan_context

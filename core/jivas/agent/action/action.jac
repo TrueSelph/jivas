@@ -49,17 +49,24 @@ node Action(GraphNode) {
     # override to furnish analytics data for the action
     def analytics() { }
 
+    # override with collection export logic for the action
+    def export_collection() -> dict {
+        # should return a collection of exported collection nodes with a data structure compatible with import_collection
+        return {};
+    }
+
+    # override with collection import logic for the action
+    def import_collection(data:dict, purge:bool=True) -> bool {
+        # data - a dictionary of exported collection nodes to import
+        # purge - a bool which when set, will purge the collection prior to import
+        return False;
+    }
+
     def healthcheck() -> Union[bool, dict] {
         # override to implement healthcheck operation
         # optionally returns a dict of (status:bool, severity:str [error|warning], message:str) if more information is needed
         return True;
     }
-
-    # export the collection for the action
-    def export_collection() -> dict {}
-    
-    # import the collection for the action
-    def import_collection(collection_info:dict, purge_collection:bool=True) -> dict {}
 
     def update(data: dict = {}) -> GraphNode {
         # updates an action node; expects a dict of attribute names mapped to values for updating
