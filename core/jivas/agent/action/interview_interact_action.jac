@@ -15,15 +15,15 @@ node InterviewInteractAction(InteractAction) {
     *#
 
     has model_action: str = "LangChainModelAction";
-    has model_name: str = "gpt-4o";
+    has model_name: str = "gpt-4.1";
     has model_max_tokens:int = 4096;
     has model_temperature: float = 0.0;
     has history: bool = True;
-    has history_size: int = 1;
+    has history_size: int = 3;
     has max_statement_length: int = 2048;
     has auto_intents:bool = True;
     has auto_confirm:bool = False; # set True if you wish to skip the user confirmation step
-    has question_directive:str = "Ask the question: '{question}'.";
+    has question_directive:str = "Ignore the history and continue gathering information. Concisely ask the next follow up question: '{question}'.";
     has insist_response_directive:str = "Insist that a response is required then ask the question: '{question}'.";
     has confirmation_directive: str = """
     Perform the following steps to confirm user submission:
@@ -32,7 +32,7 @@ node InterviewInteractAction(InteractAction) {
                 {summary}
             - Format them as a clear, bulleted list under the statement: "Here's what I've recorded:"
         b. Request Explicit Confirmation:
-            - Present the summary followed by:
+            - Present the key and summary followed by:
             "Are all details correct? Feel free to suggest changes or cancel altogether."
     """;
     has revision_directive: str = "Encourage the user to suggest any changes to the information provided.";
