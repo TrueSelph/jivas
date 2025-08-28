@@ -55,13 +55,17 @@ def call_api(
     json_data: Optional[Dict] = None,
     files: Optional[List] = None,
     data: Optional[Dict] = None,
-    timeout: int = 10,
+    timeout: Optional[int] = None,
 ) -> Optional[requests.Response]:
     """Generic function to call an API endpoint."""
 
     jivas_base_url = os.environ.get("JIVAS_BASE_URL", "http://localhost:8000")
     if not endpoint.startswith("http"):
         endpoint = f"{jivas_base_url}/{endpoint}"
+
+    # Use provided timeout, or fall back to environment variable, or default to 30
+    if timeout is None:
+        timeout = int(os.environ.get("JIVAS_REQUEST_TIMEOUT", 30))
 
     ctx = get_user_info()  # Assumes a function that fetches user info
 

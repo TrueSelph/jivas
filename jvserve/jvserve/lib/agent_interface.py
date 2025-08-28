@@ -15,6 +15,7 @@ class AgentInterface:
 
     _instance = None
     logger = logging.getLogger(__name__)
+    timeout = int(os.environ.get("JIVAS_REQUEST_TIMEOUT", 30))
 
     def __init__(self, host: str = "localhost", port: int = 8000) -> None:
         """Initialize the AgentInterface with JacInterface."""
@@ -64,7 +65,7 @@ class AgentInterface:
 
         try:
             response = requests.post(
-                endpoint, json=payload, headers=headers, timeout=60
+                endpoint, json=payload, headers=headers, timeout=self.timeout
             )
             if response.status_code == 200:
                 return response.json().get("reports", {})

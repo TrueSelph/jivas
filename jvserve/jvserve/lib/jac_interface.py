@@ -25,6 +25,8 @@ from jaclang.runtimelib.machine import JacMachine
 class JacInterface:
     """Thread-safe connection and context state provider for Jac Runtime with auto-authentication."""
 
+    timeout = int(os.environ.get("JIVAS_REQUEST_TIMEOUT", 30))
+
     def __init__(self, host: str = "localhost", port: int = 8000) -> None:
         """Initialize JacInterface with host and port."""
         self.host = host
@@ -155,7 +157,9 @@ class JacInterface:
             try:
                 # Try login first
                 response = requests.post(
-                    login_url, json={"email": user, "password": password}, timeout=15
+                    login_url,
+                    json={"email": user, "password": password},
+                    timeout=self.timeout,
                 )
                 self.logger.info(f"Login response status: {response.status_code}")
                 if response.status_code == 200:
@@ -164,7 +168,9 @@ class JacInterface:
 
                 # Register if login fails
                 reg_response = requests.post(
-                    register_url, json={"email": user, "password": password}, timeout=15
+                    register_url,
+                    json={"email": user, "password": password},
+                    timeout=self.timeout,
                 )
                 self.logger.info(
                     f"Register response status: {reg_response.status_code}"
@@ -174,7 +180,7 @@ class JacInterface:
                     login_response = requests.post(
                         login_url,
                         json={"email": user, "password": password},
-                        timeout=15,
+                        timeout=self.timeout,
                     )
                     self.logger.info(
                         f"Retry login response status: {login_response.status_code}"
