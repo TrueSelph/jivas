@@ -49,8 +49,10 @@ class AgentInterface:
     def api_pulse(self, action_label: str, agent_id: str) -> dict:
         """Synchronous pulse API call"""
         if not self._jac.is_valid():
-            self.logger.warning("Invalid API state for pulse")
-            return {}
+            self.logger.warning(
+                "Invalid API state for pulse, attempting to reinstate it..."
+            )
+            self._jac._authenticate()
 
         # Clean parameters
         action_label = action_label.replace("action_label=", "")
@@ -62,7 +64,7 @@ class AgentInterface:
 
         try:
             response = requests.post(
-                endpoint, json=payload, headers=headers, timeout=10
+                endpoint, json=payload, headers=headers, timeout=60
             )
             if response.status_code == 200:
                 return response.json().get("reports", {})
