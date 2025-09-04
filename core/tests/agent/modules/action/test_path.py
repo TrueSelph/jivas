@@ -178,8 +178,8 @@ class TestPath:
         Verifies that a standard module string is correctly converted
         to an action webhook path format with placeholders.
         """
-        result: str = action_webhook_path("some.module.namespace.webhook")
-        assert result == "/action/webhook/namespace/webhook/{agent_id}/{key}"
+        result: str = action_webhook_path("some.namespace.action.walker")
+        assert result == "/action/webhook/namespace/action/walker/{agent_id}/{key}"
 
     def test_action_webhook_path_empty_module(self) -> None:
         """Test action webhook path with empty module.
@@ -198,4 +198,4 @@ class TestPath:
         result: str = action_webhook_path(
             "jivas.core.agent.modules.test.webhook_action"
         )
-        assert result == "/action/webhook/test/webhook_action/{agent_id}/{key}"
+        assert result == "/action/webhook/modules/test/webhook_action/{agent_id}/{key}"

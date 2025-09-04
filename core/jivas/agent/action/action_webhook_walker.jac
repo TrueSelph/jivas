@@ -15,8 +15,8 @@ import from jac_cloud.jaseci.datasources.redis { WebhookRedis }
 import from jac_cloud.core.archetype { NodeAnchor }
 import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 import from jac_cloud.core.archetype { BulkWrite }
-
 import from jivas.agent.modules.action.path { action_webhook_path }
+import from jivas.agent.core.agents { Agents }
 
 import from jac_cloud.jaseci.routers.webhook { generate_key, delete }
 import from jivas.agent.action.agent_graph_walker { agent_graph_walker }
@@ -25,18 +25,60 @@ walker action_webhook_walker(agent_graph_walker) {
     # base walker for action webhook implementations
 
     has agent_id: str;
+    has key: str = "";
+    has header: dict = {};
+    has payload: dict = {};
+    has response: dict = {
+        "status": 200,
+        "message": "200 OK"
+    };
 
     # set up logger
     static has logger:Logger = logging.getLogger(__name__);
 
     class __specs__ {
-        static has webhook: dict = {
-            "type": "path",
-            "name": "key"
-        };
-        static has path: str = action_webhook_path(__module__);
-        static has methods: list = ["get", "post"];
-        static has private: bool = True; # hide endpoint in parent
+        static has private: bool = True;
+    }
+
+    can on_agents with Agents entry {
+
+        agent_node = None;
+
+        # validate key if present
+        if self.validate_key() == False {
+            self.response = {
+                "status": 403,
+                "message": "Invalid webhook key"
+            };
+            disengage;
+        }
+
+        if not self.agent_id {
+            self.response = {
+                "status": 400,
+                "message": "Missing Agent ID"
+            };
+            disengage;
+        }
+
+        try {
+            agent_node = &self.agent_id;
+            if not agent_node.published {
+                self.response = {
+                    "status": 404,
+                    "message": "Agent is not published"
+                };
+                disengage;
+            }
+        } except Exception as e {
+            self.response = {
+                "status": 400,
+                "message": "Invalid Agent ID"
+            };
+            disengage;
+        }
+
+        visit agent_node;
     }
 
     # return the request object passed to the callback
@@ -46,7 +88,34 @@ walker action_webhook_walker(agent_graph_walker) {
 
     # returns the json payload passed to the callback
     def get_request_json() -> dict {
-        return asyncio.run(_.get_context().connection.json());
+        # return asyncio.run(_.get_context().context.json());
+        return self.payload;
+    }
+
+    def get_request_header() -> dict {
+        # returns the request headers passed to the callback
+        return self.header;
+    }
+
+    def validate_key() -> bool {
+        # validate the webhook key passed to the callback
+        if not self.key or not self.agent_id {
+            self.logger.error("Missing key or agent_id for webhook validation");
+            return False;
+        }
+
+        # Validate the key against the database
+        try {
+            wh = Webhook.Collection.find_one({"key": self.key, "name": f"{self.get_type()}_{self.agent_id}"});
+            if not wh {
+                self.logger.error("Webhook key not found or does not match agent");
+                return False;
+            }
+            return True;
+        } except Exception as e {
+            self.logger.error(f"Error validating webhook key: {str(e)}");
+            return False;
+        }
     }
 
     # generates webhook key and full webhook callback url
@@ -99,6 +168,8 @@ walker action_webhook_walker(agent_graph_walker) {
                 self.logger.error("Key generation returned empty key");
                 return "";
             }
+
+            self.key = webhook_key;
         } except (json.JSONDecodeError, AttributeError, KeyError) as e {
             self.logger.error(f"Failed to generate webhook key: {str(e)}");
             return "";

@@ -6,6 +6,8 @@ import traceback
 from typing import Any
 
 import requests
+from fastapi import Request
+from fastapi.responses import JSONResponse
 
 from jvserve.lib.jac_interface import JacInterface
 
@@ -46,6 +48,61 @@ class AgentInterface:
         except Exception as e:
             self._jac.reset()
             self.logger.error(f"Init error: {e}\n{traceback.format_exc()}")
+
+    async def webhook_exec(
+        self,
+        agent_id: str,
+        key: str,
+        namespace: str,
+        action: str,
+        walker: str,
+        request: Request,
+    ) -> JSONResponse:
+        """Trigger webhook execution - async compatible"""
+        try:
+
+            if not self._jac.is_valid():
+                self.logger.warning(
+                    "Invalid API state for webhook, attempting to reinstate it..."
+                )
+                self._jac._authenticate()
+
+            header = dict(request.headers)
+            try:
+                payload = await request.json()
+                if not payload:
+                    payload = {}
+            except Exception:
+                payload = {}
+
+            walker_obj = await self._jac.spawn_walker_async(
+                walker_name=walker,
+                module_name=f"actions.{namespace}.{action}.{walker}",
+                attributes={
+                    "agent_id": agent_id,
+                    "key": key,
+                    "header": header,
+                    "payload": payload,
+                },
+            )
+            if not walker_obj:
+                self.logger.error("Webhook execution failed")
+                return JSONResponse(
+                    content={"error": "Webhook execution failed"}, status_code=500
+                )
+
+            result = walker_obj.response
+            return JSONResponse(
+                status_code=result.get("status", 200),
+                content=result.get("message", "200 OK"),
+            )
+
+        except Exception as e:
+            self._jac.reset()
+            self.logger.error(f"Webhook callback error: {e}\n{traceback.format_exc()}")
+            return JSONResponse(
+                content={"error": "Internal server error"}, status_code=500
+            )
 
     def api_pulse(self, action_label: str, agent_id: str) -> dict:
         """Synchronous pulse API call"""
