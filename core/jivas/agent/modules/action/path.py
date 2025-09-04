@@ -78,4 +78,4 @@ def action_webhook_path(module: str) -> str:
         return ""
 
     module_parts = module.split(".")
-    return f"/action/webhook/{module_parts[-2]}/{module_parts[-1]}/{{agent_id}}/{{key}}"
+    return f"/action/webhook/{module_parts[-3]}/{module_parts[-2]}/{module_parts[-1]}/{{agent_id}}/{{key}}"

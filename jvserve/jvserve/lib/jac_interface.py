@@ -124,7 +124,7 @@ class JacInterface:
 
         try:
             if module_name not in JacMachine.list_modules():
-                self.logger.error(f"Module {module_name} not loaded")
+                self.logger.error(f"Module {module_name} not found")
                 return None
 
             entry_node = ctx.entry_node.archetype

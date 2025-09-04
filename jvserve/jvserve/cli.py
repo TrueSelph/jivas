@@ -18,9 +18,9 @@ import pymongo
 import requests
 from bson import ObjectId
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from jac_cloud.core.context import JaseciContext
 from jac_cloud.jaseci.main import FastAPI as JaseciFastAPI  # type: ignore
 from jac_cloud.jaseci.utils import logger
@@ -243,6 +243,42 @@ def run_jivas(filename: str, host: str = "localhost", port: int = 8000) -> None:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    @app.get("/action/webhook/{namespace}/{action}/{walker}/{agent_id}/{key}")
+    async def webhook_exec_get(
+        namespace: str,
+        action: str,
+        walker: str,
+        agent_id: str,
+        key: str,
+        request: Request,
+    ) -> JSONResponse:
+        return await agent_interface.webhook_exec(
+            namespace=namespace,
+            action=action,
+            walker=walker,
+            agent_id=agent_id,
+            key=key,
+            request=request,
+        )
+
+    @app.post("/action/webhook/{namespace}/{action}/{walker}/{agent_id}/{key}")
+    async def webhook_exec_post(
+        namespace: str,
+        action: str,
+        walker: str,
+        agent_id: str,
+        key: str,
+        request: Request,
+    ) -> JSONResponse:
+        return await agent_interface.webhook_exec(
+            namespace=namespace,
+            action=action,
+            walker=walker,
+            agent_id=agent_id,
+            key=key,
+            request=request,
+        )
 
     # Ensure the local file directory exists if that's the interface
     if FILE_INTERFACE == "local":
