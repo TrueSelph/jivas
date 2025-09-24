@@ -1,7 +1,6 @@
 """Module for registering CLI plugins for jaseci."""
 
 import asyncio
-from datetime import datetime
 import json
 import logging
 import mimetypes
@@ -11,9 +10,9 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
+from datetime import datetime
 from pickle import load
 from typing import AsyncIterator, Optional
-from jac_cloud.jaseci.datasources.redis import Redis
 
 import aiohttp
 import psutil
@@ -25,6 +24,7 @@ from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from jac_cloud.core.context import JaseciContext
+from jac_cloud.jaseci.datasources.redis import Redis
 from jac_cloud.jaseci.main import FastAPI as JaseciFastAPI  # type: ignore
 from jac_cloud.jaseci.utils import logger
 from jac_cloud.jaseci.utils.logger import Level
@@ -435,7 +435,7 @@ class JacCmd:
             run_jivas(filename, host, port)
 
 
-def handle_message(msg):
+def handle_message(msg: str) -> None:
     """
     Handles incoming messages from the Redis channel 'jivas_actions'.
     Expects the message to be a JSON string with 'action' and 'initiator' fields.
@@ -462,10 +462,8 @@ def handle_message(msg):
         print(f"Ignored action: {action} from {initiator}")
 
 
-def redis_listener():
-    """
-    Listens to the Redis channel 'walker_install_action' and handles incoming messages.
-    """
+def redis_listener() -> None:
+    """Listens to the Redis channel 'walker_install_action' and handles incoming messages."""
     pubsub = redis.pubsub()
     pubsub.subscribe("jivas_actions")
     jvlogger.info("Subscribed to channel: jivas_actions")
@@ -475,7 +473,7 @@ def redis_listener():
             handle_message(message["data"])
 
 
-def send_action_notification(action: str, extra_data: dict | None = None):
+def send_action_notification(action: str, extra_data: dict | None = None) -> None:
     """
     Sends a message to the Redis channel 'jivas_actions'.
 
