@@ -20,7 +20,7 @@ import from jivas.agent.memory.memory { Memory }
 import from jivas.agent.action.action { Action }
 import from jivas.agent.action.actions { Actions }
 import from jivas.agent.core.exec_reload { exec_reload }
-import from jvserve.cli { disable_watcher, enable_watcher }
+import from jvserve.cli { disable_watcher, enable_watcher, send_action_notification }
 
 walker import_agent {
     # creates or refreshes an agent via json data or yaml source
@@ -82,6 +82,10 @@ walker import_agent {
     can on_exit with exit {
         # enable the watcher
         enable_watcher();
+
+        # send message to redis for other pods to reload jivas
+        send_action_notification(action="reload_jivas");
+
         # reload jivas after import if reload flag is set..
         if self.reload_after {
             root spawn exec_reload();

@@ -1,1 +1,0 @@
-import{v as o}from"./chunk-QMGIS6GS-CBZUm-7V.js";function r(){const t=localStorage.getItem("host");return localStorage.clear(),localStorage.setItem("host",t||""),o("/login")}export{r as clientLoader};

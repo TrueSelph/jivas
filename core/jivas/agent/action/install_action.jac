@@ -6,7 +6,7 @@ import from logging { Logger }
 import from jivas.agent.core.agent { Agent }
 import from jivas.agent.action.agent_graph_walker {agent_graph_walker}
 import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
-import from jvserve.cli { disable_watcher, enable_watcher }
+import from jvserve.cli { disable_watcher, enable_watcher, send_action_notification }
 
 walker install_action(agent_graph_walker) {
     # installs a single action on an agent
@@ -95,6 +95,9 @@ walker install_action(agent_graph_walker) {
                 Jac.get_context().status = 200;
                 report message;
                 success = True;
+
+                # send message to redis for other pods to reload jivas
+                send_action_notification(action="reload_jivas");
             } else {
                 message = f"unable to install action {self.package_name} {self.version}";
                 self.logger.error(message);
