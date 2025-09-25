@@ -1,6 +1,7 @@
 """Module for registering CLI plugins for jaseci."""
 
 import asyncio
+import json
 import logging
 import mimetypes
 import os
@@ -9,6 +10,7 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
+from datetime import datetime
 from pickle import load
 from typing import AsyncIterator, Optional
 
@@ -22,6 +24,7 @@ from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from jac_cloud.core.context import JaseciContext
+from jac_cloud.jaseci.datasources.redis import Redis
 from jac_cloud.jaseci.main import FastAPI as JaseciFastAPI  # type: ignore
 from jac_cloud.jaseci.utils import logger
 from jac_cloud.jaseci.utils.logger import Level
@@ -41,6 +44,8 @@ from jvserve.lib.file_interface import (
 )
 from jvserve.lib.jvlogger import JVLogger
 
+redis = Redis().get_rd()
+
 load_dotenv(".env")
 # quiet the jac_cloud logger down to errors only
 logger.setLevel(Level.ERROR.value)
@@ -54,6 +59,10 @@ collection_init_lock = asyncio.Lock()
 
 # Global state for watcher control
 watcher_enabled = True
+
+
+# taken from kubernetes HOSTNAME for replicated deployment
+SERVER_ID = os.environ.get("HOSTNAME", "unknown_server")
 
 
 async def get_url_proxy_collection() -> pymongo.collection.Collection:
@@ -335,6 +344,8 @@ def run_jivas(filename: str, host: str = "localhost", port: int = 8000) -> None:
         jvlogger.info("Development mode: Starting file watcher")
         start_file_watcher(watchdir, filename, host, port)
 
+    threading.Thread(target=redis_listener, daemon=True).start()
+
     # Run the app
     JaseciFastAPI.start(host=host, port=port)
 
@@ -422,3 +433,63 @@ class JacCmd:
         def jvserve(filename: str, host: str = "localhost", port: int = 8000) -> None:
             """Launch unified JIVAS server with file services"""
             run_jivas(filename, host, port)
+
+
+def handle_message(msg: str) -> None:
+    """
+    Handles incoming messages from the Redis channel 'jivas_actions'.
+    Expects the message to be a JSON string with 'action' and 'initiator' fields.
+    Only acts on 'reload_jivas' messages not sent by this pod.
+    """
+    try:
+        data = json.loads(msg)
+    except json.JSONDecodeError:
+        print(f"Received invalid message: {msg}")
+        return
+
+    action = data.get("action")
+    initiator = data.get("initiator")
+
+    # Ignore messages sent by this pod
+    if initiator == SERVER_ID:
+        jvlogger.info("Skipping message from self")
+        return
+
+    if action == "reload_jivas":
+        print(f"Received reload_jivas action from {initiator}, executing reload.")
+        reload_jivas()
+    else:
+        print(f"Ignored action: {action} from {initiator}")
+
+
+def redis_listener() -> None:
+    """Listens to the Redis channel 'walker_install_action' and handles incoming messages."""
+    pubsub = redis.pubsub()
+    pubsub.subscribe("jivas_actions")
+    jvlogger.info("Subscribed to channel: jivas_actions")
+
+    for message in pubsub.listen():
+        if message["type"] == "message":
+            handle_message(message["data"])
+
+
+def send_action_notification(action: str, extra_data: dict | None = None) -> None:
+    """
+    Sends a message to the Redis channel 'jivas_actions'.
+
+    Args:
+        action (str): the action name, e.g., 'reload_jivas'
+        extra_data (dict): optional additional data to include in the message
+    """
+    payload = {
+        "action": action,
+        "timestamp": datetime.utcnow().isoformat(),
+        "initiator": SERVER_ID,
+    }
+
+    if extra_data:
+        payload.update(extra_data)
+
+    # Publish the message
+    redis.publish("jivas_actions", json.dumps(payload))
+    jvlogger.info(f"Sent message: {payload}")

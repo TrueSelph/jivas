@@ -1,9 +1,19 @@
-import { Box, Button, Card, Divider, Group, Title } from "@mantine/core";
+import {
+	ActionIcon,
+	Box,
+	Button,
+	Card,
+	Divider,
+	Group,
+	Popover,
+	Switch,
+	Title,
+} from "@mantine/core";
 import type { Route } from "./+types/chat";
 import type { Agent } from "~/types";
 import { useFetcher, useOutletContext } from "react-router";
-import { IconEraser } from "@tabler/icons-react";
-import { useCallback } from "react";
+import { IconAdjustments, IconEraser, IconSettings } from "@tabler/icons-react";
+import { useCallback, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { fetchWithAuth } from "~/lib/api";
 
@@ -82,6 +92,9 @@ export function meta() {
 }
 
 export default function ChatRoute({ loaderData }: Route.ComponentProps) {
+	const [streaming, setStreaming] = useState(
+		localStorage.getItem("streaming") === "true",
+	);
 	const { selectedAgentInfo } = useOutletContext<{
 		selectedAgentInfo: Agent & { thumbnail: string };
 	}>();
@@ -106,21 +119,49 @@ export default function ChatRoute({ loaderData }: Route.ComponentProps) {
 		<Box py="xl" px="xl">
 			<Group justify="space-between">
 				<Title order={3}>Chat</Title>
-				<Button
-					color="dark"
-					leftSection={<IconEraser className="h-5 w-5" />}
-					size="xs"
-					onClick={clearMessages}
-					loading={clearMessagesFetcher.state !== "idle"}
-				>
-					Clear Chat Memory
-				</Button>
+
+				<Group gap="xs">
+					<Popover width={200} position="bottom" withArrow shadow="md">
+						<Popover.Target>
+							<ActionIcon color="dark">
+								<IconAdjustments size={16} />
+							</ActionIcon>
+						</Popover.Target>
+						<Popover.Dropdown>
+							<Title order={5}>Settings</Title>
+							<Divider my="xs" />
+
+							<Switch
+								checked={streaming}
+								onChange={(event) => {
+									window.dispatchEvent(new CustomEvent("tsmsave"));
+									setStreaming(event.currentTarget.checked);
+									localStorage.setItem(
+										"streaming",
+										event.currentTarget.checked.toString(),
+									);
+								}}
+								label="Streaming"
+							></Switch>
+						</Popover.Dropdown>
+					</Popover>
+					<Button
+						color="dark"
+						leftSection={<IconEraser className="h-5 w-5" />}
+						size="xs"
+						onClick={clearMessages}
+						loading={clearMessagesFetcher.state !== "idle"}
+					>
+						Clear Chat Memory
+					</Button>
+				</Group>
 			</Group>
 
 			<Divider mt="xs" mb="xl" />
 			<Card px="xl" h="80vh" withBorder>
 				<ts-messenger
-					// streaming="true"
+					key={`streaming-${String(streaming)}`}
+					streaming={streaming ? "true" : "false"}
 					// agent-id="n:Agent:6874f6d57a46111b8c140df4"
 					// instance-id="ins_AjEscatXrpvh34pAQZxRG"
 					// host="https://f45e-190-108-207-91.ngrok-free.app"
@@ -142,7 +183,6 @@ export default function ChatRoute({ loaderData }: Route.ComponentProps) {
 						"--ts-input-placeholder-color": "#000000eb",
 						"--ts-response-msg-color": "black",
 					})}
-					streaming="true"
 					with-debug="true"
 					layout="standard"
 					session-id={loaderData.sessionId || ""}
