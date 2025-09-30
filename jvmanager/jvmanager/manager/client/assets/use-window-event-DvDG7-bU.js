@@ -15,23 +15,23 @@ import{a as o}from"./chunk-QMGIS6GS-Ycl3lDfV.js";var S=function(){return S=Objec
     margin-right: `).concat(l,"px ").concat(n,`;
     `),r==="padding"&&"padding-right: ".concat(l,"px ").concat(n,";")].filter(Boolean).join(""),`
   }
-  
+
   .`).concat(O,` {
     right: `).concat(l,"px ").concat(n,`;
   }
-  
+
   .`).concat(x,` {
     margin-right: `).concat(l,"px ").concat(n,`;
   }
-  
+
   .`).concat(O," .").concat(O,` {
     right: 0 `).concat(n,`;
   }
-  
+
   .`).concat(x," .").concat(x,` {
     margin-right: 0 `).concat(n,`;
   }
-  
+
   body[`).concat(T,`] {
     `).concat(ee,": ").concat(l,`px;
   }
