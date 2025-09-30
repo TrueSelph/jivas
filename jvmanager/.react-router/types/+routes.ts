@@ -39,12 +39,15 @@ type Pages = {
   "/new-agent": {
     params: {};
   };
+  "/add-action": {
+    params: {};
+  };
 };
 
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/login" | "/logout" | "/graph" | "/chat" | "/dashboard" | "/actions" | "/actions/:actionId" | "/new-agent";
+    page: "/" | "/login" | "/logout" | "/graph" | "/chat" | "/dashboard" | "/actions" | "/actions/:actionId" | "/new-agent" | "/add-action";
   };
   "routes/home.tsx": {
     id: "routes/home";
@@ -64,7 +67,7 @@ type RouteFiles = {
   };
   "routes/layout.tsx": {
     id: "routes/layout";
-    page: "/chat" | "/dashboard" | "/actions" | "/actions/:actionId" | "/new-agent";
+    page: "/chat" | "/dashboard" | "/actions" | "/actions/:actionId" | "/new-agent" | "/add-action";
   };
   "routes/chat.tsx": {
     id: "routes/chat";
@@ -85,5 +88,9 @@ type RouteFiles = {
   "routes/new-agent.tsx": {
     id: "routes/new-agent";
     page: "/new-agent";
+  };
+  "routes/add-action.tsx": {
+    id: "routes/add-action";
+    page: "/add-action";
   };
 };

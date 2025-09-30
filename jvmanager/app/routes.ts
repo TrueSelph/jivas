@@ -16,5 +16,6 @@ export default [
 		route("/actions", "routes/actions.tsx"),
 		route("/actions/:actionId", "routes/action-details.tsx"),
 		route("/new-agent", "routes/new-agent.tsx"),
+		route("/add-action", "routes/add-action.tsx"),
 	]),
 ] satisfies RouteConfig;

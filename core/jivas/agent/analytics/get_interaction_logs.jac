@@ -10,11 +10,13 @@ import from jac_cloud.core.archetype { NodeAnchor }
 
 walker get_interaction_logs(agent_graph_walker) {
 	# returns the list of interactions within a date range
-    has start_date: str = "";
-    has end_date: str = "";
-    has session_id: str = "";
-    has channel: str = "";
-    has timezone: str = "UTC";
+	has start_date: str = "";
+	has end_date: str = "";
+	has session_id: str = "";
+	has channel: str = "";
+	has timezone: str = "UTC";
+	has page: int = 1;
+	has per_page: int = 10;
 
     static has logger:Logger = logging.getLogger(__name__);
 
@@ -46,22 +48,37 @@ walker get_interaction_logs(agent_graph_walker) {
                 match_criteria["channel"] = self.channel;
 			}
 
-            pipeline = [
-                {"$match": match_criteria},
-                {"$sort": {"time_stamp": 1}}
-            ];
+		    # Get total count first
+			count_pipeline = [
+				{"$match": match_criteria},
+				{"$count": "total"}
+			];
 
-            result = list(collection.aggregate(pipeline));
+			count_result = list(collection.aggregate(count_pipeline));
+			total_count = count_result[0]["total"] if count_result else 0;
 
+			# Calculate pagination
+			skip_count = (self.page - 1) * self.per_page;
+			total_pages = (total_count + self.per_page - 1) // self.per_page;
 
-            report {
-                "total": len(result),
-                "data": json.loads(json.dumps(result, default=str))
-            };
+			pipeline = [
+				{"$match": match_criteria},
+				{"$sort": {"time_stamp": -1}},
+				{"$skip": skip_count},
+				{"$limit": self.per_page}
+			];
 
-        } except Exception as e {
-            self.logger.error(f"An error occurred while fetching interaction logs: {traceback.format_exc()}");
-            report {"error": str(e)};
-        }
-    }
+			result = list(collection.aggregate(pipeline));
+
+			report {
+				"total": total_count,
+				"data": json.loads(json.dumps(result, default=str)),
+				"pages": total_pages
+			};
+
+		} except Exception as e {
+			self.logger.error(f"An error occurred while fetching interaction logs: {traceback.format_exc()}");
+			report {"error": str(e)};
+		}
+	}
 }

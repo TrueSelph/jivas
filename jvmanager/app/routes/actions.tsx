@@ -1,8 +1,9 @@
 import type { Action } from "~/types";
 import type { Route } from "./+types/actions";
-import { Box, Divider, SimpleGrid, Title } from "@mantine/core";
+import { Box, Divider, Group, Button, SimpleGrid, Title } from "@mantine/core";
 import { ActionCard } from "~/components/ActionCard";
 import { fetchWithAuth } from "~/lib/api";
+import { Link } from "react-router";
 
 // export async function loader() {
 // 	return {
@@ -64,7 +65,12 @@ export async function clientLoader({ serverLoader }: Route.ClientLoaderArgs) {
 export default function ChatRoute({ loaderData }: Route.ComponentProps) {
 	return (
 		<Box px="xl" py="xl">
-			<Title order={3}>Actions</Title>
+			<Group justify="space-between">
+				<Title order={3}>Actions</Title>
+				<Button color="dark" size="sm" component={Link} to="/add-action">
+					Add Action
+				</Button>
+			</Group>
 			<Divider mt="xs" mb="xl" />
 
 			<SimpleGrid cols={{ base: 1, md: 2, lg: 4 }}>
