@@ -1,0 +1,1 @@
+import"./index-B4oKE3iz.js";import{a as t}from"./chunk-QMGIS6GS-Ycl3lDfV.js";const e=t.createContext({dir:"ltr",toggleDirection:()=>{},setDirection:()=>{}});function i(){return t.useContext(e)}export{i as u};
