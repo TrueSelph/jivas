@@ -25,6 +25,11 @@ import from jivas.agent.action {
     stt
 }
 
+import from jivas.agent.action.subgraph_action {
+    list_states,
+    update_state
+}
+
 import from jivas.agent.memory {
     add_frame,
     get_frames,
