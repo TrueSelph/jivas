@@ -211,6 +211,21 @@ node SubgraphAction(Action) {
         return walker_result;
     }
 
+    def update_responses(responses:dict, frame:Frame) {
+        stored_responses = frame.frame_node.data_get(key=f"{frame.action_label}_results");
+
+        if type(stored_responses) is not dict or not stored_responses {
+            stored_responses = {};
+        }
+
+        # Merge new responses into stored_responses
+        for (key, value) in responses.items() {
+            stored_responses[key] = value;
+        }
+
+        frame.frame_node.data_set(key=f"{frame.action_label}_results", value=stored_responses);
+    }
+
     def get_states(){
         collection = self.get_collection();
 
