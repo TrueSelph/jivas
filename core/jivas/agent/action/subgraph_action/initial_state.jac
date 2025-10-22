@@ -2,7 +2,7 @@ import logging;
 import traceback;
 import from typing { Union }
 import from logging { Logger }
-import from jivas.agent.action.state { State }
+import from jivas.agent.action.subgraph_action.state { State }
 import from jivas.agent.memory.frame { Frame }
 
 

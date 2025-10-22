@@ -65,19 +65,15 @@ node CompletedState(GraphNode) {
         frame_node = frame.frame_node;
         agent_node = frame.agent_node;
 
-        self.set_vars();
-
         states_data = frame.frame_node.data_get(key=f"{frame.action_label}_results");
         print("got_states_data");
         revised = states_data.get("revised", False);
 
         if self.auto_confirm {
             branch_choice_response ={"confirm_response": True};
-            self.update_responses(branch_choice_response);
+            self.update_responses(branch_choice_response, frame);
         }
         elif not revised{ 
-            print("revised is False");
-        
             # Check for confirmation in the latest user message
             branch_choice_response = self.call_llm(self.prompt, history=True, json_only=True, frame_node=frame_node, agent_node=agent_node);
             self.update_responses(branch_choice_response, frame);
@@ -93,10 +89,8 @@ node CompletedState(GraphNode) {
         if not branch_choice_response {
             # Retrieve the interview session from the frame node
             responses = frame_node.data_get(key=f"{frame.action_label}_results");
-            print(f"Interview session data: {responses}");
 
             if responses and isinstance(responses, dict) and len(responses) > 0 {
-                print("has valid data");
                 summary_lines = [];
                 for (field, value) in responses.items() {
                     summary_lines.append(f"- **{field}**: {value}");
@@ -105,7 +99,6 @@ node CompletedState(GraphNode) {
             } else {
                 summary = "";
             }
-            print(summary);
 
             directive = self.directive.replace("{summary}", summary);
 
@@ -115,26 +108,10 @@ node CompletedState(GraphNode) {
             return directive;    
         }
         elif confirmed{
-            print("we have a confirmation response");
             return True;
         }
         elif not confirmed{
-            print("user has not confirmed\n");
             return False;
-        }
-    }
-
-    def set_vars(){
-        # setting any custom prompts or directives
-        if ( prompt := self.state_info.get("prompt", "") ){
-            print("completed state var setting");
-            self.prompt = prompt;
-            print("new prompt", prompt);
-        }
-        if ( directive := self.state_info.get("directive", "") ){
-            print("completed state var settting");
-            self.directive = directive;
-            print("new directive", directive);
         }
     }
 

@@ -34,12 +34,6 @@ node ConfirmedState(State) {
         if ( directive := self.state_info.get("directive", "") ){
             self.directive = directive;
         }
-
-        # Retrieve the interview session from the frame node
-        interview_session = frame_node.data_get(key=f"{frame.action_label}_results");
-        print(f"Interview session data: {interview_session}");
-
-
         return self.directive;
     }
 }

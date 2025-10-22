@@ -196,13 +196,15 @@ node SubgraphAction(Action) {
 
         responses = frame_node.data_get(key=f"{self.label}_results") or {};
 
-        self.process_responses(frame_node, responses);
+        additional_directives = self.process_responses(frame_node, responses);
+        if additional_directives{
+            directives.append(additional_directives);
+        }
 
         if (responses.get("confirm_response", "")){            
             frame_node.data_set(key=f"{self.label}_results", value={});
         }
         return directives;
-
     }    
 
     def walk_subgraph(frame_node:Frame) -> Union[str, dict] {
@@ -212,7 +214,7 @@ node SubgraphAction(Action) {
     }
 
     def update_responses(responses:dict, frame:Frame) {
-        stored_responses = frame.frame_node.data_get(key=f"{frame.action_label}_results");
+        stored_responses = frame.data_get(key=f"{self.label}_results");
 
         if type(stored_responses) is not dict or not stored_responses {
             stored_responses = {};
@@ -223,7 +225,7 @@ node SubgraphAction(Action) {
             stored_responses[key] = value;
         }
 
-        frame.frame_node.data_set(key=f"{frame.action_label}_results", value=stored_responses);
+        frame.data_set(key=f"{self.label}_results", value=stored_responses);
     }
 
     def get_states(){
@@ -262,7 +264,6 @@ node SubgraphAction(Action) {
 
         # get all info as a dict
         pagination_info = pager.to_dict();
-        print("items\n", items);
 
         return {
             "page": page,
