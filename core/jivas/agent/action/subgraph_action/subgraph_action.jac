@@ -15,6 +15,7 @@ import from jivas.agent.action.subgraph_action.revision_state { RevisionState }
 import from jivas.agent.action.subgraph_action.initial_state { InitialState }
 import from jivas.agent.memory.collection { Collection }
 import from jivas.agent.memory.frame { Frame }
+import from jivas.agent.core.graph_walker { graph_walker }
 import from jivas.agent.core.graph_node { GraphNode }
 
 
@@ -196,16 +197,20 @@ node SubgraphAction(Action) {
 
         responses = frame_node.data_get(key=f"{self.label}_results") or {};
 
-        additional_directives = self.process_responses(frame_node, responses);
-        if additional_directives{
-            directives.append(additional_directives);
+        custom_directives = self.process_responses(frame_node, responses);
+        if custom_directives{
+            directives = custom_directives;
         }
 
         if (responses.get("confirm_response", "")){            
             frame_node.data_set(key=f"{self.label}_results", value={});
         }
         return directives;
-    }    
+    }  
+
+    def set_directives(directive:str){
+        self.directives.append(directive);
+    }  
 
     def walk_subgraph(frame_node:Frame) -> Union[str, dict] {
         collection = self.get_collection();
@@ -252,7 +257,6 @@ node SubgraphAction(Action) {
                 {"$and": [{"name": "ConfirmedState"}, {"archetype.collection_id": collection.id}]},
                 {"$and": [{"name": "RevisionState"}, {"archetype.collection_id": collection.id}]}
             ]
-            
         });
 
         if not items {
@@ -366,10 +370,9 @@ walker _subgraph {
     }
 
     can on_collection with Collection entry {
-        visit [-->](`?State) else {
+        visit [-->] (`?State) else {
             disengage;
-        }
-        
+        }        
     }
 
     can on_state with State entry {
@@ -377,7 +380,7 @@ walker _subgraph {
             # execute the action
             response = here.run(self);            
             if(type(response) is bool) {
-                visit [-->]else {
+                visit [-->] else {
                     disengage;
                 }
             }
@@ -390,9 +393,9 @@ walker _subgraph {
             visit [-->] else {
                 disengage;
             }
-        }   
-        
+        }
     }
+
     can on_completed_state with CompletedState entry {
         if here.touch(self) {
             # execute the action
@@ -434,6 +437,8 @@ walker _subgraph {
                 disengage;
             }
         }
+    }
+    can on_exit with exit {
     }
     def set_directives(directive:str){
         self.directives.append(directive);

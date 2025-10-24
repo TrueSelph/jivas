@@ -3,6 +3,7 @@ import traceback;
 import from typing { Union }
 import from logging { Logger }
 import from jivas.agent.action.subgraph_action.state { State }
+import from jivas.agent.core.graph_node { GraphNode }
 import from jivas.agent.memory.frame { Frame }
 
 

@@ -4,6 +4,7 @@ import from typing { Union }
 import from logging { Logger }
 import from jivas.agent.core.graph_node { GraphNode }
 import from jivas.agent.memory.frame { Frame }
+import from jivas.agent.action.action { Action }
 
 node State(GraphNode) {
     # represents an execution on a subgraph on the agent action graph  
@@ -62,13 +63,14 @@ node State(GraphNode) {
         state_data = frame_node.data_get(key=f"{frame.action_label}_results");
         if state_data{
             state_value = state_data.get(self.label, None);
+            confirmed = state_data.get("confirm_response", False);
         }
         else{
             state_value = {};
+            confirmed = False;
         }
-        
 
-        if state_value {
+        if state_value or confirmed{
             return False;
         }
         else {

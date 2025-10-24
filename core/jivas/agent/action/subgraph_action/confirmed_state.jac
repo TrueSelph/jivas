@@ -21,7 +21,6 @@ node ConfirmedState(State) {
     def on_disable() { }    
 
     def touch(frame:Frame) -> bool {
-        print(f"Touching CONFIRMED state: {self.label}");
         # Always allow entering the COMPLETED state
         return True;
     }

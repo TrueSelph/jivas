@@ -3,6 +3,7 @@ import traceback;
 import from typing { Union }
 import from logging { Logger }
 import from jivas.agent.core.graph_node { GraphNode }
+import from jivas.agent.action.subgraph_action.state { State }
 import from jivas.agent.memory.frame { Frame }
 
 
@@ -31,7 +32,9 @@ node CompletedState(GraphNode) {
             - Do not put internal settings such as "revised" or "confirm response" in the displayed list
             - Do not put any items on the list with a value of N/A
         b. Request Explicit Confirmation:
-            - Present the key and summary followed by a request to know if the presented details are accurate as well as inform the user that they can request changes or cancel altogether.
+            Present the key and summary followed by:
+                - a request to know if the presented details are accurate 
+                - a message to inform the user that they can request changes or cancel altogether.
     """;
 
     has prompt:str = """
@@ -66,7 +69,6 @@ node CompletedState(GraphNode) {
         agent_node = frame.agent_node;
 
         states_data = frame.frame_node.data_get(key=f"{frame.action_label}_results");
-        print("got_states_data");
         revised = states_data.get("revised", False);
 
         if self.auto_confirm {
@@ -117,7 +119,6 @@ node CompletedState(GraphNode) {
 
     def call_llm(prompt:str, history:Union[bool,None] = None, json_only:bool = False, frame_node:Frame, agent_node:GraphNode) -> Union[str, dict, None] {
         # performs function tool calling for extracting question responses based on question
-        print("\nCalling LLM with prompt");
         prompt_messages = [];
 
         if not prompt {
@@ -129,7 +130,6 @@ node CompletedState(GraphNode) {
             use_history = history;
         }
         visitor_utterance = frame_node.data_get(key="visitor_utterance");
-        print(f"Visitor utterance: {visitor_utterance}");
 
         if not visitor_utterance {
             return None;
@@ -150,12 +150,10 @@ node CompletedState(GraphNode) {
             }
 
         }
-        print(f"Model action: {self.model_action}");
 
         model_action = agent_node.get_action(action_label=self.model_action);
 
         if model_action {
-            # print("\n Has model action, calling model\n", model_action);
             model_action_result = model_action.call_model(
             prompt_messages=prompt_messages,
             prompt_variables={},
@@ -185,13 +183,11 @@ node CompletedState(GraphNode) {
             stored_responses = {};
         }
 
-        print(f"Stored responses before update: {stored_responses}");
         # Merge new responses into stored_responses
         for (key, value) in responses.items() {
             stored_responses[key] = value;
         }
 
         frame.frame_node.data_set(key=f"{frame.action_label}_results", value=stored_responses);
-        print(f"Stored responses after update: {frame.frame_node.data_get(key=f'{frame.action_label}_results')}");
     }
 }

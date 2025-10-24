@@ -3,6 +3,7 @@ import traceback;
 import from typing { Union }
 import from logging { Logger }
 import from jivas.agent.core.graph_node { GraphNode }
+import from jivas.agent.action.subgraph_action.state { State }
 import from jivas.agent.memory.frame { Frame }
 
 
@@ -27,7 +28,7 @@ node RevisionState(GraphNode) {
         Review the user's message and the recorded responses to accurately extract the following entities and update the relevant recorded responses.
         Be strict on the constraints specified for each entity. Return a JSON object with keys exactly as listed below.
         Include only keys for which you could extract a valid revised value adhering to all constraints. 
-        Do not extract value if it is the same as the one in responses.
+        Do not extract value if it is the same as the one in responses but always extract if the user states a different value from the one in the recorded responses.
 
         Entities to extract:
         {entities}

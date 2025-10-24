@@ -3,12 +3,12 @@ import from logging { Logger }
 import from jivas.agent.core.agent { Agent }
 import from jivas.agent.action.action { Action }
 import from jivas.agent.action.actions { Actions }
-import from actions.jivas.subgraph_action.subgraph_action { SubgraphAction }
+import from jivas.agent.action.subgraph_action.subgraph_action { SubgraphAction }
 import from jivas.agent.action.agent_graph_walker { agent_graph_walker }
 
 
 walker update_state(agent_graph_walker) {
-    # action endpoint for listing all documents processed by the deepdoc service
+    # action endpoint for updating states in a subgraph
 
     has state_id:str = "";
     has data:dict = {};
