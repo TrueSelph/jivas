@@ -69,6 +69,7 @@ node RetrievalInteractAction(InteractAction) {
     has model_name:str = "gpt-4o";
     has model_temperature:float = 0.2;
     has model_max_tokens:int = 10000;
+    has cache_interact_action:str = "CacheInteractAction";
 
     def on_register() {
 
@@ -86,6 +87,19 @@ node RetrievalInteractAction(InteractAction) {
     }
 
     def execute(visitor: agent_graph_walker) {
+
+        content_filter="";
+        if cache_interact_action := self.get_agent().get_action(action_label=self.cache_interact_action) {
+            cached_result = cache_interact_action.get_cached_response(visitor);
+            if cached_result.get("message") {
+                visitor.interaction_node.set_message(cached_result["message"]);
+                return;
+            }
+
+            if cache_interact_action.can_use_cache_filter() {
+                content_filter = "metadata.document_type:!=cache_response";
+            }
+        }
 
         # first prepare the query with context completion
         # prepare query using conversation history or fallback to original utterance
@@ -109,7 +123,7 @@ node RetrievalInteractAction(InteractAction) {
         interaction_context['query'] = query.get("query", visitor);
 
         # handle context, if any and queue directive
-        if(context_data := self.retrieve_context(interaction_context['query'])) {
+        if(context_data := self.retrieve_context(query = interaction_context['query'], filter=content_filter)) {
 
             context_directive = None;
             # add raw context to the interaction node
@@ -159,6 +173,11 @@ node RetrievalInteractAction(InteractAction) {
                     query = model_action_result.get_json_result();
                 }
             }
+        } else {
+            query = {
+                "query": visitor.utterance,
+                "is_query": True
+            };
         }
 
         return query;
