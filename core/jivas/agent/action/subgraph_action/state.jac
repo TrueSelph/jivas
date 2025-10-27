@@ -7,14 +7,14 @@ import from jivas.agent.memory.frame { Frame }
 import from jivas.agent.action.action { Action }
 
 node State(GraphNode) {
-    # represents an execution on a subgraph on the agent action graph  
+    # represents an execution on a subgraph on the agent action graph
 
     has collection_id:str = "";
     has label: str = "";
     has description: str = "specialized state";
     has enabled: bool = True;
     has state_info: dict = {};
-    
+
 
     #llm model parameters
     has model_action: str = "LangChainModelAction";
@@ -37,8 +37,8 @@ node State(GraphNode) {
         Return ONLY the JSON object with the extracted entities, no delimiters. Do not include any other text or explanation.
         The JSON must have the following structure (only include keys with valid values):
         {sample_json}
-    """;    
-    
+    """;
+
     # set up logger
     static has logger:Logger = logging.getLogger(__name__);
 
@@ -55,7 +55,7 @@ node State(GraphNode) {
     def on_enable() { }
 
     # override to execute operations upon disabling of action
-    def on_disable() { }    
+    def on_disable() { }
 
     def touch(frame:Frame) -> bool {
         frame_node = frame.frame_node;
@@ -78,9 +78,8 @@ node State(GraphNode) {
             return True;
         }
     }
-    
+
     def run(frame:Frame)->Union[str, bool]{
-       
         agent_node = frame.agent_node;
         frame_node = frame.frame_node;
         required = self.state_info.get("required","");
@@ -93,7 +92,7 @@ node State(GraphNode) {
             question = self.state_info.get("question", "");
             constraints = self.state_info.get("constraints", {});
             description = constraints.get("description", "");
-            
+
             directive = "Tailor your response to get the information needed based on the following description: \n" + description + "\n Eg." + question;
 
             if(options:= constraints.get("options", "")){
@@ -128,7 +127,7 @@ node State(GraphNode) {
             constraint_part = f" ({', '.join(constraint_strs)})" if constraint_strs else "";
             entities_list.append(f"- {self.state_info.get("name")}: {desc}{constraint_part}");
             sample_json_lines.append(f"  '{self.state_info.get("name")}': '<extracted value>'");
-        
+
 
             entities = "\n".join(entities_list);
             sample_json = '{\n' + ',\n'.join(sample_json_lines) + '\n}';
@@ -197,7 +196,7 @@ node State(GraphNode) {
             }
             else {
                 return None;
-            }   
+            }
         }
 
         # return None;
@@ -218,6 +217,5 @@ node State(GraphNode) {
         frame.frame_node.data_set(key=f"{frame.action_label}_results", value=stored_responses);
     }
 
-    
-}
 
+}

@@ -30,7 +30,7 @@ walker update_state(agent_graph_walker) {
     can on_actions with Actions entry {
         visit [-->](`?SubgraphAction)(?enabled==True);
     }
-    
+
 
     can on_action with Action entry {
         self.response = here.update_state(id = self.state_id, data = self.data);

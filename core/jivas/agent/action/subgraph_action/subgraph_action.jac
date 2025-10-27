@@ -20,7 +20,7 @@ import from jivas.agent.core.graph_node { GraphNode }
 
 
 node SubgraphAction(Action) {
-    # represents an execution on a subgraph on the agent action graph   
+    # represents an execution on a subgraph on the agent action graph
     has persona_action:str = "PersonaInteractAction";
     has label: str = "";
     has description: str = "subgraph action that executes a series of states";
@@ -84,7 +84,7 @@ node SubgraphAction(Action) {
                 label="initial_state"
             );
         }
-        
+
         collection ++> initial_state;
 
         for state_info in self.states {
@@ -141,11 +141,11 @@ node SubgraphAction(Action) {
             );
         }else{
             confirmed_state = ConfirmedState(
-                collection_id=collection.id, 
+                collection_id=collection.id,
                 label="confirmed_state"
             );
         }
-        
+
         # initialize revision_state with optional prompt/directive if present
         if ("prompt" in self.revision_state and "directive" in self.revision_state) {
             revision_state = RevisionState(
@@ -179,14 +179,14 @@ node SubgraphAction(Action) {
                 label="revision_state"
             );
         }
-        
+
         states_created[f"state{index - 1}"] ++> completed_state;
         completed_state ++> confirmed_state;
         completed_state  ++> revision_state;
 
-        self.logger.info(f"Created states in subgraph");        
+        self.logger.info(f"Created states in subgraph");
     }
-    
+
     def run(frame_node:Frame) -> str {
 
         self.pre_process(frame_node);
@@ -202,15 +202,15 @@ node SubgraphAction(Action) {
             directives = custom_directives;
         }
 
-        if (responses.get("confirm_response", "")){            
+        if (responses.get("confirm_response", "")){
             frame_node.data_set(key=f"{self.label}_results", value={});
         }
         return directives;
-    }  
+    }
 
     def set_directives(directive:str){
         self.directives.append(directive);
-    }  
+    }
 
     def walk_subgraph(frame_node:Frame) -> Union[str, dict] {
         collection = self.get_collection();
@@ -351,9 +351,9 @@ node SubgraphAction(Action) {
     }
 
     def process_responses(frame_node:Frame, responses:dict) abs;
-    
+
     def pre_process(frame_node:Frame) abs;
-    
+
 }
 
 walker _subgraph {
@@ -372,13 +372,13 @@ walker _subgraph {
     can on_collection with Collection entry {
         visit [-->] (`?State) else {
             disengage;
-        }        
+        }
     }
 
     can on_state with State entry {
         if here.touch(self) and here.enabled {
             # execute the action
-            response = here.run(self);            
+            response = here.run(self);
             if(type(response) is bool) {
                 visit [-->] else {
                     disengage;
@@ -414,7 +414,7 @@ walker _subgraph {
                 self.set_directives(response);
                 disengage;
             }
-        }        
+        }
     }
     can on_confirmed_state with ConfirmedState entry{
         response = here.run(self);
@@ -444,5 +444,3 @@ walker _subgraph {
         self.directives.append(directive);
     }
 }
-
-

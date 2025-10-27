@@ -7,7 +7,7 @@ import from jivas.agent.memory.frame { Frame }
 
 
 node ConfirmedState(State) {
-    # Represents an execution on a subgraph on the agent action graph   
+    # Represents an execution on a subgraph on the agent action graph
 
     has collection_id: str = "";
     has enabled: bool = True;
@@ -18,7 +18,7 @@ node ConfirmedState(State) {
     def on_enable() { }
 
     # override to execute operations upon disabling of action
-    def on_disable() { }    
+    def on_disable() { }
 
     def touch(frame:Frame) -> bool {
         # Always allow entering the COMPLETED state
@@ -28,7 +28,7 @@ node ConfirmedState(State) {
     def run(frame:Frame) {
         frame_node = frame.frame_node;
         agent_node = frame.agent_node;
-        
+
         # set any custom directive from daf
         if ( directive := self.state_info.get("directive", "") ){
             self.directive = directive;

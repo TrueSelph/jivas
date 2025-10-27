@@ -8,7 +8,7 @@ import from jivas.agent.memory.frame { Frame }
 
 
 node InitialState(State) {
-    # Represents an execution on a subgraph on the agent action graph   
+    # Represents an execution on a subgraph on the agent action graph
 
     has collection_id: str = "";
     has label: str = "";
@@ -30,7 +30,7 @@ node InitialState(State) {
         Return ONLY a JSON structure with a single detected key (abort_response, decline_response) set to true.
         If nothing is detected, return an empty JSON object. No delimiters!
         No commentary. Never guess - ambiguous cases = empty JSON.
-    
+
     """;
 
     def touch(frame:Frame) -> bool {

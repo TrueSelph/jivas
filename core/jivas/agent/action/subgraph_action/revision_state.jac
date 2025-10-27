@@ -9,7 +9,7 @@ import from jivas.agent.memory.frame { Frame }
 
 
 node RevisionState(GraphNode) {
-    # Represents an execution on a subgraph on the agent action graph   
+    # Represents an execution on a subgraph on the agent action graph
     has collection_id: str = "";
     has label: str = "";
     has state_info:dict = {};
@@ -27,7 +27,7 @@ node RevisionState(GraphNode) {
     has prompt:str = """
         Review the user's message and the recorded responses to accurately extract the following entities and update the relevant recorded responses.
         Be strict on the constraints specified for each entity. Return a JSON object with keys exactly as listed below.
-        Include only keys for which you could extract a valid revised value adhering to all constraints. 
+        Include only keys for which you could extract a valid revised value adhering to all constraints.
         Do not extract value if it is the same as the one in responses but always extract if the user states a different value from the one in the recorded responses.
 
         Entities to extract:
@@ -46,7 +46,7 @@ node RevisionState(GraphNode) {
     def on_enable() { }
 
     # override to execute operations upon disabling of action
-    def on_disable() { }    
+    def on_disable() { }
 
     def touch(frame:Frame) -> bool {
         states_data = frame.frame_node.data_get(key=f"{frame.action_label}_results");
@@ -62,7 +62,7 @@ node RevisionState(GraphNode) {
     def run(frame:Frame) -> Union[str, bool] {
         frame_node = frame.frame_node;
         agent_node = frame.agent_node;
-        
+
         # Check for any changes in the latest user message
         prompt = self.generate_revision_extraction_prompt(frame);
         extraction_result = self.call_llm(prompt, history=True, json_only=True, frame_node=frame_node, agent_node=agent_node);

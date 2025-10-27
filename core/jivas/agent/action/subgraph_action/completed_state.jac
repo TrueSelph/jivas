@@ -9,7 +9,7 @@ import from jivas.agent.memory.frame { Frame }
 
 
 node CompletedState(GraphNode) {
-    # Represents an execution on a subgraph on the agent action graph   
+    # Represents an execution on a subgraph on the agent action graph
     has collection_id: str = "";
     has auto_confirm: bool = False;
     has model_action: str = "LangChainModelAction";
@@ -33,7 +33,7 @@ node CompletedState(GraphNode) {
             - Do not put any items on the list with a value of N/A
         b. Request Explicit Confirmation:
             Present the key and summary followed by:
-                - a request to know if the presented details are accurate 
+                - a request to know if the presented details are accurate
                 - a message to inform the user that they can request changes or cancel altogether.
     """;
 
@@ -58,8 +58,8 @@ node CompletedState(GraphNode) {
     def on_enable() { }
 
     # override to execute operations upon disabling of action
-    def on_disable() { }    
-    
+    def on_disable() { }
+
     def touch(frame:Frame) -> bool {
         return True;
     }
@@ -75,7 +75,7 @@ node CompletedState(GraphNode) {
             branch_choice_response ={"confirm_response": True};
             self.update_responses(branch_choice_response, frame);
         }
-        elif not revised{ 
+        elif not revised{
             # Check for confirmation in the latest user message
             branch_choice_response = self.call_llm(self.prompt, history=True, json_only=True, frame_node=frame_node, agent_node=agent_node);
             self.update_responses(branch_choice_response, frame);
@@ -86,7 +86,7 @@ node CompletedState(GraphNode) {
 
         confirmed = branch_choice_response.get('confirm_response', None);
 
-        
+
         # If there is no confirmation or abortion
         if not branch_choice_response {
             # Retrieve the interview session from the frame node
@@ -107,7 +107,7 @@ node CompletedState(GraphNode) {
             # Change revised in frame to false
             revised_state = {"revised":False};
             self.update_responses(revised_state, frame);
-            return directive;    
+            return directive;
         }
         elif confirmed{
             return True;
@@ -171,7 +171,7 @@ node CompletedState(GraphNode) {
             }
             else {
                 return None;
-            }   
+            }
         }
     }
 

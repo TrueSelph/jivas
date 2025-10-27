@@ -32,7 +32,7 @@ walker list_states(agent_graph_walker) {
     can on_actions with Actions entry {
         visit [-->](`?SubgraphAction)(?enabled==True);
     }
-    
+
 
     can on_action with Action entry {
         # get the list of documents from the manifest
