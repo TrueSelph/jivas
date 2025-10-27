@@ -108,10 +108,13 @@ walker interact(agent_graph_walker) {
             visit queued_actions;
         }
 
+        self.logger.info(f"Utterance: {self.utterance}");
+
     }
 
     can on_action with InteractAction entry {
         # performs execute routine for action nodes
+        self.logger.info(f"Touch: {here.label}");
 
         if not self.is_intended(here) {
             return;
@@ -123,6 +126,7 @@ walker interact(agent_graph_walker) {
         }
 
         if here.touch(self) {
+            self.logger.info(f"Execute: {here.label}");
             # execute the action
             here.execute(self);
             self.interaction_node.trail.append(here.label);
