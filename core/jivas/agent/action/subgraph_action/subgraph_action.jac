@@ -350,7 +350,7 @@ node SubgraphAction(Action) {
         return state_node;
     }
 
-    def process_response(frame_node:Frame, responses:dict) abs;
+    def process_response(responses:dict, frame_node:Frame) abs;
 
     def pre_process(frame_node:Frame) abs;
 
