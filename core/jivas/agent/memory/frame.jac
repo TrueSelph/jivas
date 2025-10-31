@@ -7,7 +7,6 @@ import from jivas.agent.modules.text.parsing { extract_first_name }
 import from jivas.agent.memory.interaction { Interaction }
 import from jivas.agent.memory.interaction_response { InteractionResponse, TextInteractionMessage }
 import from jivas.agent.core.graph_node { GraphNode }
-import from jivas.agent.action.interact_action { InteractAction }
 import from jac_cloud.plugin.jaseci { JacPlugin as Jac }
 
 node Frame(GraphNode) {
