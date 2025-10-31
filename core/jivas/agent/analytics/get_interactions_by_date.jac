@@ -12,6 +12,7 @@ walker get_interactions_by_date(agent_graph_walker) {
     has start_date: str = "";
     has end_date: str = "";
 	has timezone: str = "UTC";
+	has channel: str = "";
 
 	# set up logger
     static has logger:Logger = logging.getLogger(__name__);
@@ -32,18 +33,21 @@ walker get_interactions_by_date(agent_graph_walker) {
 
 	    try {
 			collection = NodeAnchor.Collection.get_collection("interactions");
+			match_query = {
+				"agent_id": self.agent_id,
+				"time_stamp": {
+					"$gte": start.isoformat(),
+					"$lte": end.isoformat()
+				}
+			};
+
+			if (self.channel) {
+				match_query["channel"] = self.channel;
+			}
 
 			pipeline = [
 				# Match documents for the agent within date range
-				{
-					"$match": {
-						"agent_id": self.agent_id,
-						"time_stamp": {
-							"$gte": start.isoformat(),
-							"$lte": end.isoformat()
-						}
-					}
-				},
+				{"$match": match_query},
 				# Convert string timestamp to date object and group by local date
 				{
 					"$group": {
