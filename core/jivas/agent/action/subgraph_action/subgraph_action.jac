@@ -197,7 +197,7 @@ node SubgraphAction(Action) {
 
         responses = frame_node.data_get(key=f"{self.label}_results") or {};
 
-        custom_directives = self.process_responses(frame_node, responses);
+        custom_directives = self.process_response(frame_node, responses);
         if custom_directives{
             directives = custom_directives;
         }
