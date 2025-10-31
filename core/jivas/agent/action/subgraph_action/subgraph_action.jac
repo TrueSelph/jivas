@@ -218,7 +218,7 @@ node SubgraphAction(Action) {
         return walker_result;
     }
 
-    def update_responses(responses:dict, frame:Frame) {
+    def update_response(responses:dict, frame:Frame) {
         stored_responses = frame.data_get(key=f"{self.label}_results");
 
         if type(stored_responses) is not dict or not stored_responses {
