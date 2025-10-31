@@ -4,6 +4,7 @@ import from typing { Union }
 import from logging { Logger }
 import from jivas.agent.core.graph_node { GraphNode }
 import from jivas.agent.memory.collection { Collection }
+import from jivas.agent.memory.frame { Frame }
 
 node Action(GraphNode) {
     # represents an execution on the agent action graph
@@ -27,6 +28,8 @@ node Action(GraphNode) {
 
     # override to execute operations upon registration of action
     def on_register() { }
+
+    def run(frame_node:Frame){}
 
     # override to execute operations upon the reload of action
     def on_reload() { }
