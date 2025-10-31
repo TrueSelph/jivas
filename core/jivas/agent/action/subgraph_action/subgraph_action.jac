@@ -197,7 +197,7 @@ node SubgraphAction(Action) {
 
         responses = frame_node.data_get(key=f"{self.label}_results") or {};
 
-        custom_directives = self.process_response(frame_node, responses);
+        custom_directives = self.process_response(responses, frame_node);
         if custom_directives{
             directives = custom_directives;
         }
@@ -350,7 +350,7 @@ node SubgraphAction(Action) {
         return state_node;
     }
 
-    def process_responses(frame_node:Frame, responses:dict) abs;
+    def process_response(frame_node:Frame, responses:dict) abs;
 
     def pre_process(frame_node:Frame) abs;
 
