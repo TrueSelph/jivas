@@ -73,10 +73,20 @@ node State(GraphNode) {
         if state_value or confirmed{
             return False;
         }
-        else {
-            # authorize the walker to run this action
-            return True;
+
+        if (conditional := self.state_info.get('conditional', {})) {
+
+            for (field, expected_value) in conditional.items(){
+                actual_value = state_data.get(field, None);
+                if actual_value != expected_value{
+                    return False;
+                }
+            }
         }
+
+        # authorize the walker to run this action
+        return True;
+
     }
 
     def run(frame:Frame)->Union[str, bool]{
