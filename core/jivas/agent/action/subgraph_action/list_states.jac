@@ -16,6 +16,7 @@ walker list_states(agent_graph_walker) {
     has response:list[dict] = [];
     has reporting:bool = True;
     has agent_id:str = "";
+    has label:str = "";
 
     # set up logger
     static has logger:Logger = logging.getLogger(__name__);
@@ -30,7 +31,7 @@ walker list_states(agent_graph_walker) {
     }
 
     can on_actions with Actions entry {
-        visit [-->](`?SubgraphAction)(?enabled==True);
+        visit [-->](`?SubgraphAction)(?enabled==True)(?label==self.label);
     }
 
 

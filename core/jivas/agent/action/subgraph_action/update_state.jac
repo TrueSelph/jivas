@@ -14,6 +14,7 @@ walker update_state(agent_graph_walker) {
     has data:dict = {};
     has response:dict = {};
     has reporting:bool = True;
+    has label:str = "";
 
     # set up logger
     static has logger:Logger = logging.getLogger(__name__);
@@ -28,7 +29,7 @@ walker update_state(agent_graph_walker) {
     }
 
     can on_actions with Actions entry {
-        visit [-->](`?SubgraphAction)(?enabled==True);
+        visit [-->](`?SubgraphAction)(?enabled==True)(?label==self.label);
     }
 
 
