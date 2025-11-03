@@ -1,7 +1,6 @@
 import logging;
 import traceback;
 import from enum { unique }
-import from typing { Union }
 import from logging { Logger }
 import from jivas.agent.action.action { Action }
 import from jivas.agent.modules.data.node_get { node_get }
@@ -30,6 +29,7 @@ node SubgraphAction(Action) {
     has completed_state: dict = {};
     has confirmed_state:dict = {};
     has revision_state: dict = {};
+    has parameters: list = [];
 
 
     # set up logger
@@ -187,19 +187,25 @@ node SubgraphAction(Action) {
         self.logger.info(f"Created states in subgraph");
     }
 
-    def run(frame_node:Frame) -> str {
-
-        self.pre_process(frame_node);
-
+    def run(frame_node:Frame, interaction_node:Interaction) -> str {
+        directives = [];
+        pre_process = self.pre_process(frame_node, interaction_node);
+        if type(pre_process) is str{
+            directives = [pre_process];
+        }
+        elif type(pre_process) is list{
+            directives = pre_process;
+        }
         walker_result = self.walk_subgraph(frame_node);
-        directives = walker_result.directives.copy();
+        directives.extend(walker_result.directives);
+
         walker_result.directives = {};
 
         responses = frame_node.data_get(key=f"{self.label}_results") or {};
 
-        custom_directives = self.process_response(responses, frame_node);
+        custom_directives = self.process_response(responses, frame_node, interaction_node);
         if custom_directives{
-            directives = custom_directives;
+            directives = (custom_directives);
         }
 
         if (responses.get("confirm_response", "")){
@@ -276,7 +282,7 @@ node SubgraphAction(Action) {
         };
     }
 
-    def get_state(name:str, label:str){
+    def get_state(label:str){
         collection = self.get_collection();
 
         state_node = node_obj(node_get({
@@ -350,9 +356,14 @@ node SubgraphAction(Action) {
         return state_node;
     }
 
-    def process_response(responses:dict, frame_node:Frame) abs;
+    def abort_process(value:bool = True){
+        initial_state = self.get_state("initial_state");
+        initial_state.abort = value;
+    }
 
-    def pre_process(frame_node:Frame) abs;
+    def process_response(responses:dict, frame_node:Frame, interaction_node:Interaction) abs;
+
+    def pre_process(frame_node:Frame, interaction_node:Interaction) abs;
 
 }
 

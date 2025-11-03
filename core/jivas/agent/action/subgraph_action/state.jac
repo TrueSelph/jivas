@@ -115,6 +115,7 @@ node State(GraphNode) {
             if not extraction_result{
                 # set extraction result to N/A
                 extraction_result = {self.label:"N/A"};
+                self.update_responses(extraction_result, frame);
             }
         }
         if extraction_result{
