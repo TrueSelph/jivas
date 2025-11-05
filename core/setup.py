@@ -42,9 +42,9 @@ setup(
     package_data={"jivas": []},
     python_requires=">=3.12.0",
     install_requires=[
-        "jvcli<=2.1.20",
-        "jvclient<=2.1.20",
-        "jvserve<=2.1.20",
+        "jvcli",
+        "jvclient",
+        "jvserve",
         "jac-cloud==0.2.7",
         "jaclang==0.8.7",
         "pytz==2025.2",

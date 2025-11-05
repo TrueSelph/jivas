@@ -13,6 +13,7 @@ walker get_interaction_logs(agent_graph_walker) {
 	has start_date: str = "";
 	has end_date: str = "";
 	has session_id: str = "";
+	has frame_id: str = "";
 	has channel: str = "";
 	has timezone: str = "UTC";
 	has page: int = 1;
@@ -40,8 +41,12 @@ walker get_interaction_logs(agent_graph_walker) {
                 }
             };
 
+            if self.frame_id {
+                match_criteria["frame_id"] = self.frame_id;
+            }
+
             if self.session_id {
-                match_criteria["session_id"] = self.session_id;
+                match_criteria["response.session_id"] = self.session_id;
             }
 
             if self.channel {
