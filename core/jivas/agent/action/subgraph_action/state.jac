@@ -24,6 +24,14 @@ node State(GraphNode) {
     has history: bool = True;
     has history_size: int = 3;
     has max_statement_length: int = 2048;
+    has directive_template:str = """
+    Tailor your response to get the information needed based on the following description:
+    {description}
+
+    Take note of the following additional instructions while responding to the user but do not mention them unless it is needed:
+    {instructions}
+    E.g. {question}
+    """;
 
     has extraction_prompt:str = """
         Review the user's message and the conversation history to accurately extract the following entities.
@@ -97,13 +105,16 @@ node State(GraphNode) {
         prompt = self.generate_extraction_prompt();
 
         extraction_result = self.call_llm(prompt=prompt, history=True, json_only=True, frame_node=frame_node, agent_node=agent_node);
-
         if required is True and not extraction_result{
+
             question = self.state_info.get("question", "");
             constraints = self.state_info.get("constraints", {});
             description = constraints.get("description", "");
+            additional_instructions = constraints.get("additional_instructions", "");
 
-            directive = "Tailor your response to get the information needed based on the following description: \n" + description + "\n Eg." + question;
+            directive = self.directive_template.replace("{description}", description);
+            directive = directive.replace("{instructions}", additional_instructions);
+            directive = directive.replace("{question}", question);
 
             if(options:= constraints.get("options", "")){
                 directive = directive + "\n They can choose from the list of options below\n" + str(options);
