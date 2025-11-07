@@ -30,7 +30,11 @@ node Action(GraphNode) {
     # override to execute operations upon registration of action
     def on_register() { }
 
-    def run(frame_node:Frame, interaction_node:Interaction){}
+    # overide to execute operations upon running of action
+    def run(frame_node:Frame, interaction_node:Interaction){ }
+
+    # overide to execute operations upon denying access of action
+    def deny(interaction_node:Interaction){ }
 
     # override to execute operations upon the reload of action
     def on_reload() { }
