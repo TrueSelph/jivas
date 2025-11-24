@@ -31,6 +31,14 @@ node SubgraphAction(Action) {
     has revision_state: dict = {};
     has parameters: list = [];
 
+    #llm model parameters
+    has model_action: str = "LangChainModelAction";
+    has model_name: str = "gpt-4.1";
+    has model_max_tokens:int = 4096;
+    has max_statement_length:int = 500;
+    has model_temperature: float = 0.3;
+    has history: bool = True;
+    has history_size: int = 3;
 
     # set up logger
     static has logger:Logger = logging.getLogger(__name__);
@@ -207,6 +215,7 @@ node SubgraphAction(Action) {
         if custom_directives{
             directives = (custom_directives);
         }
+        self.update_response(responses, frame_node);
 
         if (responses.get("confirm_response", "")){
             frame_node.data_set(key=f"{self.label}_results", value={});
@@ -222,6 +231,59 @@ node SubgraphAction(Action) {
         collection = self.get_collection();
         walker_result = collection spawn _subgraph(frame_node=frame_node, agent_node=&self.agent_id, action_label=self.label);
         return walker_result;
+    }
+
+    def call_llm(prompt:str,  frame_node:Frame, interaction_node:Interaction, history:Union[bool,None] = None, json_only:bool = False) -> Union[str, dict, None] {
+        # performs function tool calling for extracting question responses based on question
+        prompt_messages = [];
+
+        if not prompt {
+            return None;
+        }
+
+        use_history = self.history;
+        if history is not None {
+            use_history = history;
+        }
+
+        prompt_messages = [
+            {"human":interaction_node.utterance},
+            {"system":prompt}
+        ];
+
+        # prepare the final prompt with history.
+        if (use_history) {
+            statements = frame_node.get_transcript_statements(interactions = self.history_size, max_statement_length = self.max_statement_length, with_events = True);
+
+            if (statements) {
+                # prepend statements to the prompt messages
+                prompt_messages = statements + prompt_messages;
+            }
+
+        }
+
+        model_action = self.get_agent().get_action(action_label=self.model_action);
+
+        if model_action {
+            model_action_result = model_action.call_model(
+            prompt_messages=prompt_messages,
+            prompt_variables={},
+            model_name=self.model_name,
+            model_temperature=self.model_temperature,
+            model_max_tokens=self.model_max_tokens
+        );
+
+            if model_action_result {
+                if json_only {
+                    return model_action_result.get_json_result();
+                } else {
+                    return model_action_result.get_result();
+                }
+            }
+            else {
+                return None;
+            }
+        }
     }
 
     def update_response(responses:dict, frame:Frame) {

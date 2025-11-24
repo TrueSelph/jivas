@@ -27,10 +27,11 @@ node State(GraphNode) {
     has directive_template:str = """
     Tailor your response to get the information needed based on the following description:
     {description}
+    Avoid asking for other information not related to this description unless specified elsewhere.
+    {question}
 
-    Take note of the following additional instructions while responding to the user but do not mention them unless it is needed:
+    Take note of the following additional instructions if present while responding to the user but do not mention them unless it is needed:
     {instructions}
-    E.g. {question}
     """;
 
     has extraction_prompt:str = """
@@ -114,7 +115,7 @@ node State(GraphNode) {
 
             directive = self.directive_template.replace("{description}", description);
             directive = directive.replace("{instructions}", additional_instructions);
-            directive = directive.replace("{question}", question);
+            directive = directive.replace("{question}", f"E.g. {question}");
 
             if(options:= constraints.get("options", "")){
                 directive = directive + "\n They can choose from the list of options below\n" + str(options);

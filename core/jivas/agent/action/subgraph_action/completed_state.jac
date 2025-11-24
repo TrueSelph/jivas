@@ -29,7 +29,7 @@ node CompletedState(GraphNode) {
             - Extract all user-provided submission details from:
                 {summary}
             - Format them as a clear, bulleted list under a statement that indicates that it is a list of the information gathered.
-            - Do not put internal settings such as "revised" or "confirm response" in the displayed list
+            - Do not put internal settings such as "revised", "completed", "confirm_response" in the displayed list
             - Do not put any items on the list with a value of N/A
         b. Request Explicit Confirmation:
             Present the key and summary followed by:
@@ -42,7 +42,7 @@ node CompletedState(GraphNode) {
         Follow these rules:
 
         # Confirmation Detection
-        Set "confirm_response" to true for: "yes", "sure", "confirmed", "yeah", "yep", "absolutely", "okay" + clear context.
+        Set "confirm_response" to true for: "yes", "sure", "confirmed", "yeah", "yep", "absolutely", "okay" + clear context. These should be in response to a request for confirmation of previously provided information.
         Set "confirm_response" to false ONLY for explicit negative or revision signals, including:
             - Direct negatives: "no"
             - Revision or correction requests: "I'd like to make an adjustment", "need to make a change", "revision", "change my answer", "not correct", "incorrect", "needs update"
@@ -67,6 +67,7 @@ node CompletedState(GraphNode) {
     def run(frame:Frame) -> Union[str, bool] {
         frame_node = frame.frame_node;
         agent_node = frame.agent_node;
+        self.update_responses({"completed": True}, frame);
 
         states_data = frame.frame_node.data_get(key=f"{frame.action_label}_results");
         revised = states_data.get("revised", False);
@@ -176,7 +177,6 @@ node CompletedState(GraphNode) {
     }
 
     def update_responses(responses:dict, frame:Frame) {
-        print(f"New responses to merge: {responses}");
         stored_responses = frame.frame_node.data_get(key=f"{frame.action_label}_results");
 
         if type(stored_responses) is not dict or not stored_responses {
