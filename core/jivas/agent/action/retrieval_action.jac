@@ -23,7 +23,7 @@ node RetrievalAction(Action) {
     """;
 
     # the null directive template for RAG
-    has null_directive:str = "No context information was retrieved based on user utterance. If the user utterance is a question which relates to your knowledge, advise them that you do not have the relevant information at this time to answer their question.\n";
+    has null_directive:str = "No context information was retrieved based on user utterance. If there is no other information available in this prompt or the converation history that can help answer the user's question, advise the user that you do not have the relevant information at this time to answer their question.\n";
 
     # context_rewriting_prompt
     has query_completion_prompt:str = """
@@ -113,10 +113,7 @@ node RetrievalAction(Action) {
             # add the context directive to the interaction node
             interaction_node.add_directive(directive = context_directive);
         } else {
-            directives = interaction_node.get_directives();
-            if(not directives) {
-                interaction_node.add_directive(directive = self.null_directive);
-            }
+            interaction_node.add_directive(directive = self.null_directive);
         }
 
         interaction_node.data_set(key=self.get_type(), value=interaction_context);
