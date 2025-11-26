@@ -4,6 +4,7 @@ import from typing { Union }
 import from logging { Logger }
 import from jivas.agent.core.graph_node { GraphNode }
 import from jivas.agent.memory.frame { Frame }
+import from jivas.agent.memory.interaction { Interaction }
 import from jivas.agent.action.action { Action }
 
 node State(GraphNode) {
@@ -27,6 +28,7 @@ node State(GraphNode) {
     has directive_template:str = """
     Tailor your response to get the information needed based on the following description:
     {description}
+
     Avoid asking for other information not related to this description unless specified elsewhere.
     {question}
 
@@ -105,7 +107,14 @@ node State(GraphNode) {
 
         prompt = self.generate_extraction_prompt();
 
-        extraction_result = self.call_llm(prompt=prompt, history=True, json_only=True, frame_node=frame_node, agent_node=agent_node);
+        extraction_result = self.call_llm(
+            prompt=prompt,
+            history=True,
+            json_only=True,
+            frame_node=frame_node,
+            interaction_node = interaction_node,
+            agent_node=agent_node
+        );
         if required is True and not extraction_result{
 
             question = self.state_info.get("question", "");
@@ -166,7 +175,7 @@ node State(GraphNode) {
         }
     }
 
-    def call_llm(prompt:str, history:Union[bool,None] = None, json_only:bool = False, frame_node:Frame, agent_node:GraphNode) -> Union[str, dict, None] {
+    def call_llm(prompt:str, history:Union[bool,None] = None, json_only:bool = False, frame_node:Frame, interaction_node:Interaction, agent_node:GraphNode) -> Union[str, dict, None] {
         # performs function tool calling for extracting question responses based on question
         prompt_messages = [];
 
@@ -207,7 +216,8 @@ node State(GraphNode) {
             prompt_variables={},
             model_name=self.model_name,
             model_temperature=self.model_temperature,
-            model_max_tokens=self.model_max_tokens
+            model_max_tokens=self.model_max_tokens,
+            interaction_node=interaction_node
         );
 
             if model_action_result {

@@ -13,7 +13,6 @@ import from jivas.agent.action.subgraph_action.confirmed_state { ConfirmedState 
 import from jivas.agent.action.subgraph_action.revision_state { RevisionState }
 import from jivas.agent.action.subgraph_action.initial_state { InitialState }
 import from jivas.agent.memory.collection { Collection }
-import from jivas.agent.memory.frame { Frame }
 import from jivas.agent.core.graph_walker { graph_walker }
 import from jivas.agent.core.graph_node { GraphNode }
 
@@ -204,7 +203,7 @@ node SubgraphAction(Action) {
         elif type(pre_process) is list{
             directives = pre_process;
         }
-        walker_result = self.walk_subgraph(frame_node);
+        walker_result = self.walk_subgraph(frame_node, interaction_node);
         directives.extend(walker_result.directives);
 
         walker_result.directives = {};
@@ -227,9 +226,9 @@ node SubgraphAction(Action) {
         self.directives.append(directive);
     }
 
-    def walk_subgraph(frame_node:Frame) -> Union[str, dict] {
+    def walk_subgraph(frame_node:Frame, interaction_node:Interaction) -> Union[str, dict] {
         collection = self.get_collection();
-        walker_result = collection spawn _subgraph(frame_node=frame_node, agent_node=&self.agent_id, action_label=self.label);
+        walker_result = collection spawn _subgraph(frame_node=frame_node, interaction_node=interaction_node, agent_node=&self.agent_id, action_label=self.label);
         return walker_result;
     }
 
@@ -270,7 +269,8 @@ node SubgraphAction(Action) {
             prompt_variables={},
             model_name=self.model_name,
             model_temperature=self.model_temperature,
-            model_max_tokens=self.model_max_tokens
+            model_max_tokens=self.model_max_tokens,
+            interaction_node=interaction_node
         );
 
             if model_action_result {
@@ -437,6 +437,7 @@ walker _subgraph {
     has action_label: str = "";
     has agent_node: GraphNode = None;
     has frame_node: Frame = None;
+    has interaction_node: Interaction = None;
 
     obj __specs__ {
         static has private:bool = True;
