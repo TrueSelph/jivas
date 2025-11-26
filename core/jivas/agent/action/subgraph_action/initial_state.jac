@@ -42,7 +42,7 @@ node InitialState(State) {
     def run(frame:Frame) {
         frame_node = frame.frame_node;
         agent_node = frame.agent_node;
-
+        interaction_node = frame.interaction_node;
         # check if abort was set to true
         if self.abort{
             frame_node.data_set(key=f"{frame.action_label}_results", value={});
@@ -52,6 +52,7 @@ node InitialState(State) {
             response = self.call_llm(self.prompt, history=True, json_only=True, frame_node=frame_node, agent_node=agent_node);
             if response.get("abort_response"){
                 frame_node.data_set(key=f"{frame.action_label}_results", value={});
+                interaction_node.add_event("AI has aborted the current process by request of the user.");
                 return self.directive;
             }
             else{
