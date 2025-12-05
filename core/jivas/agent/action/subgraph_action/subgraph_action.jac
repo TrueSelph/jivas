@@ -452,7 +452,7 @@ walker _subgraph {
     can on_state with State entry {
         if here.touch(self) and here.enabled {
             # execute the action
-            response = here.run(self);
+            response = here.run(self, interaction_node=self.interaction_node);
             if(type(response) is bool) {
                 visit [-->] else {
                     disengage;
@@ -473,7 +473,7 @@ walker _subgraph {
     can on_completed_state with CompletedState entry {
         if here.touch(self) {
             # execute the action
-            response=here.run(self);
+            response = here.run(self, interaction_node=self.interaction_node);
             if response == True {
                 visit[-->](`?ConfirmedState) else {
                     disengage;
@@ -491,7 +491,7 @@ walker _subgraph {
         }
     }
     can on_confirmed_state with ConfirmedState entry{
-        response = here.run(self);
+        response = here.run(self, interaction_node=self.interaction_node);
         self.set_directives(response);
     }
     def set_directives(directive:str){
@@ -500,7 +500,7 @@ walker _subgraph {
     can on_revision_state with RevisionState entry{
         if here.touch(self) {
             # execute the action
-            response=here.run(self);
+            response = here.run(self, interaction_node=self.interaction_node);
             if response is True {
                 visit [<--](`?CompletedState) else {
                     disengage;

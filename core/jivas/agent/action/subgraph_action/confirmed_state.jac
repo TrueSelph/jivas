@@ -4,7 +4,7 @@ import from typing { Union }
 import from logging { Logger }
 import from jivas.agent.action.subgraph_action.state { State }
 import from jivas.agent.memory.frame { Frame }
-
+import from jivas.agent.memory.interaction { Interaction }
 
 node ConfirmedState(State) {
     # Represents an execution on a subgraph on the agent action graph
@@ -25,7 +25,7 @@ node ConfirmedState(State) {
         return True;
     }
 
-    def run(frame:Frame) {
+    def run(frame:Frame, interaction_node:Interaction) -> Union[str, bool] {
         frame_node = frame.frame_node;
         agent_node = frame.agent_node;
 

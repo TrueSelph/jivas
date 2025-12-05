@@ -1,9 +1,9 @@
 import logging;
 import traceback;
-import from typing { Union }
 import from logging { Logger }
 import from jivas.agent.core.graph_node { GraphNode }
 import from jivas.agent.memory.frame { Frame }
+import from typing { Union }
 import from jivas.agent.memory.interaction { Interaction }
 import from jivas.agent.action.action { Action }
 
@@ -19,7 +19,7 @@ node State(GraphNode) {
 
     #llm model parameters
     has model_action: str = "LangChainModelAction";
-    has model_name: str = "gpt-4o";
+    has model_name: str = "gpt-4.1";
     has model_max_tokens:int = 4096;
     has model_temperature: float = 0.3;
     has history: bool = True;
@@ -100,7 +100,7 @@ node State(GraphNode) {
 
     }
 
-    def run(frame:Frame)->Union[str, bool]{
+    def run(frame:Frame, interaction_node:Interaction)->Union[str, bool]{
         agent_node = frame.agent_node;
         frame_node = frame.frame_node;
         required = self.state_info.get("required","");
@@ -112,7 +112,7 @@ node State(GraphNode) {
             history=True,
             json_only=True,
             frame_node=frame_node,
-            interaction_node = interaction_node,
+            interaction_node=interaction_node,
             agent_node=agent_node
         );
         if required is True and not extraction_result{
@@ -163,7 +163,7 @@ node State(GraphNode) {
 
             entities = "\n".join(entities_list);
             sample_json = '{\n' + ',\n'.join(sample_json_lines) + '\n}';
-            # prepate the prompt
+            # prepare the prompt
             prompt = self.extraction_prompt.format(entities=entities, sample_json=sample_json);
             # escape the conflicting symbols
             prompt = prompt.replace('{', '{{').replace('}','}}');

@@ -5,6 +5,7 @@ import from logging { Logger }
 import from jivas.agent.core.graph_node { GraphNode }
 import from jivas.agent.action.subgraph_action.state { State }
 import from jivas.agent.memory.frame { Frame }
+import from jivas.agent.memory.interaction { Interaction }
 
 
 
@@ -15,7 +16,7 @@ node RevisionState(GraphNode) {
     has state_info:dict = {};
     has states:list = [];
     has model_action: str = "LangChainModelAction";
-    has model_name: str = "gpt-4o";
+    has model_name: str = "gpt-4.1";
     has model_max_tokens:int = 4096;
     has model_temperature: float = 0.3;
     has history: bool = True;
@@ -59,13 +60,13 @@ node RevisionState(GraphNode) {
         }
     }
 
-    def run(frame:Frame) -> Union[str, bool] {
+    def run(frame:Frame, interaction_node:Interaction) -> Union[str, bool] {
         frame_node = frame.frame_node;
         agent_node = frame.agent_node;
 
         # Check for any changes in the latest user message
         prompt = self.generate_revision_extraction_prompt(frame);
-        extraction_result = self.call_llm(prompt, history=True, json_only=True, frame_node=frame_node, agent_node=agent_node);
+        extraction_result = self.call_llm(prompt, history=True, json_only=True, frame_node=frame_node, agent_node=agent_node, interaction_node=interaction_node);
 
         # If there is no confirmation or abortion
         if extraction_result{
@@ -124,7 +125,7 @@ node RevisionState(GraphNode) {
         return prompt;
     }
 
-    def call_llm(prompt:str, history:Union[bool,None] = None, json_only:bool = False, frame_node:Frame, agent_node:GraphNode) -> Union[str, dict, None] {
+    def call_llm(prompt:str, history:Union[bool,None] = None, json_only:bool = False, frame_node:Frame, agent_node:GraphNode, interaction_node: Interaction) -> Union[str, dict, None] {
         # performs function tool calling for extracting question responses based on question
         prompt_messages = [];
 
@@ -165,7 +166,8 @@ node RevisionState(GraphNode) {
             prompt_variables={},
             model_name=self.model_name,
             model_temperature=self.model_temperature,
-            model_max_tokens=self.model_max_tokens
+            model_max_tokens=self.model_max_tokens,
+            interaction_node=interaction_node
         );
 
             if model_action_result {
