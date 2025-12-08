@@ -5,7 +5,7 @@ import from logging { Logger }
 import from jivas.agent.action.subgraph_action.state { State }
 import from jivas.agent.core.graph_node { GraphNode }
 import from jivas.agent.memory.frame { Frame }
-
+import from jivas.agent.memory.interaction { Interaction }
 
 node InitialState(State) {
     # Represents an execution on a subgraph on the agent action graph
@@ -39,19 +39,20 @@ node InitialState(State) {
         return True;
     }
 
-    def run(frame:Frame) {
+    def run(frame:Frame, interaction_node:Interaction) -> Union[str, bool] {
         frame_node = frame.frame_node;
         agent_node = frame.agent_node;
-
+        interaction_node = frame.interaction_node;
         # check if abort was set to true
         if self.abort{
             frame_node.data_set(key=f"{frame.action_label}_results", value={});
             self.abort = False;
             return "";
         }else{
-            response = self.call_llm(self.prompt, history=True, json_only=True, frame_node=frame_node, agent_node=agent_node);
+            response = self.call_llm(self.prompt, history=True, json_only=True, frame_node=frame_node, agent_node=agent_node, interaction_node=interaction_node);
             if response.get("abort_response"){
                 frame_node.data_set(key=f"{frame.action_label}_results", value={});
+                interaction_node.add_event("AI has aborted the current process by request of the user.");
                 return self.directive;
             }
             else{

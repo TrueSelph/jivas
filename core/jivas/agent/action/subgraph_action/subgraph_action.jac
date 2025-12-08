@@ -13,7 +13,6 @@ import from jivas.agent.action.subgraph_action.confirmed_state { ConfirmedState 
 import from jivas.agent.action.subgraph_action.revision_state { RevisionState }
 import from jivas.agent.action.subgraph_action.initial_state { InitialState }
 import from jivas.agent.memory.collection { Collection }
-import from jivas.agent.memory.frame { Frame }
 import from jivas.agent.core.graph_walker { graph_walker }
 import from jivas.agent.core.graph_node { GraphNode }
 
@@ -31,6 +30,14 @@ node SubgraphAction(Action) {
     has revision_state: dict = {};
     has parameters: list = [];
 
+    #llm model parameters
+    has model_action: str = "LangChainModelAction";
+    has model_name: str = "gpt-4.1";
+    has model_max_tokens:int = 4096;
+    has max_statement_length:int = 500;
+    has model_temperature: float = 0.3;
+    has history: bool = True;
+    has history_size: int = 3;
 
     # set up logger
     static has logger:Logger = logging.getLogger(__name__);
@@ -196,7 +203,7 @@ node SubgraphAction(Action) {
         elif type(pre_process) is list{
             directives = pre_process;
         }
-        walker_result = self.walk_subgraph(frame_node);
+        walker_result = self.walk_subgraph(frame_node, interaction_node);
         directives.extend(walker_result.directives);
 
         walker_result.directives = {};
@@ -207,6 +214,7 @@ node SubgraphAction(Action) {
         if custom_directives{
             directives = (custom_directives);
         }
+        self.update_response(responses, frame_node);
 
         if (responses.get("confirm_response", "")){
             frame_node.data_set(key=f"{self.label}_results", value={});
@@ -218,10 +226,64 @@ node SubgraphAction(Action) {
         self.directives.append(directive);
     }
 
-    def walk_subgraph(frame_node:Frame) -> Union[str, dict] {
+    def walk_subgraph(frame_node:Frame, interaction_node:Interaction) -> Union[str, dict] {
         collection = self.get_collection();
-        walker_result = collection spawn _subgraph(frame_node=frame_node, agent_node=&self.agent_id, action_label=self.label);
+        walker_result = collection spawn _subgraph(frame_node=frame_node, interaction_node=interaction_node, agent_node=&self.agent_id, action_label=self.label);
         return walker_result;
+    }
+
+    def call_llm(prompt:str,  frame_node:Frame, interaction_node:Interaction, history:Union[bool,None] = None, json_only:bool = False) -> Union[str, dict, None] {
+        # performs function tool calling for extracting question responses based on question
+        prompt_messages = [];
+
+        if not prompt {
+            return None;
+        }
+
+        use_history = self.history;
+        if history is not None {
+            use_history = history;
+        }
+
+        prompt_messages = [
+            {"human":interaction_node.utterance},
+            {"system":prompt}
+        ];
+
+        # prepare the final prompt with history.
+        if (use_history) {
+            statements = frame_node.get_transcript_statements(interactions = self.history_size, max_statement_length = self.max_statement_length, with_events = True);
+
+            if (statements) {
+                # prepend statements to the prompt messages
+                prompt_messages = statements + prompt_messages;
+            }
+
+        }
+
+        model_action = self.get_agent().get_action(action_label=self.model_action);
+
+        if model_action {
+            model_action_result = model_action.call_model(
+            prompt_messages=prompt_messages,
+            prompt_variables={},
+            model_name=self.model_name,
+            model_temperature=self.model_temperature,
+            model_max_tokens=self.model_max_tokens,
+            interaction_node=interaction_node
+        );
+
+            if model_action_result {
+                if json_only {
+                    return model_action_result.get_json_result();
+                } else {
+                    return model_action_result.get_result();
+                }
+            }
+            else {
+                return None;
+            }
+        }
     }
 
     def update_response(responses:dict, frame:Frame) {
@@ -375,6 +437,7 @@ walker _subgraph {
     has action_label: str = "";
     has agent_node: GraphNode = None;
     has frame_node: Frame = None;
+    has interaction_node: Interaction = None;
 
     obj __specs__ {
         static has private:bool = True;
@@ -389,7 +452,7 @@ walker _subgraph {
     can on_state with State entry {
         if here.touch(self) and here.enabled {
             # execute the action
-            response = here.run(self);
+            response = here.run(self, interaction_node=self.interaction_node);
             if(type(response) is bool) {
                 visit [-->] else {
                     disengage;
@@ -410,7 +473,7 @@ walker _subgraph {
     can on_completed_state with CompletedState entry {
         if here.touch(self) {
             # execute the action
-            response=here.run(self);
+            response = here.run(self, interaction_node=self.interaction_node);
             if response == True {
                 visit[-->](`?ConfirmedState) else {
                     disengage;
@@ -428,7 +491,7 @@ walker _subgraph {
         }
     }
     can on_confirmed_state with ConfirmedState entry{
-        response = here.run(self);
+        response = here.run(self, interaction_node=self.interaction_node);
         self.set_directives(response);
     }
     def set_directives(directive:str){
@@ -437,7 +500,7 @@ walker _subgraph {
     can on_revision_state with RevisionState entry{
         if here.touch(self) {
             # execute the action
-            response=here.run(self);
+            response = here.run(self, interaction_node=self.interaction_node);
             if response is True {
                 visit [<--](`?CompletedState) else {
                     disengage;

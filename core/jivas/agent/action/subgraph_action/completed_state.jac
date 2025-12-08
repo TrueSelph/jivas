@@ -5,7 +5,7 @@ import from logging { Logger }
 import from jivas.agent.core.graph_node { GraphNode }
 import from jivas.agent.action.subgraph_action.state { State }
 import from jivas.agent.memory.frame { Frame }
-
+import from jivas.agent.memory.interaction { Interaction }
 
 
 node CompletedState(GraphNode) {
@@ -13,7 +13,7 @@ node CompletedState(GraphNode) {
     has collection_id: str = "";
     has auto_confirm: bool = False;
     has model_action: str = "LangChainModelAction";
-    has model_name: str = "gpt-4o";
+    has model_name: str = "gpt-4.1";
     has model_max_tokens:int = 4096;
     has model_temperature: float = 0.3;
     has history: bool = True;
@@ -29,7 +29,7 @@ node CompletedState(GraphNode) {
             - Extract all user-provided submission details from:
                 {summary}
             - Format them as a clear, bulleted list under a statement that indicates that it is a list of the information gathered.
-            - Do not put internal settings such as "revised" or "confirm response" in the displayed list
+            - Do not put internal settings such as "revised", "completed", "confirm_response" in the displayed list
             - Do not put any items on the list with a value of N/A
         b. Request Explicit Confirmation:
             Present the key and summary followed by:
@@ -42,7 +42,7 @@ node CompletedState(GraphNode) {
         Follow these rules:
 
         # Confirmation Detection
-        Set "confirm_response" to true for: "yes", "sure", "confirmed", "yeah", "yep", "absolutely", "okay" + clear context.
+        Set "confirm_response" to true for: "yes", "sure", "confirmed", "yeah", "yep", "absolutely", "okay" + clear context. These should be in response to a request for confirmation of previously provided information.
         Set "confirm_response" to false ONLY for explicit negative or revision signals, including:
             - Direct negatives: "no"
             - Revision or correction requests: "I'd like to make an adjustment", "need to make a change", "revision", "change my answer", "not correct", "incorrect", "needs update"
@@ -64,9 +64,10 @@ node CompletedState(GraphNode) {
         return True;
     }
 
-    def run(frame:Frame) -> Union[str, bool] {
+    def run(frame:Frame, interaction_node:Interaction) -> Union[str, bool] {
         frame_node = frame.frame_node;
         agent_node = frame.agent_node;
+        self.update_responses({"completed": True}, frame);
 
         states_data = frame.frame_node.data_get(key=f"{frame.action_label}_results");
         revised = states_data.get("revised", False);
@@ -77,7 +78,7 @@ node CompletedState(GraphNode) {
         }
         elif not revised{
             # Check for confirmation in the latest user message
-            branch_choice_response = self.call_llm(self.prompt, history=True, json_only=True, frame_node=frame_node, agent_node=agent_node);
+            branch_choice_response = self.call_llm(self.prompt, history=True, json_only=True, frame_node=frame_node, agent_node=agent_node, interaction_node=interaction_node);
             self.update_responses(branch_choice_response, frame);
         }
         elif revised{
@@ -117,7 +118,7 @@ node CompletedState(GraphNode) {
         }
     }
 
-    def call_llm(prompt:str, history:Union[bool,None] = None, json_only:bool = False, frame_node:Frame, agent_node:GraphNode) -> Union[str, dict, None] {
+    def call_llm(prompt:str, history:Union[bool,None] = None, json_only:bool = False, frame_node:Frame, agent_node:GraphNode, interaction_node:Interaction) -> Union[str, dict, None] {
         # performs function tool calling for extracting question responses based on question
         prompt_messages = [];
 
@@ -159,7 +160,8 @@ node CompletedState(GraphNode) {
             prompt_variables={},
             model_name=self.model_name,
             model_temperature=self.model_temperature,
-            model_max_tokens=self.model_max_tokens
+            model_max_tokens=self.model_max_tokens,
+            interaction_node=interaction_node
         );
 
             if model_action_result {
@@ -176,7 +178,6 @@ node CompletedState(GraphNode) {
     }
 
     def update_responses(responses:dict, frame:Frame) {
-        print(f"New responses to merge: {responses}");
         stored_responses = frame.frame_node.data_get(key=f"{frame.action_label}_results");
 
         if type(stored_responses) is not dict or not stored_responses {

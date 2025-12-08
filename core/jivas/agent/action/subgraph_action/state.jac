@@ -1,9 +1,10 @@
 import logging;
 import traceback;
-import from typing { Union }
 import from logging { Logger }
 import from jivas.agent.core.graph_node { GraphNode }
 import from jivas.agent.memory.frame { Frame }
+import from typing { Union }
+import from jivas.agent.memory.interaction { Interaction }
 import from jivas.agent.action.action { Action }
 
 node State(GraphNode) {
@@ -18,12 +19,22 @@ node State(GraphNode) {
 
     #llm model parameters
     has model_action: str = "LangChainModelAction";
-    has model_name: str = "gpt-4o";
+    has model_name: str = "gpt-4.1";
     has model_max_tokens:int = 4096;
     has model_temperature: float = 0.3;
     has history: bool = True;
     has history_size: int = 3;
     has max_statement_length: int = 2048;
+    has directive_template:str = """
+    Tailor your response to get the information needed based on the following description:
+    {description}
+
+    Avoid asking for other information not related to this description unless specified elsewhere.
+    {question}
+
+    Take note of the following additional instructions if present while responding to the user but do not mention them unless it is needed:
+    {instructions}
+    """;
 
     has extraction_prompt:str = """
         Review the user's message and the conversation history to accurately extract the following entities.
@@ -89,21 +100,31 @@ node State(GraphNode) {
 
     }
 
-    def run(frame:Frame)->Union[str, bool]{
+    def run(frame:Frame, interaction_node:Interaction)->Union[str, bool]{
         agent_node = frame.agent_node;
         frame_node = frame.frame_node;
         required = self.state_info.get("required","");
 
         prompt = self.generate_extraction_prompt();
 
-        extraction_result = self.call_llm(prompt=prompt, history=True, json_only=True, frame_node=frame_node, agent_node=agent_node);
-
+        extraction_result = self.call_llm(
+            prompt=prompt,
+            history=True,
+            json_only=True,
+            frame_node=frame_node,
+            interaction_node=interaction_node,
+            agent_node=agent_node
+        );
         if required is True and not extraction_result{
+
             question = self.state_info.get("question", "");
             constraints = self.state_info.get("constraints", {});
             description = constraints.get("description", "");
+            additional_instructions = constraints.get("additional_instructions", "");
 
-            directive = "Tailor your response to get the information needed based on the following description: \n" + description + "\n Eg." + question;
+            directive = self.directive_template.replace("{description}", description);
+            directive = directive.replace("{instructions}", additional_instructions);
+            directive = directive.replace("{question}", f"E.g. {question}");
 
             if(options:= constraints.get("options", "")){
                 directive = directive + "\n They can choose from the list of options below\n" + str(options);
@@ -142,7 +163,7 @@ node State(GraphNode) {
 
             entities = "\n".join(entities_list);
             sample_json = '{\n' + ',\n'.join(sample_json_lines) + '\n}';
-            # prepate the prompt
+            # prepare the prompt
             prompt = self.extraction_prompt.format(entities=entities, sample_json=sample_json);
             # escape the conflicting symbols
             prompt = prompt.replace('{', '{{').replace('}','}}');
@@ -154,7 +175,7 @@ node State(GraphNode) {
         }
     }
 
-    def call_llm(prompt:str, history:Union[bool,None] = None, json_only:bool = False, frame_node:Frame, agent_node:GraphNode) -> Union[str, dict, None] {
+    def call_llm(prompt:str, history:Union[bool,None] = None, json_only:bool = False, frame_node:Frame, interaction_node:Interaction, agent_node:GraphNode) -> Union[str, dict, None] {
         # performs function tool calling for extracting question responses based on question
         prompt_messages = [];
 
@@ -195,7 +216,8 @@ node State(GraphNode) {
             prompt_variables={},
             model_name=self.model_name,
             model_temperature=self.model_temperature,
-            model_max_tokens=self.model_max_tokens
+            model_max_tokens=self.model_max_tokens,
+            interaction_node=interaction_node
         );
 
             if model_action_result {
