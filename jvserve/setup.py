@@ -49,6 +49,7 @@ setup(
         "aiohttp==3.13.1",
         "schedule==1.2.2",
         "boto3==1.40.59",
+        "sniffio",
     ],
     extras_require={
         "dev": [
