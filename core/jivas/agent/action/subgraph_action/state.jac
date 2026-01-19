@@ -130,8 +130,6 @@ node State(GraphNode) {
                 directive = directive + "\n They can choose from the list of options below\n" + str(options);
             }
             frame_node.data_set(key="directive", value=directive);
-            print("directive");
-            print(directive);
 
             return directive;
         }
