@@ -446,9 +446,9 @@ node Agent(GraphNode) {
         return file_interface.get_file(f"{self.id}/{path}");
     }
 
-    def save_file(path: str, content: bytes) -> bool {
+    def save_file(path: str, content: bytes, content_type: str = "") -> bool {
         # Saves a file for this agent at the given path.
-        return file_interface.save_file(f"{self.id}/{path}", content);
+        return file_interface.save_file(f"{self.id}/{path}", content, content_type);
     }
 
     def delete_file(path: str) -> bool {

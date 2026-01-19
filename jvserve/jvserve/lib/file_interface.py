@@ -28,7 +28,7 @@ class FileInterface(ABC):
         pass
 
     @abstractmethod
-    def save_file(self, filename: str, content: bytes) -> bool:
+    def save_file(self, filename: str, content: bytes, content_type: str = "") -> bool:
         """Save content to a file in storage."""
         pass
 
@@ -58,7 +58,7 @@ class LocalFileInterface(FileInterface):
                 return f.read()
         return None
 
-    def save_file(self, filename: str, content: bytes) -> bool:
+    def save_file(self, filename: str, content: bytes, content_type: str = "") -> bool:
         """Write content to a local file."""
         file_path = os.path.join(self.__root_dir, filename)
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
@@ -124,13 +124,22 @@ class S3FileInterface(FileInterface):
         except Exception:
             return None
 
-    def save_file(self, filename: str, content: bytes) -> bool:
+    def save_file(self, filename: str, content: bytes, content_type: str = "") -> bool:
         """Save file to S3 bucket."""
         try:
             file_key = os.path.join(self.__root_dir, filename)
-            self.s3_client.put_object(
-                Bucket=self.bucket_name, Key=file_key, Body=content
-            )
+
+            if content_type:
+                self.s3_client.put_object(
+                    Bucket=self.bucket_name,
+                    Key=file_key,
+                    Body=content,
+                    ContentType=content_type,
+                )
+            else:
+                self.s3_client.put_object(
+                    Bucket=self.bucket_name, Key=file_key, Body=content
+                )
             return True
         except Exception:
             return False
