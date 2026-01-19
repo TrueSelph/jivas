@@ -180,9 +180,9 @@ node Action(GraphNode) {
         return self.get_agent().get_file(f"{self.get_type()}/{path}");
     }
 
-    def save_file(path: str, content: bytes) -> bool {
+    def save_file(path: str, content: bytes, content_type: str = "") -> bool {
         # saves a file associated with this action at the given path
-        return self.get_agent().save_file(f"{self.get_type()}/{path}", content);
+        return self.get_agent().save_file(f"{self.get_type()}/{path}", content, content_type);
     }
 
     def delete_file(path: str) -> bool {
